@@ -24,7 +24,9 @@ import type {
     ProgressCallback,
     ScriptMeta,
     ScriptEntry
+    PresetName
 } from './types/index.js';
+import { getPreset } from './presets.js';
 
 /**
  * UI Controller class
@@ -51,6 +53,56 @@ export class UIController {
     }
 
     /**
+     * Get the JSON editor element, with direct DOM access fallback
+     * This ensures we always get a fresh reference to the element
+     * @returns The JSON editor textarea element or null if not found
+     */
+    private getJsonEditor(): HTMLTextAreaElement | null {
+        // Try cached reference first
+        if (this.elements.jsonEditor) {
+            return this.elements.jsonEditor;
+        }
+        
+        // Fallback to direct DOM access
+        const element = document.getElementById('jsonEditor') as HTMLTextAreaElement | null;
+        if (element) {
+            // Update the cached reference
+            this.elements.jsonEditor = element;
+            console.log('[getJsonEditor] Retrieved jsonEditor via direct DOM access');
+        } else {
+            console.error('[getJsonEditor] Failed to find jsonEditor element in DOM');
+        }
+        
+        return element;
+    }
+
+    /**
+     * Set the JSON editor value with defensive checks
+     * @param value - The value to set in the editor
+     * @returns true if successful, false otherwise
+     */
+    private setJsonEditorValue(value: string): boolean {
+        const editor = this.getJsonEditor();
+        
+        if (!editor) {
+            console.error('[setJsonEditorValue] Cannot set value - jsonEditor element not found');
+            return false;
+        }
+        
+        // Set the value
+        editor.value = value;
+        
+        // Verify the value was set correctly
+        if (editor.value !== value) {
+            console.error('[setJsonEditorValue] Value was not set correctly. Expected length:', value.length, 'Actual length:', editor.value.length);
+            return false;
+        }
+        
+        console.log('[setJsonEditorValue] Successfully set jsonEditor value, length:', value.length);
+        return true;
+    }
+
+    /**
      * Initialize DOM element references
      */
     private initializeElements(): UIElements {
@@ -58,6 +110,12 @@ export class UIController {
             // Panel
             optionsPanel: document.getElementById('optionsPanel'),
             panelToggle: document.getElementById('panelToggle') as HTMLButtonElement | null,
+
+            // Presets
+            presetDefault: document.getElementById('presetDefault') as HTMLButtonElement | null,
+            presetFullBloom: document.getElementById('presetFullBloom') as HTMLButtonElement | null,
+            presetMinimal: document.getElementById('presetMinimal') as HTMLButtonElement | null,
+            presetDescription: document.getElementById('presetDescription'),
 
             // Token Generation Options
             displayAbilityText: document.getElementById('displayAbilityText') as HTMLInputElement | null,
@@ -111,6 +169,7 @@ export class UIController {
             countDemon: document.getElementById('countDemon'),
             countTraveller: document.getElementById('countTraveller'),
             countFabled: document.getElementById('countFabled'),
+            countLoric: document.getElementById('countLoric'),
             countTotal: document.getElementById('countTotal')
         };
     }
@@ -121,6 +180,11 @@ export class UIController {
     private setupEventListeners(): void {
         // Panel toggle
         this.elements.panelToggle?.addEventListener('click', () => this.togglePanel());
+
+        // Preset buttons
+        this.elements.presetDefault?.addEventListener('click', () => this.applyPreset('default'));
+        this.elements.presetFullBloom?.addEventListener('click', () => this.applyPreset('fullbloom'));
+        this.elements.presetMinimal?.addEventListener('click', () => this.applyPreset('minimal'));
 
         // File upload
         this.elements.fileUpload?.addEventListener('change', (e) => this.handleFileUpload(e));
@@ -200,6 +264,82 @@ export class UIController {
     }
 
     /**
+     * Apply a preset configuration
+     * @param presetName - Name of preset to apply
+     */
+    private applyPreset(presetName: PresetName): void {
+        const preset = getPreset(presetName);
+        const settings = preset.settings;
+
+        // Update UI elements with preset values
+        if (this.elements.displayAbilityText) {
+            this.elements.displayAbilityText.checked = settings.displayAbilityText ?? false;
+        }
+        if (this.elements.roleDiameter && settings.roleDiameter) {
+            this.elements.roleDiameter.value = settings.roleDiameter.toString();
+        }
+        if (this.elements.reminderDiameter && settings.reminderDiameter) {
+            this.elements.reminderDiameter.value = settings.reminderDiameter.toString();
+        }
+        if (this.elements.tokenCount) {
+            this.elements.tokenCount.checked = settings.tokenCount ?? false;
+        }
+        if (this.elements.setupFlowerStyle && settings.setupFlowerStyle) {
+            this.elements.setupFlowerStyle.value = settings.setupFlowerStyle;
+        }
+        if (this.elements.reminderBackground && settings.reminderBackground) {
+            this.elements.reminderBackground.value = settings.reminderBackground;
+        }
+        if (this.elements.characterBackground && settings.characterBackground) {
+            this.elements.characterBackground.value = settings.characterBackground;
+        }
+        if (this.elements.characterNameFont && settings.characterNameFont) {
+            this.elements.characterNameFont.value = settings.characterNameFont;
+        }
+        if (this.elements.characterReminderFont && settings.characterReminderFont) {
+            this.elements.characterReminderFont.value = settings.characterReminderFont;
+        }
+
+        // Update active button state using element references
+        const presetButtons = [
+            this.elements.presetDefault,
+            this.elements.presetFullBloom,
+            this.elements.presetMinimal
+        ];
+        presetButtons.forEach(btn => {
+            if (btn) {
+                btn.classList.remove('active');
+            }
+        });
+        
+        // Set active state on the selected preset button
+        switch (presetName) {
+            case 'default':
+                this.elements.presetDefault?.classList.add('active');
+                break;
+            case 'fullbloom':
+                this.elements.presetFullBloom?.classList.add('active');
+                break;
+            case 'minimal':
+                this.elements.presetMinimal?.classList.add('active');
+                break;
+        }
+
+        // Update description
+        if (this.elements.presetDescription) {
+            const p = this.elements.presetDescription.querySelector('p');
+            if (p) {
+                p.textContent = preset.description;
+            }
+        }
+
+        // Regenerate tokens if script is loaded
+        if (this.characters.length > 0) {
+            this.handleGenerateTokens();
+        }
+    }
+
+    /**
      * Handle file upload
      * @param event - Change event
      */
@@ -219,10 +359,15 @@ export class UIController {
             const data = await loadJsonFile(file);
             console.log('[handleFileUpload] File loaded successfully:', data);
             
-            if (this.elements.jsonEditor) {
-                this.elements.jsonEditor.value = JSON.stringify(data, null, 2);
-                console.log('[handleFileUpload] JSON editor populated');
+            const jsonString = JSON.stringify(data, null, 2);
+            const success = this.setJsonEditorValue(jsonString);
+            
+            if (!success) {
+                console.error('[handleFileUpload] Failed to populate JSON editor');
+                this.showValidationError('Failed to display file content in editor');
+                return;
             }
+            
             this.validateJsonInput();
             if (this.elements.exampleScripts) {
                 this.elements.exampleScripts.value = '';
@@ -255,10 +400,15 @@ export class UIController {
             const data = await loadExampleScript(filename);
             console.log('[handleExampleSelect] Example script loaded successfully:', data);
             
-            if (this.elements.jsonEditor) {
-                this.elements.jsonEditor.value = JSON.stringify(data, null, 2);
-                console.log('[handleExampleSelect] JSON editor populated');
+            const jsonString = JSON.stringify(data, null, 2);
+            const success = this.setJsonEditorValue(jsonString);
+            
+            if (!success) {
+                console.error('[handleExampleSelect] Failed to populate JSON editor');
+                this.showValidationError('Failed to display example script content in editor');
+                return;
             }
+            
             this.validateJsonInput();
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
@@ -273,7 +423,8 @@ export class UIController {
      * Validate JSON input
      */
     private validateJsonInput(): void {
-        const value = this.elements.jsonEditor?.value ?? '';
+        const editor = this.getJsonEditor();
+        const value = editor?.value ?? '';
         const result = validateJson(value);
 
         if (this.elements.jsonValidation) {
@@ -306,9 +457,10 @@ export class UIController {
      * Format JSON in editor
      */
     private formatJsonEditor(): void {
-        if (this.elements.jsonEditor) {
-            const formatted = formatJson(this.elements.jsonEditor.value);
-            this.elements.jsonEditor.value = formatted;
+        const editor = this.getJsonEditor();
+        if (editor) {
+            const formatted = formatJson(editor.value);
+            this.setJsonEditorValue(formatted);
             this.validateJsonInput();
         }
     }
@@ -317,9 +469,7 @@ export class UIController {
      * Clear JSON editor
      */
     private clearJsonEditor(): void {
-        if (this.elements.jsonEditor) {
-            this.elements.jsonEditor.value = '';
-        }
+        this.setJsonEditorValue('');
         if (this.elements.jsonValidation) {
             this.elements.jsonValidation.className = 'validation-message';
             this.elements.jsonValidation.textContent = '';
@@ -359,7 +509,8 @@ export class UIController {
      * Handle token generation
      */
     private async handleGenerateTokens(): Promise<void> {
-        const value = this.elements.jsonEditor?.value ?? '';
+        const editor = this.getJsonEditor();
+        const value = editor?.value ?? '';
         const validation = validateJson(value);
         if (!validation.valid || !validation.data) {
             this.showValidationError(validation.error ?? 'Invalid JSON');
@@ -425,7 +576,8 @@ export class UIController {
             minion: 'countMinion',
             demon: 'countDemon',
             traveller: 'countTraveller',
-            fabled: 'countFabled'
+            fabled: 'countFabled',
+            loric: 'countLoric'
         };
 
         CONFIG.TEAMS.forEach(team => {

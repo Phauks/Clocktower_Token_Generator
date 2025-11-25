@@ -4,7 +4,7 @@
  */
 
 // Team types
-export type Team = 'townsfolk' | 'outsider' | 'minion' | 'demon' | 'traveller' | 'fabled';
+export type Team = 'townsfolk' | 'outsider' | 'minion' | 'demon' | 'traveller' | 'fabled' | 'loric';
 
 // Character data from BotC API
 export interface Character {
@@ -132,6 +132,7 @@ export interface TokenCounts {
     demon: TeamCounts;
     traveller: TeamCounts;
     fabled: TeamCounts;
+    loric: TeamCounts;
     total: TeamCounts;
 }
 
@@ -211,6 +212,9 @@ export interface Config {
         ABILITY_TEXT: FontSettings;
         TOKEN_COUNT: FontSettings;
     };
+    TRADEMARK: {
+        TEXT: string;
+    };
 }
 
 // Element references for UI
@@ -218,6 +222,12 @@ export interface UIElements {
     // Panel
     optionsPanel: HTMLElement | null;
     panelToggle: HTMLButtonElement | null;
+
+    // Presets
+    presetDefault: HTMLButtonElement | null;
+    presetFullBloom: HTMLButtonElement | null;
+    presetMinimal: HTMLButtonElement | null;
+    presetDescription: HTMLElement | null;
 
     // Token Generation Options
     displayAbilityText: HTMLInputElement | null;
@@ -271,6 +281,7 @@ export interface UIElements {
     countDemon: HTMLElement | null;
     countTraveller: HTMLElement | null;
     countFabled: HTMLElement | null;
+    countLoric: HTMLElement | null;
     countTotal: HTMLElement | null;
 }
 
@@ -279,6 +290,27 @@ export type TeamColors = Record<Team, string>;
 
 // Team labels
 export type TeamLabels = Record<Team, string>;
+
+// Preset configurations
+export type PresetName = 'default' | 'fullbloom' | 'minimal';
+
+export interface PresetConfig {
+    name: string;
+    description: string;
+    icon: string;
+    settings: Partial<GenerationOptions> & {
+        // Additional preset-specific settings
+        characterBackground?: string;
+        setupFlowerStyle?: string;
+        reminderBackground?: string;
+        characterNameFont?: string;
+        characterReminderFont?: string;
+        displayAbilityText?: boolean;
+        tokenCount?: boolean;
+        scriptNameToken?: boolean;
+        almanacToken?: boolean;
+    };
+}
 
 // Declare global jsPDF and JSZip
 declare global {

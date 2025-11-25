@@ -61,7 +61,7 @@ export const CONFIG: Config = {
     ],
 
     // Team Types
-    TEAMS: ['townsfolk', 'outsider', 'minion', 'demon', 'traveller', 'fabled'] as Team[],
+    TEAMS: ['townsfolk', 'outsider', 'minion', 'demon', 'traveller', 'fabled', 'loric'] as Team[],
 
     // Font Settings
     FONTS: {
@@ -80,6 +80,11 @@ export const CONFIG: Config = {
         TOKEN_COUNT: {
             SIZE_RATIO: 0.08
         }
+    },
+
+    // Trademark Token
+    TRADEMARK: {
+        TEXT: 'Blood on the Clocktower is a product of the Pandemonium Institute'
     }
 };
 
@@ -92,7 +97,8 @@ export const TEAM_COLORS: TeamColors = {
     minion: '#5f1a3f',
     demon: '#8b0000',
     traveller: '#5f4f1a',
-    fabled: '#4f1a5f'
+    fabled: '#4f1a5f',
+    loric: '#2a5f5f'
 };
 
 /**
@@ -104,7 +110,8 @@ export const TEAM_LABELS: TeamLabels = {
     minion: 'Minion',
     demon: 'Demon',
     traveller: 'Traveller',
-    fabled: 'Fabled'
+    fabled: 'Fabled',
+    loric: 'Loric'
 };
 
 export default CONFIG;

@@ -50,10 +50,11 @@ export async function loadExampleScript(filename: string): Promise<ScriptEntry[]
     console.log(`[loadExampleScript] Loading example script: ${filename}`);
     
     // Try multiple path variations for compatibility with different deployment scenarios
+    const basePath = new URL('.', window.location.href).href;
     const pathsToTry = [
         `./example_scripts/${filename}`,
         `example_scripts/${filename}`,
-        `${window.location.pathname.replace(/\/[^/]*$/, '')}/example_scripts/${filename}`
+        new URL(`example_scripts/${filename}`, basePath).href
     ];
     
     let lastError: Error | null = null;

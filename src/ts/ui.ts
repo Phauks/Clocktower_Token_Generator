@@ -462,6 +462,17 @@ export class UIController {
     }
 
     /**
+     * Helper function to show/hide a section element
+     * @param section - Section element to show/hide
+     * @param show - Whether to show or hide the section
+     */
+    private showSection(section: HTMLElement | null, show: boolean): void {
+        if (section) {
+            section.style.display = show ? 'flex' : 'none';
+        }
+    }
+
+    /**
      * Render token grid
      */
     private renderTokenGrid(): void {
@@ -496,15 +507,11 @@ export class UIController {
         // Show/hide sections based on content and filters
         const typeFilter = this.elements.tokenTypeFilter?.value ?? 'all';
         
-        if (characterSection) {
-            const showCharacters = (typeFilter === 'all' || typeFilter === 'character') && characterTokens.length > 0;
-            characterSection.style.display = showCharacters ? 'flex' : 'none';
-        }
+        const showCharacters = (typeFilter === 'all' || typeFilter === 'character') && characterTokens.length > 0;
+        const showReminders = (typeFilter === 'all' || typeFilter === 'reminder') && reminderTokens.length > 0;
         
-        if (reminderSection) {
-            const showReminders = (typeFilter === 'all' || typeFilter === 'reminder') && reminderTokens.length > 0;
-            reminderSection.style.display = showReminders ? 'flex' : 'none';
-        }
+        this.showSection(characterSection, showCharacters);
+        this.showSection(reminderSection, showReminders);
 
         // Render character tokens
         for (const token of characterTokens) {
@@ -602,12 +609,8 @@ export class UIController {
         }
         // Hide token sections when loading
         if (show) {
-            if (this.elements.characterTokensSection) {
-                this.elements.characterTokensSection.style.display = 'none';
-            }
-            if (this.elements.reminderTokensSection) {
-                this.elements.reminderTokensSection.style.display = 'none';
-            }
+            this.showSection(this.elements.characterTokensSection, false);
+            this.showSection(this.elements.reminderTokensSection, false);
         }
     }
 
@@ -639,12 +642,8 @@ export class UIController {
             this.elements.loadingState.style.display = 'none';
         }
         // Hide token sections when showing empty state
-        if (this.elements.characterTokensSection) {
-            this.elements.characterTokensSection.style.display = 'none';
-        }
-        if (this.elements.reminderTokensSection) {
-            this.elements.reminderTokensSection.style.display = 'none';
-        }
+        this.showSection(this.elements.characterTokensSection, false);
+        this.showSection(this.elements.reminderTokensSection, false);
     }
 
     /**

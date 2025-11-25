@@ -131,13 +131,13 @@ body {
     color: var(--color-accent);
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
     margin-bottom: var(--spacing-xs);
-    padding-right: 50px; /* Space for GitHub link */
+    padding-right: calc(var(--spacing-xl) + var(--spacing-md)); /* Space for GitHub link */
 }
 
 .app-header .subtitle {
     color: var(--text-secondary);
     font-size: 1rem;
-    padding-right: 50px; /* Match title padding */
+    padding-right: calc(var(--spacing-xl) + var(--spacing-md)); /* Match title padding */
 }
 
 /* GitHub Link */

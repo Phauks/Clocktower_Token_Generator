@@ -86,7 +86,11 @@ export class UIController {
             teamFilter: document.getElementById('teamFilter') as HTMLSelectElement | null,
             tokenTypeFilter: document.getElementById('tokenTypeFilter') as HTMLSelectElement | null,
             reminderFilter: document.getElementById('reminderFilter') as HTMLSelectElement | null,
-            tokenGrid: document.getElementById('tokenGrid'),
+            tokenSections: document.getElementById('tokenSections'),
+            characterTokensSection: document.getElementById('characterTokensSection'),
+            reminderTokensSection: document.getElementById('reminderTokensSection'),
+            characterTokenGrid: document.getElementById('characterTokenGrid'),
+            reminderTokenGrid: document.getElementById('reminderTokenGrid'),
             loadingState: document.getElementById('loadingState'),
             emptyState: document.getElementById('emptyState'),
             exportOptions: document.getElementById('exportOptions'),
@@ -193,14 +197,24 @@ export class UIController {
      * @param event - Change event
      */
     private async handleFileUpload(event: Event): Promise<void> {
+        console.log('[handleFileUpload] File upload event triggered');
         const target = event.target as HTMLInputElement;
         const file = target.files?.[0];
-        if (!file) return;
+        
+        if (!file) {
+            console.log('[handleFileUpload] No file selected');
+            return;
+        }
+        
+        console.log(`[handleFileUpload] File selected: ${file.name}`);
 
         try {
             const data = await loadJsonFile(file);
+            console.log('[handleFileUpload] File loaded successfully:', data);
+            
             if (this.elements.jsonEditor) {
                 this.elements.jsonEditor.value = JSON.stringify(data, null, 2);
+                console.log('[handleFileUpload] JSON editor populated');
             }
             this.validateJsonInput();
             if (this.elements.exampleScripts) {
@@ -208,6 +222,7 @@ export class UIController {
             }
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
+            console.error('[handleFileUpload] Error:', message);
             this.showValidationError(message);
         }
     }
@@ -217,19 +232,30 @@ export class UIController {
      * @param event - Change event
      */
     private async handleExampleSelect(event: Event): Promise<void> {
+        console.log('[handleExampleSelect] Example script selection event triggered');
         const target = event.target as HTMLSelectElement;
         const filename = target.value;
-        if (!filename) return;
+        
+        if (!filename) {
+            console.log('[handleExampleSelect] No filename selected (empty value)');
+            return;
+        }
+        
+        console.log(`[handleExampleSelect] Selected example: ${filename}`);
 
         try {
             this.showLoading(true);
             const data = await loadExampleScript(filename);
+            console.log('[handleExampleSelect] Example script loaded successfully:', data);
+            
             if (this.elements.jsonEditor) {
                 this.elements.jsonEditor.value = JSON.stringify(data, null, 2);
+                console.log('[handleExampleSelect] JSON editor populated');
             }
             this.validateJsonInput();
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
+            console.error('[handleExampleSelect] Error:', message);
             this.showValidationError(`Failed to load example: ${message}`);
         } finally {
             this.showLoading(false);
@@ -436,14 +462,32 @@ export class UIController {
     }
 
     /**
+     * Helper function to show/hide a section element
+     * @param section - Section element to show/hide
+     * @param show - Whether to show or hide the section
+     */
+    private showSection(section: HTMLElement | null, show: boolean): void {
+        if (section) {
+            section.style.display = show ? 'flex' : 'none';
+        }
+    }
+
+    /**
      * Render token grid
      */
     private renderTokenGrid(): void {
-        if (!this.elements.tokenGrid) return;
+        const characterGrid = this.elements.characterTokenGrid;
+        const reminderGrid = this.elements.reminderTokenGrid;
+        const characterSection = this.elements.characterTokensSection;
+        const reminderSection = this.elements.reminderTokensSection;
+        
+        if (!characterGrid || !reminderGrid) return;
 
-        // Clear existing content (except loading/empty states)
-        const existingCards = this.elements.tokenGrid.querySelectorAll('.token-card');
-        existingCards.forEach(card => card.remove());
+        // Clear existing content
+        const existingCharacterCards = characterGrid.querySelectorAll('.token-card');
+        const existingReminderCards = reminderGrid.querySelectorAll('.token-card');
+        existingCharacterCards.forEach(card => card.remove());
+        existingReminderCards.forEach(card => card.remove());
 
         if (this.filteredTokens.length === 0) {
             this.showEmptyState(this.tokens.length > 0
@@ -456,10 +500,29 @@ export class UIController {
             this.elements.emptyState.style.display = 'none';
         }
 
-        // Create token cards
-        for (const token of this.filteredTokens) {
+        // Separate tokens by type
+        const characterTokens = this.filteredTokens.filter(t => t.type === 'character');
+        const reminderTokens = this.filteredTokens.filter(t => t.type === 'reminder');
+
+        // Show/hide sections based on content and filters
+        const typeFilter = this.elements.tokenTypeFilter?.value ?? 'all';
+        
+        const showCharacters = (typeFilter === 'all' || typeFilter === 'character') && characterTokens.length > 0;
+        const showReminders = (typeFilter === 'all' || typeFilter === 'reminder') && reminderTokens.length > 0;
+        
+        this.showSection(characterSection, showCharacters);
+        this.showSection(reminderSection, showReminders);
+
+        // Render character tokens
+        for (const token of characterTokens) {
             const card = this.createTokenCard(token);
-            this.elements.tokenGrid.appendChild(card);
+            characterGrid.appendChild(card);
+        }
+
+        // Render reminder tokens
+        for (const token of reminderTokens) {
+            const card = this.createTokenCard(token);
+            reminderGrid.appendChild(card);
         }
     }
 
@@ -544,6 +607,11 @@ export class UIController {
         if (this.elements.emptyState && show) {
             this.elements.emptyState.style.display = 'none';
         }
+        // Hide token sections when loading
+        if (show) {
+            this.showSection(this.elements.characterTokensSection, false);
+            this.showSection(this.elements.reminderTokensSection, false);
+        }
     }
 
     /**
@@ -573,6 +641,9 @@ export class UIController {
         if (this.elements.loadingState) {
             this.elements.loadingState.style.display = 'none';
         }
+        // Hide token sections when showing empty state
+        this.showSection(this.elements.characterTokensSection, false);
+        this.showSection(this.elements.reminderTokensSection, false);
     }
 
     /**

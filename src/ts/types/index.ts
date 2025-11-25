@@ -250,7 +250,11 @@ export interface UIElements {
     teamFilter: HTMLSelectElement | null;
     tokenTypeFilter: HTMLSelectElement | null;
     reminderFilter: HTMLSelectElement | null;
-    tokenGrid: HTMLElement | null;
+    tokenSections: HTMLElement | null;
+    characterTokensSection: HTMLElement | null;
+    reminderTokensSection: HTMLElement | null;
+    characterTokenGrid: HTMLElement | null;
+    reminderTokenGrid: HTMLElement | null;
     loadingState: HTMLElement | null;
     emptyState: HTMLElement | null;
     exportOptions: HTMLElement | null;

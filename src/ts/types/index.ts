@@ -288,6 +288,15 @@ export interface UIElements {
     countLoric: HTMLElement | null;
     countMeta: HTMLElement | null;
     countTotal: HTMLElement | null;
+
+    // Settings Modal
+    settingsButton: HTMLButtonElement | null;
+    settingsModal: HTMLElement | null;
+    modalBackdrop: HTMLElement | null;
+    modalClose: HTMLButtonElement | null;
+    uiSizeSlider: HTMLInputElement | null;
+    uiSizeValue: HTMLElement | null;
+    colorSchema: HTMLSelectElement | null;
 }
 
 // Team color mapping

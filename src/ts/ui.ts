@@ -40,6 +40,12 @@ export class UIController {
     private elements: UIElements;
     private scriptMeta: ScriptMeta | null;
 
+    // UI Size settings constants
+    private static readonly UI_SIZE_MIN = 50;
+    private static readonly UI_SIZE_MAX = 200;
+    private static readonly UI_SIZE_DEFAULT = 100;
+    private static readonly BASE_FONT_SIZE_PX = 16;
+
     constructor() {
         this.tokens = [];
         this.filteredTokens = [];
@@ -174,7 +180,16 @@ export class UIController {
             countFabled: document.getElementById('countFabled'),
             countLoric: document.getElementById('countLoric'),
             countMeta: document.getElementById('countMeta'),
-            countTotal: document.getElementById('countTotal')
+            countTotal: document.getElementById('countTotal'),
+
+            // Settings Modal
+            settingsButton: document.getElementById('settingsButton') as HTMLButtonElement | null,
+            settingsModal: document.getElementById('settingsModal'),
+            modalBackdrop: document.getElementById('modalBackdrop'),
+            modalClose: document.getElementById('modalClose') as HTMLButtonElement | null,
+            uiSizeSlider: document.getElementById('uiSizeSlider') as HTMLInputElement | null,
+            uiSizeValue: document.getElementById('uiSizeValue'),
+            colorSchema: document.getElementById('colorSchema') as HTMLSelectElement | null
         };
     }
 
@@ -254,12 +269,25 @@ export class UIController {
             }
         });
 
+        // Settings modal
+        this.elements.settingsButton?.addEventListener('click', () => this.openSettingsModal());
+        this.elements.modalClose?.addEventListener('click', () => this.closeSettingsModal());
+        this.elements.modalBackdrop?.addEventListener('click', () => this.closeSettingsModal());
+        
+        // UI Size slider
+        this.elements.uiSizeSlider?.addEventListener('input', () => this.handleUiSizeChange());
+
         // Keyboard shortcuts
         document.addEventListener('keydown', (e: KeyboardEvent) => {
             // Ctrl/Cmd + Enter to generate tokens
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
                 this.handleGenerateTokens();
+            }
+            
+            // ESC to close settings modal
+            if (e.key === 'Escape') {
+                this.closeSettingsModal();
             }
         });
     }
@@ -959,9 +987,110 @@ export class UIController {
     }
 
     /**
+     * Open the settings modal
+     */
+    private openSettingsModal(): void {
+        if (this.elements.settingsModal) {
+            this.elements.settingsModal.hidden = false;
+            document.body.classList.add('modal-open');
+            console.log('[Settings] Modal opened');
+        }
+    }
+
+    /**
+     * Close the settings modal
+     */
+    private closeSettingsModal(): void {
+        if (this.elements.settingsModal) {
+            this.elements.settingsModal.hidden = true;
+            document.body.classList.remove('modal-open');
+            console.log('[Settings] Modal closed');
+        }
+    }
+
+    /**
+     * Handle UI size slider change
+     */
+    private handleUiSizeChange(): void {
+        const slider = this.elements.uiSizeSlider;
+        if (!slider) return;
+
+        const value = parseInt(slider.value, 10);
+        
+        // Update the display value
+        if (this.elements.uiSizeValue) {
+            this.elements.uiSizeValue.textContent = `${value}%`;
+        }
+        
+        // Apply the UI scale
+        this.applyUiScale(value);
+        
+        // Save to localStorage
+        this.saveSettings({ uiSize: value });
+    }
+
+    /**
+     * Apply UI scale to the document
+     * @param size - UI size percentage (50-200)
+     */
+    private applyUiScale(size: number): void {
+        const scale = size / UIController.UI_SIZE_DEFAULT;
+        document.documentElement.style.setProperty('--ui-scale', scale.toString());
+        document.documentElement.style.fontSize = `calc(${UIController.BASE_FONT_SIZE_PX}px * ${scale})`;
+        console.log(`[Settings] Applied UI scale: ${size}% (scale factor: ${scale})`);
+    }
+
+    /**
+     * Load settings from localStorage
+     */
+    private loadSettings(): void {
+        try {
+            const storedUiSize = localStorage.getItem('uiSize');
+            if (storedUiSize) {
+                const uiSize = parseInt(storedUiSize, 10);
+                if (uiSize >= UIController.UI_SIZE_MIN && uiSize <= UIController.UI_SIZE_MAX) {
+                    // Update slider
+                    if (this.elements.uiSizeSlider) {
+                        this.elements.uiSizeSlider.value = uiSize.toString();
+                    }
+                    // Update display value
+                    if (this.elements.uiSizeValue) {
+                        this.elements.uiSizeValue.textContent = `${uiSize}%`;
+                    }
+                    // Apply the scale
+                    this.applyUiScale(uiSize);
+                    console.log(`[Settings] Loaded UI size from localStorage: ${uiSize}%`);
+                }
+            } else {
+                console.log('[Settings] No saved settings found, using defaults');
+            }
+        } catch (error) {
+            console.warn('[Settings] Failed to load settings from localStorage:', error);
+        }
+    }
+
+    /**
+     * Save settings to localStorage
+     * @param settings - Settings object to save
+     */
+    private saveSettings(settings: { uiSize?: number }): void {
+        try {
+            if (settings.uiSize !== undefined) {
+                localStorage.setItem('uiSize', settings.uiSize.toString());
+                console.log(`[Settings] Saved UI size to localStorage: ${settings.uiSize}%`);
+            }
+        } catch (error) {
+            console.warn('[Settings] Failed to save settings to localStorage:', error);
+        }
+    }
+
+    /**
      * Initialize the UI
      */
     async initialize(): Promise<void> {
+        // Load settings from localStorage
+        this.loadSettings();
+
         // Populate example scripts dropdown
         this.populateExampleScripts();
 

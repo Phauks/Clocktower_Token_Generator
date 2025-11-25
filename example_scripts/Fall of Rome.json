@@ -1,0 +1,778 @@
+[
+  {
+    "id": "_meta",
+    "author": "Alex S, v.1.9",
+    "name": "Fall of Rome",
+    "almanac": "https://www.bloodstar.xyz/p/AlexS/Fall_of_Rome/almanac.html",
+    "firstNight": [
+      "dusk",
+      "hannibal",
+      "minioninfo",
+      "temptress",
+      "cleopatra",
+      "haruspex",
+      "winemaker",
+      "demoninfo",
+      "thetwins",
+      "physician",
+      "sculptor",
+      "vestalvirgin",
+      "legionary",
+      "dawn"
+    ],
+    "otherNight": [
+      "dusk",
+      "scholar",
+      "temptress",
+      "mercenary",
+      "highpriest1",
+      "highpriest2",
+      "architect",
+      "emperor",
+      "winemaker",
+      "thetwins",
+      "physician",
+      "cleopatra",
+      "crassus",
+      "hannibal",
+      "caesar",
+      "haruspex",
+      "blacksmith",
+      "gladiator",
+      "sculptor",
+      "vestalvirgin",
+      "legionary",
+      "trumpeter",
+      "mortician",
+      "standardbearer",
+      "actor",
+      "merchant",
+      "dawn"
+    ]
+  },
+  {
+    "id": "sculptor",
+    "name": "Sculptor",
+    "image": [
+      "https://www.impeccabletiming.net/botc/sculptor.png",
+      "https://www.impeccabletiming.net/botc/sculptor_evil.png"
+    ],
+    "team": "townsfolk",
+    "edition": "fallofrome",
+    "ability": "You start knowing a player. Each night*, you learn the alignment of their most recent nomination.",
+    "flavor": "“The sculptor's hand can only break the spell to free the figures slumbering in the stone.” - Michelangelo (1501)",
+    "firstNight": 25,
+    "otherNight": 19,
+    "firstNightReminder": "Point to the *SCULPTURE*. :reminder:",
+    "otherNightReminder": "If the player with the *SCULPTURE* token nominated today, wake the sculptor:  Give a thumbs up or thumbs down.",
+    "reminders": [
+      "Sculpture",
+      "Nominated"
+    ]
+  },
+  {
+    "id": "vestalvirgin",
+    "name": "Vestal Virgin",
+    "image": [
+      "https://www.impeccabletiming.net/botc/vestalvirgin.png",
+      "https://www.impeccabletiming.net/botc/vestalvirgin_evil.png"
+    ],
+    "team": "townsfolk",
+    "edition": "fallofrome",
+    "ability": "You start knowing 1 good & 1 evil character, 1 of which is in-play. When they die, that night you learn 1 good & 1 evil character, 1 of which is in-play.",
+    "flavor": "“Some are of the opinion that these vestals had no other business than the preservation of the sacred fire; but others conceive that they were keepers of other divine secrets, concealed from all but themselves.” - Lucius Mestrius 'Plutarch' Plutarchus c. 49 A.D. - 119 A.D.",
+    "firstNight": 26,
+    "otherNight": 20,
+    "firstNightReminder": "Show 1 good and 1 evil character token: one of which is in play. :reminder:",
+    "otherNightReminder": "If *LEARNS* died today, wake the Vestal Virgin:  Show 1 good and 1 evil character token: one of which is in play. :reminder:",
+    "reminders": [
+      "Learns"
+    ]
+  },
+  {
+    "id": "legionary",
+    "name": "Legionary",
+    "image": [
+      "https://www.impeccabletiming.net/botc/legionary.png",
+      "https://www.impeccabletiming.net/botc/legionary_evil.png"
+    ],
+    "team": "townsfolk",
+    "edition": "fallofrome",
+    "ability": "Each night, you learn how many living evil players are sat clockwise between yourself and a living Legionary. [+0 to +2 Legionary]",
+    "flavor": "“We find that the Romans owed the conquest of the world to no other cause than continual military training, exact observance of discipline in their camps, and unwearied cultivation of the other arts of war.” - Publius Flavius Vegetius Renatus c.385 A.D. - c. 450 A.D.",
+    "firstNight": 27,
+    "otherNight": 21,
+    "firstNightReminder": "Give a finger signal.",
+    "otherNightReminder": "Give a finger signal.",
+    "setup": true,
+    "special": [
+      {
+        "type": "selection",
+        "name": "bag-duplicate"
+      }
+    ]
+  },
+  {
+    "id": "physician",
+    "name": "Physician",
+    "image": [
+      "https://www.impeccabletiming.net/botc/physician.png",
+      "https://www.impeccabletiming.net/botc/physician_evil.png"
+    ],
+    "team": "townsfolk",
+    "edition": "fallofrome",
+    "ability": "Each night, choose two players (not yourself): they are sober, healthy & get true info tonight. The 1st time the Demon kills one, you learn the Demon type.",
+    "flavor": "“Some patients recover, because they believe in doctors.” - Hippocrates of Kos c. 460 B.C. - c. 370 B.C.",
+    "firstNight": 24,
+    "otherNight": 11,
+    "firstNightReminder": "The Physician chooses 2 players. :reminder: :reminder:",
+    "otherNightReminder": "The Physician chooses 2 players. :reminder: :reminder: If a *PATIENT* is targeted by the Demon tonight:  Wake the Physician. Show the in-play Demon character token. :reminder:",
+    "reminders": [
+      "Patient",
+      "Patient",
+      "1st Demon"
+    ]
+  },
+  {
+    "id": "trumpeter",
+    "name": "Trumpeter",
+    "image": [
+      "https://www.impeccabletiming.net/botc/trumpeter.png",
+      "https://www.impeccabletiming.net/botc/trumpeter_evil.png"
+    ],
+    "team": "townsfolk",
+    "edition": "fallofrome",
+    "ability": "Each night*, you learn how many evil players publicly claimed to be Spartacus today.",
+    "flavor": "“I have done everything that I should, but the outcome is in the hand of fortune.” - Nero Claudius Caesar 37 A.D. - 68 A.D.",
+    "firstNight": 0,
+    "otherNight": 22,
+    "otherNightReminder": "Give a finger signal.",
+    "reminders": [
+      "Evil Claim",
+      "Evil Claim",
+      "Evil Claim",
+      "Evil Claim",
+      "Evil Claim"
+    ]
+  },
+  {
+    "id": "mortician",
+    "name": "Mortician",
+    "image": [
+      "https://www.impeccabletiming.net/botc/mortician.png",
+      "https://www.impeccabletiming.net/botc/mortician_evil.png"
+    ],
+    "team": "townsfolk",
+    "edition": "fallofrome",
+    "ability": "Each night*, if a player died by execution today you learn if either of their living neighbours are evil.",
+    "flavor": "“Let no one weep for me, or celebrate my funeral with mourning; for I still live, as I pass to and fro through the mouths of men.” - Quintus Ennius 239 B.C. - 169 B.C.",
+    "firstNight": 0,
+    "otherNight": 23,
+    "otherNightReminder": "Either nod or shake your head.",
+    "reminders": [
+      "Recently Executed",
+      "Recently Executed"
+    ]
+  },
+  {
+    "id": "merchant",
+    "name": "Merchant",
+    "image": [
+      "https://www.impeccabletiming.net/botc/merchant.png",
+      "https://www.impeccabletiming.net/botc/merchant_evil.png"
+    ],
+    "team": "townsfolk",
+    "edition": "fallofrome",
+    "ability": "Once per game, at night, choose to learn the characters of players that have nominated you.",
+    "flavor": "“Greed is but a word jealous men inflict upon the ambitious.” - Marcus Licinius Crassus 115 B.C. - 53 B.C.",
+    "firstNight": 0,
+    "otherNight": 26,
+    "otherNightReminder": "The Merchant might choose to learn who *NOMINATED*.Show the character tokens of players who nominated the Merchant. :reminder:",
+    "reminders": [
+      "Nominated",
+      "Nominated",
+      "Nominated",
+      "Nominated",
+      "Nominated",
+      "Nominated",
+      "Nominated",
+      "Nominated",
+      "Nominated",
+      "No Ability"
+    ]
+  },
+  {
+    "id": "actor",
+    "name": "Actor",
+    "image": [
+      "https://www.impeccabletiming.net/botc/actor.png",
+      "https://www.impeccabletiming.net/botc/actor_evil.png"
+    ],
+    "team": "townsfolk",
+    "edition": "fallofrome",
+    "ability": "Once per game, during the day, publicly guess 3 players' character types (not yourself, 1 guess per type). That night, you learn how many you got correct. ",
+    "flavor": "“Have I played the part well? Then applaud me as I exit!” - Caesar Augustus 63 B.C. - 14 A.D.",
+    "firstNight": 0,
+    "otherNight": 25,
+    "otherNightReminder": "If the Actor used their ability today: give a finger signal. :reminder:",
+    "reminders": [
+      "Correct",
+      "Correct",
+      "Correct",
+      "No Ability"
+    ]
+  },
+  {
+    "id": "gladiator",
+    "name": "Gladiator",
+    "image": [
+      "https://www.impeccabletiming.net/botc/gladiator.png",
+      "https://www.impeccabletiming.net/botc/gladiator_evil.png"
+    ],
+    "team": "townsfolk",
+    "edition": "fallofrome",
+    "ability": "Once per game, during the day, publicly choose a living player. Tonight, you and they wake & silently play roshambo: whoever loses dies (someone must lose).",
+    "flavor": "“Forgive me. I was trained with swords! Not with words.” - Crixus 72 B.C.",
+    "firstNight": 0,
+    "otherNight": 18,
+    "otherNightReminder": "If the Gladiator is ready to *DUEL*, wake the Gladiator and the challenged player.They silently play roshambo until someone loses. The loser dies. :reminder: :reminder:",
+    "reminders": [
+      "Duel",
+      "Dead",
+      "No Ability"
+    ]
+  },
+  {
+    "id": "standardbearer",
+    "name": "Standard Bearer",
+    "image": [
+      "https://www.impeccabletiming.net/botc/standardbearer.png",
+      "https://www.impeccabletiming.net/botc/standardbearer_evil.png"
+    ],
+    "team": "townsfolk",
+    "edition": "fallofrome",
+    "ability": "When you are nominated, you may make a unique public statement about the nominator (not yourself). Tonight, you learn if the statement was true.",
+    "flavor": "“Say not always what you know. But always know what you say.” - Tiberius Claudius Caesar Augustus Germanicus 10 B.C - 54 A.D.",
+    "firstNight": 0,
+    "otherNight": 24,
+    "otherNightReminder": "Either nod or shake your head.",
+    "reminders": [
+      "True",
+      "False"
+    ]
+  },
+  {
+    "id": "centurion",
+    "name": "Centurion",
+    "image": [
+      "https://www.impeccabletiming.net/botc/centurion.png",
+      "https://www.impeccabletiming.net/botc/centurion_evil.png"
+    ],
+    "team": "townsfolk",
+    "edition": "fallofrome",
+    "ability": "If you nominate & execute a living player, their team loses. You are safe from the Demon. If you publicly claimed to be Spartacus today, you are drunk until dawn.",
+    "flavor": "“It is easier to find men who will volunteer to die, than to find those who are willing to endure pain with patience.” - Gaius Julius Caesar 100 B.C. - 44 B.C.",
+    "firstNight": 0,
+    "otherNight": 0,
+    "reminders": [
+      "Drunk"
+    ]
+  },
+  {
+    "id": "blacksmith",
+    "name": "Blacksmith",
+    "image": [
+      "https://www.impeccabletiming.net/botc/blacksmith.png",
+      "https://www.impeccabletiming.net/botc/blacksmith_evil.png"
+    ],
+    "team": "townsfolk",
+    "edition": "fallofrome",
+    "ability": "The 1st time the Demon kills you, you live & gain a not-in-play Townsfolk ability.",
+    "flavor": "“Every new beginning comes from some other beginning’s end.” - Lucius Annaeus Seneca 4 B.C. - 65 A.D.",
+    "firstNight": 0,
+    "otherNight": 17,
+    "otherNightReminder": "If the Blacksmith was killed by a Demon, wake the Blacksmith:  Show the *YOU ARE* token &amp; their new character token. :reminder:",
+    "remindersGlobal": [
+      "Is The Blacksmith"
+    ],
+    "special": [
+      {
+        "type": "reveal",
+        "name": "replace-character"
+      }
+    ]
+  },
+  {
+    "id": "scholar",
+    "name": "Scholar",
+    "image": [
+      "https://www.impeccabletiming.net/botc/scholar.png",
+      "https://www.impeccabletiming.net/botc/scholar_evil.png"
+    ],
+    "team": "townsfolk",
+    "edition": "fallofrome",
+    "ability": "The 1st time you nominate a living Outsider, they immediately become a not-in-play Townsfolk. [+1 Outsider]",
+    "flavor": "“When you arise in the morning, think of what a precious privilege it is to be alive - to breathe, to think, to enjoy, to love.” - Marcus Aurelius 121 A.D. - 180 A.D.",
+    "firstNight": 0,
+    "otherNight": 2,
+    "otherNightReminder": "If the Scholar nominated an Outsider today:  Wake the nominated player. Show *YOU ARE* token &amp; their new character token. :reminder:",
+    "reminders": [
+      "Lectured",
+      "No Ability"
+    ],
+    "setup": true
+  },
+  {
+    "id": "thetwins",
+    "name": "The Twins",
+    "image": [
+      "https://www.impeccabletiming.net/botc/thetwins.png",
+      "https://www.impeccabletiming.net/botc/thetwins_evil.png"
+    ],
+    "team": "outsider",
+    "edition": "fallofrome",
+    "ability": "You start knowing a player: if either of you are executed, all Townsfolk are drunk until dusk tomorrow.",
+    "flavor": "“The quarrel that arose between Remus and Romulus demonstrated the division of the earthly city against itself...” - Augustine of Hippo 354 A.D. - 430 A.D.",
+    "firstNight": 23,
+    "otherNight": 10,
+    "firstNightReminder": "Point to *REMUS*. :reminder:",
+    "otherNightReminder": "If either The Twins or *REMUS* were executed today, all Townsfolk are immediately drunk.If you haven't done so yet, do so now. :reminder:",
+    "reminders": [
+      "Remus",
+      "Townsfolk Drunk"
+    ]
+  },
+  {
+    "id": "badomen",
+    "name": "Bad Omen",
+    "image": [
+      "https://www.impeccabletiming.net/botc/badomen.png",
+      "https://www.impeccabletiming.net/botc/badomen_evil.png"
+    ],
+    "team": "outsider",
+    "edition": "fallofrome",
+    "ability": "You do not know you are a Bad Omen. You think you are a Townsfolk, but you receive false information. You might register as evil, even if dead.",
+    "flavor": "“Beware the Ides of March.” - Gaius Julius Caesar 100 B.C. - 44 B.C.",
+    "firstNight": 0,
+    "otherNight": 0,
+    "remindersGlobal": [
+      "Is a Bad Omen",
+      "Is a Bad Omen",
+      "Is a Bad Omen",
+      "Is a Bad Omen",
+      "Is a Bad Omen",
+      "Is a Bad Omen",
+      "Is a Bad Omen",
+      "Is a Bad Omen",
+      "Is a Bad Omen",
+      "Is a Bad Omen"
+    ],
+    "setup": true,
+    "special": [
+      {
+        "type": "selection",
+        "name": "bag-disabled"
+      },
+      {
+        "type": "reveal",
+        "name": "replace-character"
+      }
+    ]
+  },
+  {
+    "id": "winemaker",
+    "name": "Winemaker",
+    "image": [
+      "https://www.impeccabletiming.net/botc/winemaker.png",
+      "https://www.impeccabletiming.net/botc/winemaker_evil.png"
+    ],
+    "team": "outsider",
+    "edition": "fallofrome",
+    "ability": "Your Townsfolk neighbours are drunk, but every other night, you are drunk until dusk, even if you are dead.",
+    "flavor": "“In wine, there's truth.” - Pliny the Elder 23 A.D. - 79 A.D.",
+    "firstNight": 22,
+    "otherNight": 9,
+    "firstNightReminder": "Place either the *ODD* or *EVEN* token. On the associated night, the Winemaker is drunk.On other nights, their Townsfolk neighbours are drunk. :reminder: :reminder: :reminder:",
+    "otherNightReminder": "Check which *ODD* or *EVEN* token is placed. On the associated night, the Winemaker is drunk.On other nights, their Townsfolk neigbours are drunk. :reminder: :reminder:",
+    "reminders": [
+      "Odd",
+      "Even",
+      "Drunk",
+      "Drunk"
+    ]
+  },
+  {
+    "id": "spartacus",
+    "name": "Spartacus",
+    "image": [
+      "https://www.impeccabletiming.net/botc/spartacus.png",
+      "https://www.impeccabletiming.net/botc/spartacus_evil.png"
+    ],
+    "team": "outsider",
+    "edition": "fallofrome",
+    "ability": "If an evil player guesses you (once), your team loses. You might register as a Townsfolk; each day, if you did not publicly claim to be Spartacus, you don't.",
+    "flavor": "“A man must not accept his fate. Or he will be destroyed by it.” - Spartacus c. 103 B.C. - 71 B.C.",
+    "firstNight": 0,
+    "otherNight": 0,
+    "reminders": [
+      "Guess Used"
+    ]
+  },
+  {
+    "id": "haruspex",
+    "name": "Haruspex",
+    "image": [
+      "https://www.impeccabletiming.net/botc/haruspex.png",
+      "https://www.impeccabletiming.net/botc/haruspex_good.png"
+    ],
+    "team": "minion",
+    "edition": "fallofrome",
+    "ability": "Each night, choose a player: you learn their character. The 1st player you choose twice in this way, dies. [+ Spartacus]",
+    "flavor": "“...but it is in and by means of piety and religion, and this especial wisdom of perceiving that all things are governed and managed by the divine power of the immortal gods, that we have been and are superior to all other countries and nations.” - Marcus Tullius Cicero 106 B.C - 46 B.C.",
+    "firstNight": 21,
+    "otherNight": 16,
+    "firstNightReminder": "The Haruspex chooses a player. :reminder: Show that player’s character token.",
+    "otherNightReminder": "The Haruspex chooses a player. :reminder: Show that player’s character token.If that player is already *FORETOLD*, that player dies. :reminder:",
+    "reminders": [
+      "Foretold",
+      "Foretold",
+      "Foretold",
+      "Foretold",
+      "Foretold",
+      "Foretold",
+      "Foretold",
+      "Foretold",
+      "Foretold",
+      "Foretold",
+      "Dead",
+      "Can't Kill"
+    ],
+    "setup": true
+  },
+  {
+    "id": "temptress",
+    "name": "Temptress",
+    "image": [
+      "https://www.impeccabletiming.net/botc/temptress.png",
+      "https://www.impeccabletiming.net/botc/temptress_good.png"
+    ],
+    "team": "minion",
+    "edition": "fallofrome",
+    "ability": "On your 1st night choose two players: they learn that they were chosen. The 1st time one of them dies by execution, the other becomes evil that night.",
+    "flavor": "“Nothing could part us in life, but now in death, we are likely to change places...” - Cleopatra VII Thea Philopator 69 B.C. - 30 B.C.",
+    "firstNight": 19,
+    "otherNight": 3,
+    "firstNightReminder": "The Temptress chooses 2 players. :reminder: :reminder:. Wake the two players separately:  Show the *THIS CHARACTER SELECTED YOU* card &amp; the Temptress token.",
+    "otherNightReminder": "If a *SEDUCED* player token was executed and died today:  Wake the other *SEDUCED* player. Show the *YOU ARE* token &amp; give a thumbs-down.",
+    "reminders": [
+      "Seduced",
+      "Seduced",
+      "Evil"
+    ]
+  },
+  {
+    "id": "glykon",
+    "name": "Glykon",
+    "image": [
+      "https://www.impeccabletiming.net/botc/glykon.png",
+      "https://www.impeccabletiming.net/botc/glykon_good.png"
+    ],
+    "team": "minion",
+    "edition": "fallofrome",
+    "ability": "You might register as good. Until dawn, players you nominate register as their opposite alignment & if a Townsfolk, are also poisoned.",
+    "flavor": "“When they went in, the thing, of course, seemed to them a miracle, that the formerly tiny snake within a few days had turned into so great a serpent, with a human face, moreover, and tame!” Lucian Of Samosata (125 B.C. – c 180 B.C.) on Alexander of Abonoteichus 'The False Prophet'",
+    "firstNight": 0,
+    "otherNight": 0,
+    "reminders": [
+      "Snake Bite",
+      "Poisoned"
+    ]
+  },
+  {
+    "id": "augur",
+    "name": "Augur",
+    "image": [
+      "https://www.impeccabletiming.net/botc/augur.png",
+      "https://www.impeccabletiming.net/botc/augur_good.png"
+    ],
+    "team": "minion",
+    "edition": "fallofrome",
+    "ability": "If a Townsfolk nominates you, they immediately become a Bad Omen.",
+    "flavor": "“That everything in war and in peace, at home and abroad, was done only after taking the auspices?” - Titus 'Livy' Livius 59 B.C. - 17 A.D.",
+    "firstNight": 0,
+    "otherNight": 0
+  },
+  {
+    "id": "cleopatra",
+    "name": "Cleopatra",
+    "image": [
+      "https://www.impeccabletiming.net/botc/cleopatra.png",
+      "https://www.impeccabletiming.net/botc/cleopatra_good.png"
+    ],
+    "team": "demon",
+    "edition": "fallofrome",
+    "ability": "Each night, choose two players: if they nominate tomorrow, they die that night. Each day, if a good player (Travellers don't count) does not nominate, evil wins. ",
+    "flavor": "“Fool! Don't you see now that I could have poisoned you a hundred times had I been able to live without you!” - Cleopatra VII Thea Philopator 69 B.C. - 30 B.C.",
+    "firstNight": 20,
+    "otherNight": 12,
+    "firstNightReminder": "Cleopatra chooses 2 players. :reminder: :reminder:",
+    "otherNightReminder": "If a *CHOSEN* player nominated today, they die. :reminder: :reminder: Cleopatra chooses 2 players. :reminder::reminder:",
+    "reminders": [
+      "Chosen",
+      "Chosen",
+      "Dead",
+      "Dead"
+    ]
+  },
+  {
+    "id": "caesar",
+    "name": "Caesar",
+    "image": [
+      "https://www.impeccabletiming.net/botc/caesar.png",
+      "https://www.impeccabletiming.net/botc/caesar_good.png"
+    ],
+    "team": "demon",
+    "edition": "fallofrome",
+    "ability": "Each night*, choose a player: they die. The 1st time an evil player dies by execution, that night, choose an additional player: they die.",
+    "flavor": "“I came, I saw, I conquered.” - Gaius Julius Caesar 100 B.C. - 44 B.C.",
+    "firstNight": 0,
+    "otherNight": 15,
+    "otherNightReminder": "Caesar chooses a player. :reminder: If an evil player was executed and died today, Caesar chooses a player. :reminder:",
+    "reminders": [
+      "Betrayal",
+      "Dead",
+      "Dead",
+      "Kill Used"
+    ]
+  },
+  {
+    "id": "crassus",
+    "name": "Crassus",
+    "image": [
+      "https://www.impeccabletiming.net/botc/crassus.png",
+      "https://www.impeccabletiming.net/botc/crassus_good.png"
+    ],
+    "team": "demon",
+    "edition": "fallofrome",
+    "ability": "Each night*, choose a player: they die. If the 1st Crassus publicly claims to be Spartacus & dies with 5 or more players alive, an evil player becomes Crassus.",
+    "flavor": "“Those who aim at great deeds must also suffer greatly...” - Lucius Mestrius 'Plutarch' Plutarchus c. 49 A.D. - 119 A.D.",
+    "firstNight": 0,
+    "otherNight": 13,
+    "otherNightReminder": "Crassus chooses a player. :reminder:If the 1st Crassus died today and claimed *I AM SPARTACUS!*, an evil player becomes Crassus.If you haven't done this yet, do so now. :reminder:  Wake that player. Show the *YOU ARE* token &amp; the Crassus token.",
+    "reminders": [
+      "Dead",
+      "1st Crassus"
+    ]
+  },
+  {
+    "id": "hannibal",
+    "name": "Hannibal",
+    "image": [
+      "https://www.impeccabletiming.net/botc/hannibal.png",
+      "https://www.impeccabletiming.net/botc/hannibal_good.png"
+    ],
+    "team": "demon",
+    "edition": "fallofrome",
+    "ability": "You think you are a good character, but you are not. Minions learn 3 bluffs. Each night*, a player might die. The 1st Hannibal to die, becomes good. [+1 Hannibal] ",
+    "flavor": "“I will either find a way or make one.” - Hannibal 247 B.C. - c 182 B.C.",
+    "firstNight": 18,
+    "otherNight": 14,
+    "firstNightReminder": "Select 2 good players. :reminder: :reminder: Wake all Minions together:  Show them the Hannibal token and point to both Demons. Show three not-in-play character tokens.",
+    "otherNightReminder": "1 or 2 players might die. :reminder: :reminder: If a Hannibal died today, wake that player:  Show the *YOU ARE* token, the Hannibal token, and give a thumbs up.",
+    "remindersGlobal": [
+      "Is a Hannibal",
+      "Is a Hannibal",
+      "Dead",
+      "Dead"
+    ],
+    "setup": true,
+    "special": [
+      {
+        "type": "selection",
+        "name": "bag-disabled"
+      },
+      {
+        "type": "reveal",
+        "name": "replace-character"
+      }
+    ]
+  },
+  {
+    "id": "architect",
+    "name": "Architect",
+    "image": [
+      "https://www.impeccabletiming.net/botc/architect.png",
+      "https://www.impeccabletiming.net/botc/architect_good.png",
+      "https://www.impeccabletiming.net/botc/architect_evil.png"
+    ],
+    "team": "traveller",
+    "edition": "fallofrome",
+    "ability": "Each night*, choose a player: 1) they become a not-in-play character of the same type, or 2) they swap characters with a player of the same type.",
+    "flavor": "I found Rome a city of bricks and left it the city of marbles.",
+    "firstNight": 0,
+    "otherNight": 7,
+    "otherNightReminder": "The Architect chooses a player. :reminder: :reminder: Choose option 1 or 2. Wake each player individually:  Show the *YOU ARE* token &amp; their new character token.",
+    "reminders": [
+      "Redesigned",
+      "Redesigned"
+    ]
+  },
+  {
+    "id": "mercenary",
+    "name": "Mercenary",
+    "image": [
+      "https://www.impeccabletiming.net/botc/mercenary.png",
+      "https://www.impeccabletiming.net/botc/mercenary_good.png",
+      "https://www.impeccabletiming.net/botc/mercenary_evil.png"
+    ],
+    "team": "traveller",
+    "edition": "fallofrome",
+    "ability": "Each night*, gain the ability of a player who publicly claimed Spartacus today. If a Mercenary is exiled, you are exiled too. [+1 Mercenary of opposing alignment]",
+    "flavor": "Let the buyer beware... ...and beware me too!",
+    "firstNight": 0,
+    "otherNight": 4,
+    "otherNightReminder": "Wake each Mercenary separately:  Show a character token that publicly claimed to be Spartacus today. :reminder: :reminder:",
+    "reminders": [
+      "Good",
+      "Evil",
+      "Good Ability",
+      "Evil Ability"
+    ]
+  },
+  {
+    "id": "highpriest1",
+    "name": "High Priest",
+    "image": [
+      "https://www.impeccabletiming.net/botc/highpriest1.png",
+      "https://www.impeccabletiming.net/botc/highpriest1_good.png",
+      "https://www.impeccabletiming.net/botc/highpriest1_evil.png"
+    ],
+    "team": "traveller",
+    "edition": "fallofrome",
+    "ability": "Each day, publicly choose a unique living player to bless: if a majority of players agree, something good happens to them.",
+    "flavor": "The first and greatest punishment of the sinner is the conscience of sin.",
+    "firstNight": 0,
+    "otherNight": 5,
+    "otherNightReminder": "If a player was *BLESSED* today, something good happens to them.",
+    "reminders": [
+      "Blessed",
+      "Blessed",
+      "Blessed",
+      "Blessed",
+      "Blessed",
+      "Blessed",
+      "Blessed",
+      "Blessed",
+      "Blessed",
+      "Blessed",
+      "Failed",
+      "Failed",
+      "Failed",
+      "Failed",
+      "Failed",
+      "Failed",
+      "Failed",
+      "Failed",
+      "Failed",
+      "Failed"
+    ]
+  },
+  {
+    "id": "emperor",
+    "name": "Emperor",
+    "image": [
+      "https://www.impeccabletiming.net/botc/emperor.png",
+      "https://www.impeccabletiming.net/botc/emperor_good.png",
+      "https://www.impeccabletiming.net/botc/emperor_evil.png"
+    ],
+    "team": "traveller",
+    "edition": "fallofrome",
+    "ability": "Each day, choose the 1st executions outcome. If you choose to protect today's execution: they survive. Otherwise, tonight you learn their alignment.",
+    "flavor": "Which death is preferable to every other? The unexpected.",
+    "firstNight": 0,
+    "otherNight": 8,
+    "otherNightReminder": "Give a thumbs up or thumbs down.",
+    "reminders": [
+      "Executed"
+    ]
+  },
+  {
+    "id": "highpriest2",
+    "name": "High Priest",
+    "image": [
+      "https://www.impeccabletiming.net/botc/highpriest2.png",
+      "https://www.impeccabletiming.net/botc/highpriest2_good.png",
+      "https://www.impeccabletiming.net/botc/highpriest2_evil.png"
+    ],
+    "team": "traveller",
+    "edition": "fallofrome",
+    "ability": "Each day, publicly choose a unique living player to bless: if a majority of players agree, tomorrow they may learn a statement. Tonight, choose if it’s true.",
+    "flavor": "The first and greatest punishment of the sinner is the conscience of sin.",
+    "firstNight": 0,
+    "otherNight": 6,
+    "otherNightReminder": "If a player was *BLESSED* today, wake the High Priest. The High Priest nods or shakes their head. :reminder:",
+    "reminders": [
+      "Blessed",
+      "Blessed",
+      "Blessed",
+      "Blessed",
+      "Blessed",
+      "Blessed",
+      "Blessed",
+      "Blessed",
+      "Blessed",
+      "Failed",
+      "Failed",
+      "Failed",
+      "Failed",
+      "Failed",
+      "Failed",
+      "Failed",
+      "Failed",
+      "Failed",
+      "True",
+      "False"
+    ]
+  },
+  {
+    "id": "sibyl",
+    "name": "Sibyl",
+    "image": [
+      "https://www.impeccabletiming.net/botc/sibyl.png",
+      "https://www.impeccabletiming.net/botc/sibyl_good.png",
+      "https://www.impeccabletiming.net/botc/sibyl_evil.png"
+    ],
+    "team": "traveller",
+    "edition": "fallofrome",
+    "ability": "Each day, after the 1st execution, you may publicly choose a dead player: they may nominate. If the majority of the dead and yourself agree, they are executed.",
+    "flavor": "To such a degree will I be changed that I will be visible to no one; but I will be recognized by my voice. And with my voice, to you, I give a second chance.",
+    "firstNight": 0,
+    "otherNight": 0
+  },
+  "bootlegger",
+  {
+    "id": "iamspartacus",
+    "name": "“I Am Spartacus!”",
+    "image": [
+      "https://www.impeccabletiming.net/botc/iamspartacus.png"
+    ],
+    "team": "fabled",
+    "edition": "fallofrome",
+    "ability": "Each day, up to half the living players (rounded up & Travellers don’t count) may publicly claim to be Spartacus.",
+    "flavor": "“The ego cuts deeper than the flesh.” - Spartacus c. 103 B.C. - 71 B.C.",
+    "firstNight": 0,
+    "otherNight": 0,
+    "reminders": [
+      "I am Spartacus!",
+      "I am Spartacus!",
+      "I am Spartacus!",
+      "I am Spartacus!",
+      "I am Spartacus!",
+      "I am Spartacus!",
+      "I am Spartacus!",
+      "I am Spartacus!",
+      "I am Spartacus!",
+      "I am Spartacus!"
+    ]
+  }
+]

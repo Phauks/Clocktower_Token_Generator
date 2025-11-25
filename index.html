@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blood on the Clocktower Token Generator</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="header-title">
+                    <h1>Blood on the Clocktower Token Generator</h1>
+                    <p class="subtitle">Generate custom character and reminder tokens for your scripts</p>
+                </div>
+                <button class="settings-btn" id="settingsBtn" aria-label="Open style settings" title="Style Settings">
+                    <svg class="settings-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Settings Modal -->
+        <div class="settings-modal" id="settingsModal">
+            <div class="settings-modal-overlay" id="settingsModalOverlay"></div>
+            <div class="settings-modal-content">
+                <div class="settings-modal-header">
+                    <h2>Style Settings</h2>
+                    <button class="settings-modal-close" id="settingsModalClose" aria-label="Close settings">×</button>
+                </div>
+                <div class="settings-modal-body">
+                    <!-- Leaf Options (TBI) -->
+                    <div class="settings-group">
+                        <h4 class="settings-group-title">Leaf Options</h4>
+                        <div class="option-group disabled-tbi">
+                            <label class="option-label" for="modalLeafGeneration">
+                                <span>Leaf Style</span>
+                                <span class="badge-tbi">TBI</span>
+                            </label>
+                            <select id="modalLeafGeneration" class="select-input" disabled>
+                                <option value="leaves_1">Leaves 1</option>
+                                <option value="leaves_2">Leaves 2</option>
+                                <option value="leaves_3">Leaves 3</option>
+                                <option value="leaves_4">Leaves 4</option>
+                                <option value="leaves_5">Leaves 5</option>
+                                <option value="leaves_6">Leaves 6</option>
+                                <option value="leaves_7">Leaves 7</option>
+                            </select>
+                        </div>
+                        <div class="option-group disabled-tbi">
+                            <label class="option-label" for="modalMaximumLeaves">
+                                <span>Maximum Leaves</span>
+                                <span class="badge-tbi">TBI</span>
+                            </label>
+                            <input type="number" id="modalMaximumLeaves" value="3" min="0" max="10" class="number-input" disabled>
+                        </div>
+                        <div class="option-group disabled-tbi">
+                            <label class="option-label" for="modalLeafProbability">
+                                <span>Leaf Probability (%)</span>
+                                <span class="badge-tbi">TBI</span>
+                            </label>
+                            <input type="number" id="modalLeafProbability" value="30" min="0" max="100" class="number-input" disabled>
+                        </div>
+                    </div>
+
+                    <!-- Token Appearance -->
+                    <div class="settings-group">
+                        <h4 class="settings-group-title">Token Appearance</h4>
+                        <div class="option-group">
+                            <label class="option-label" for="modalSetupFlowerStyle">
+                                <span>Setup Flower Style</span>
+                                <span class="tooltip" title="Select setup flower overlay style">ⓘ</span>
+                            </label>
+                            <select id="modalSetupFlowerStyle" class="select-input">
+                                <option value="setup_flower_1">Setup Flower 1</option>
+                                <option value="setup_flower_2">Setup Flower 2</option>
+                                <option value="setup_flower_3">Setup Flower 3</option>
+                                <option value="setup_flower_4">Setup Flower 4</option>
+                                <option value="setup_flower_5">Setup Flower 5</option>
+                                <option value="setup_flower_6">Setup Flower 6</option>
+                                <option value="setup_flower_7">Setup Flower 7</option>
+                            </select>
+                        </div>
+                        <div class="option-group">
+                            <label class="option-label" for="modalReminderBackground">
+                                <span>Reminder Background</span>
+                                <span class="tooltip" title="Background color for reminder tokens">ⓘ</span>
+                            </label>
+                            <input type="color" id="modalReminderBackground" value="#FFFFFF" class="color-input">
+                        </div>
+                        <div class="option-group">
+                            <label class="option-label" for="modalCharacterBackground">
+                                <span>Character Background</span>
+                                <span class="tooltip" title="Select character background pattern">ⓘ</span>
+                            </label>
+                            <select id="modalCharacterBackground" class="select-input">
+                                <option value="character_background_1">Background 1</option>
+                                <option value="character_background_2">Background 2</option>
+                                <option value="character_background_3">Background 3</option>
+                                <option value="character_background_4">Background 4</option>
+                                <option value="character_background_5">Background 5</option>
+                                <option value="character_background_6">Background 6</option>
+                                <option value="character_background_7">Background 7</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Font Options -->
+                    <div class="settings-group">
+                        <h4 class="settings-group-title">Fonts</h4>
+                        <div class="option-group">
+                            <label class="option-label" for="modalCharacterNameFont">
+                                <span>Character Name Font</span>
+                                <span class="tooltip" title="Font for character names">ⓘ</span>
+                            </label>
+                            <select id="modalCharacterNameFont" class="select-input">
+                                <option value="Dumbledor">Dumbledor</option>
+                                <option value="DumbledorThin">Dumbledor Thin</option>
+                                <option value="DumbledorWide">Dumbledor Wide</option>
+                            </select>
+                        </div>
+                        <div class="option-group">
+                            <label class="option-label" for="modalCharacterReminderFont">
+                                <span>Reminder Text Font</span>
+                                <span class="tooltip" title="Font for reminder text">ⓘ</span>
+                            </label>
+                            <select id="modalCharacterReminderFont" class="select-input">
+                                <option value="TradeGothic">Trade Gothic</option>
+                                <option value="TradeGothicBold">Trade Gothic Bold</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-modal-footer">
+                    <button class="btn-secondary" id="settingsModalCancel">Cancel</button>
+                    <button class="btn-primary" id="settingsModalApply">Apply Settings</button>
+                </div>
+            </div>
+        </div>
+
+        <main class="main-content">
+            <!-- Options Panel (Left Sidebar) -->
+            <aside class="options-panel" id="optionsPanel">
+                <button class="panel-toggle" id="panelToggle" aria-label="Toggle options panel">
+                    <span class="toggle-icon">☰</span>
+                </button>
+
+                <div class="panel-content">
+                    <!-- Token Generation Section -->
+                    <section class="option-section">
+                        <h3 class="section-header">Token Generation</h3>
+                        
+                        <div class="option-group">
+                            <label class="option-label" for="displayAbilityText">
+                                <span>Display Ability Text</span>
+                                <span class="tooltip" title="Display ability text on character tokens">ⓘ</span>
+                            </label>
+                            <input type="checkbox" id="displayAbilityText" class="toggle-switch">
+                        </div>
+
+                        <div class="option-group">
+                            <label class="option-label" for="roleDiameter">
+                                <span>Character Token Diameter (px)</span>
+                                <span class="tooltip" title="Diameter in pixels for character tokens">ⓘ</span>
+                            </label>
+                            <input type="number" id="roleDiameter" value="300" min="100" max="1000" class="number-input">
+                        </div>
+
+                        <div class="option-group">
+                            <label class="option-label" for="reminderDiameter">
+                                <span>Reminder Token Diameter (px)</span>
+                                <span class="tooltip" title="Diameter in pixels for reminder tokens">ⓘ</span>
+                            </label>
+                            <input type="number" id="reminderDiameter" value="525" min="100" max="1000" class="number-input">
+                        </div>
+
+                        <div class="option-group disabled-tbi">
+                            <label class="option-label" for="generateOfficialCharacters">
+                                <span>Generate Official Characters</span>
+                                <span class="badge-tbi">TBI</span>
+                            </label>
+                            <input type="checkbox" id="generateOfficialCharacters" checked disabled>
+                        </div>
+
+                        <div class="option-group disabled-tbi">
+                            <label class="option-label" for="generateCustomCharacters">
+                                <span>Generate Custom Characters</span>
+                                <span class="badge-tbi">TBI</span>
+                            </label>
+                            <input type="checkbox" id="generateCustomCharacters" checked disabled>
+                        </div>
+
+                        <div class="option-group">
+                            <label class="option-label" for="tokenCount">
+                                <span>Show Reminder Count</span>
+                                <span class="tooltip" title="Show reminder count on character tokens">ⓘ</span>
+                            </label>
+                            <input type="checkbox" id="tokenCount" class="toggle-switch">
+                        </div>
+
+                        <div class="option-group disabled-tbi">
+                            <label class="option-label" for="applyScriptName">
+                                <span>Apply Script Name</span>
+                                <span class="badge-tbi">TBI</span>
+                            </label>
+                            <input type="checkbox" id="applyScriptName" checked disabled>
+                        </div>
+
+                        <div class="option-group disabled-tbi">
+                            <label class="option-label" for="scriptNameToken">
+                                <span>Script Name Token</span>
+                                <span class="badge-tbi">TBI</span>
+                            </label>
+                            <input type="checkbox" id="scriptNameToken" checked disabled>
+                        </div>
+
+                        <div class="option-group disabled-tbi">
+                            <label class="option-label" for="almanacToken">
+                                <span>Almanac QR Token</span>
+                                <span class="badge-tbi">TBI</span>
+                            </label>
+                            <input type="checkbox" id="almanacToken" checked disabled>
+                        </div>
+                    </section>
+
+                    <!-- Style Options Section -->
+                    <section class="option-section">
+                        <h3 class="section-header">Style Options</h3>
+
+                        <div class="option-group disabled-tbi">
+                            <label class="option-label" for="leafGeneration">
+                                <span>Leaf Style</span>
+                                <span class="badge-tbi">TBI</span>
+                            </label>
+                            <select id="leafGeneration" class="select-input" disabled>
+                                <option value="leaves_1">Leaves 1</option>
+                                <option value="leaves_2">Leaves 2</option>
+                                <option value="leaves_3">Leaves 3</option>
+                                <option value="leaves_4">Leaves 4</option>
+                                <option value="leaves_5">Leaves 5</option>
+                                <option value="leaves_6">Leaves 6</option>
+                                <option value="leaves_7">Leaves 7</option>
+                            </select>
+                        </div>
+
+                        <div class="option-group disabled-tbi">
+                            <label class="option-label" for="maximumLeaves">
+                                <span>Maximum Leaves</span>
+                                <span class="badge-tbi">TBI</span>
+                            </label>
+                            <input type="number" id="maximumLeaves" value="3" min="0" max="10" class="number-input" disabled>
+                        </div>
+
+                        <div class="option-group disabled-tbi">
+                            <label class="option-label" for="leafPopulationProbability">
+                                <span>Leaf Probability (%)</span>
+                                <span class="badge-tbi">TBI</span>
+                            </label>
+                            <input type="number" id="leafPopulationProbability" value="30" min="0" max="100" class="number-input" disabled>
+                        </div>
+
+                        <div class="option-group">
+                            <label class="option-label" for="setupFlowerStyle">
+                                <span>Setup Flower Style</span>
+                                <span class="tooltip" title="Select setup flower overlay style">ⓘ</span>
+                            </label>
+                            <select id="setupFlowerStyle" class="select-input">
+                                <option value="setup_flower_1">Setup Flower 1</option>
+                                <option value="setup_flower_2">Setup Flower 2</option>
+                                <option value="setup_flower_3">Setup Flower 3</option>
+                                <option value="setup_flower_4">Setup Flower 4</option>
+                                <option value="setup_flower_5">Setup Flower 5</option>
+                                <option value="setup_flower_6">Setup Flower 6</option>
+                                <option value="setup_flower_7">Setup Flower 7</option>
+                            </select>
+                        </div>
+
+                        <div class="option-group">
+                            <label class="option-label" for="reminderBackground">
+                                <span>Reminder Background</span>
+                                <span class="tooltip" title="Background color for reminder tokens">ⓘ</span>
+                            </label>
+                            <input type="color" id="reminderBackground" value="#FFFFFF" class="color-input">
+                        </div>
+
+                        <div class="option-group">
+                            <label class="option-label" for="characterBackground">
+                                <span>Character Background</span>
+                                <span class="tooltip" title="Select character background pattern">ⓘ</span>
+                            </label>
+                            <select id="characterBackground" class="select-input">
+                                <option value="character_background_1">Background 1</option>
+                                <option value="character_background_2">Background 2</option>
+                                <option value="character_background_3">Background 3</option>
+                                <option value="character_background_4">Background 4</option>
+                                <option value="character_background_5">Background 5</option>
+                                <option value="character_background_6">Background 6</option>
+                                <option value="character_background_7">Background 7</option>
+                            </select>
+                        </div>
+
+                        <div class="option-group">
+                            <label class="option-label" for="characterNameFont">
+                                <span>Character Name Font</span>
+                                <span class="tooltip" title="Font for character names">ⓘ</span>
+                            </label>
+                            <select id="characterNameFont" class="select-input">
+                                <option value="Dumbledor">Dumbledor</option>
+                                <option value="DumbledorThin">Dumbledor Thin</option>
+                                <option value="DumbledorWide">Dumbledor Wide</option>
+                            </select>
+                        </div>
+
+                        <div class="option-group">
+                            <label class="option-label" for="characterReminderFont">
+                                <span>Reminder Text Font</span>
+                                <span class="tooltip" title="Font for reminder text">ⓘ</span>
+                            </label>
+                            <select id="characterReminderFont" class="select-input">
+                                <option value="TradeGothic">Trade Gothic</option>
+                                <option value="TradeGothicBold">Trade Gothic Bold</option>
+                            </select>
+                        </div>
+                    </section>
+
+                    <!-- PDF Generation Section -->
+                    <section class="option-section">
+                        <h3 class="section-header">PDF Generation</h3>
+
+                        <h4 class="subsection-header">Character Token</h4>
+
+                        <div class="option-group">
+                            <label class="option-label" for="tokenPadding">
+                                <span>Token Padding (px)</span>
+                                <span class="tooltip" title="Padding between tokens in pixels">ⓘ</span>
+                            </label>
+                            <input type="number" id="tokenPadding" value="75" min="0" max="200" class="number-input">
+                        </div>
+
+                        <div class="option-group disabled-tbi">
+                            <label class="option-label" for="tokenLayout">
+                                <span>Token Layout</span>
+                                <span class="badge-tbi">TBI</span>
+                            </label>
+                            <select id="tokenLayout" class="select-input" disabled>
+                                <option value="grid">Grid</option>
+                                <option value="compact">Compact</option>
+                                <option value="horizontal">Horizontal</option>
+                            </select>
+                        </div>
+
+                        <details class="advanced-options">
+                            <summary>Advanced Options</summary>
+                            <div class="option-group">
+                                <label class="option-label" for="xOffset">
+                                    <span>X Offset (px)</span>
+                                    <span class="tooltip" title="X-coordinate offset for token placement">ⓘ</span>
+                                </label>
+                                <input type="number" id="xOffset" value="0" class="number-input">
+                            </div>
+
+                            <div class="option-group">
+                                <label class="option-label" for="yOffset">
+                                    <span>Y Offset (px)</span>
+                                    <span class="tooltip" title="Y-coordinate offset for token placement">ⓘ</span>
+                                </label>
+                                <input type="number" id="yOffset" value="0" class="number-input">
+                            </div>
+                        </details>
+                    </section>
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <div class="content-area">
+                <!-- Input Section -->
+                <section class="input-section">
+                    <h2>Script Input</h2>
+                    
+                    <div class="input-methods">
+                        <div class="input-method">
+                            <label for="fileUpload" class="file-upload-label">
+                                <span class="upload-icon">📁</span>
+                                <span>Upload JSON File</span>
+                                <input type="file" id="fileUpload" accept=".json" class="file-input">
+                            </label>
+                        </div>
+
+                        <div class="input-method">
+                            <label for="exampleScripts">Or select an example script:</label>
+                            <select id="exampleScripts" class="select-input">
+                                <option value="">-- Select Example --</option>
+                                <option value="Uncertain Death.json">Uncertain Death</option>
+                                <option value="Fall of Rome.json">Fall of Rome</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="json-editor-container">
+                        <div class="editor-header">
+                            <span>JSON Editor</span>
+                            <div class="editor-actions">
+                                <button id="formatJson" class="btn-secondary" title="Format JSON">Format</button>
+                                <button id="clearJson" class="btn-secondary" title="Clear editor">Clear</button>
+                            </div>
+                        </div>
+                        <textarea id="jsonEditor" class="json-editor" placeholder="Paste your JSON script here or upload a file..."></textarea>
+                        <div id="jsonValidation" class="validation-message"></div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button id="generateTokens" class="btn-primary">
+                            <span class="btn-icon">⚙️</span>
+                            Generate Tokens
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Output Section -->
+                <section class="output-section" id="outputSection">
+                    <h2>Generated Tokens</h2>
+
+                    <!-- Filters -->
+                    <div class="filters-container">
+                        <div class="filter-group">
+                            <label for="teamFilter">Filter by Team:</label>
+                            <select id="teamFilter" class="select-input">
+                                <option value="all">All Teams</option>
+                                <option value="townsfolk">Townsfolk</option>
+                                <option value="outsider">Outsiders</option>
+                                <option value="minion">Minions</option>
+                                <option value="demon">Demons</option>
+                                <option value="traveller">Travellers</option>
+                                <option value="fabled">Fabled</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="tokenTypeFilter">Token Type:</label>
+                            <select id="tokenTypeFilter" class="select-input">
+                                <option value="all">All Tokens</option>
+                                <option value="character">Characters Only</option>
+                                <option value="reminder">Reminders Only</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="reminderFilter">Has Reminders:</label>
+                            <select id="reminderFilter" class="select-input">
+                                <option value="all">All</option>
+                                <option value="has">Has Reminders</option>
+                                <option value="none">No Reminders</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Token Counts -->
+                    <div class="token-counts" id="tokenCounts">
+                        <div class="count-item">
+                            <span class="count-label">Townsfolk:</span>
+                            <span class="count-value" id="countTownsfolk">0 / 0</span>
+                        </div>
+                        <div class="count-item">
+                            <span class="count-label">Outsiders:</span>
+                            <span class="count-value" id="countOutsider">0 / 0</span>
+                        </div>
+                        <div class="count-item">
+                            <span class="count-label">Minions:</span>
+                            <span class="count-value" id="countMinion">0 / 0</span>
+                        </div>
+                        <div class="count-item">
+                            <span class="count-label">Demons:</span>
+                            <span class="count-value" id="countDemon">0 / 0</span>
+                        </div>
+                        <div class="count-item">
+                            <span class="count-label">Travellers:</span>
+                            <span class="count-value" id="countTraveller">0 / 0</span>
+                        </div>
+                        <div class="count-item">
+                            <span class="count-label">Fabled:</span>
+                            <span class="count-value" id="countFabled">0 / 0</span>
+                        </div>
+                        <div class="count-item total">
+                            <span class="count-label">Total:</span>
+                            <span class="count-value" id="countTotal">0 / 0</span>
+                        </div>
+                    </div>
+
+                    <!-- Token Grid -->
+                    <div class="token-grid" id="tokenGrid">
+                        <div class="loading-state" id="loadingState" style="display: none;">
+                            <div class="spinner"></div>
+                            <p>Generating tokens...</p>
+                        </div>
+                        <div class="empty-state" id="emptyState">
+                            <p>No tokens generated yet. Upload or paste a JSON script to get started.</p>
+                        </div>
+                    </div>
+
+                    <!-- Export Options -->
+                    <div class="export-options" id="exportOptions" style="display: none;">
+                        <button id="downloadAllPng" class="btn-secondary">
+                            <span class="btn-icon">📥</span>
+                            Download All (ZIP)
+                        </button>
+                        <button id="generatePdf" class="btn-primary">
+                            <span class="btn-icon">📄</span>
+                            Generate PDF
+                        </button>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>Blood on the Clocktower Token Generator &copy; 2024</p>
+        </footer>
+    </div>
+
+    <!-- Scripts with integrity checks for security -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" 
+            integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA==" 
+            crossorigin="anonymous" 
+            referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" 
+            integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" 
+            crossorigin="anonymous" 
+            referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js" 
+            integrity="sha512-Qlv6VSKh1gDKGoJbnyA5RMXYcvnpIqhO++MhIM2fStMcGT9i2T//tXHwSXVWLqGf8S8rkHoVWwKmHjwTmWQgg==" 
+            crossorigin="anonymous" 
+            referrerpolicy="no-referrer"></script>
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

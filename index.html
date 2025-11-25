@@ -121,6 +121,19 @@
                             </label>
                             <input type="checkbox" id="applyScriptName" checked disabled>
                         </div>
+                    </section>
+
+                    <!-- Special Tokens Section -->
+                    <section class="option-section">
+                        <h3 class="section-header">Special Tokens</h3>
+
+                        <div class="option-group">
+                            <label class="option-label" for="pandemoniumToken">
+                                <span>Pandemonium Institute Token</span>
+                                <span class="tooltip" title="Generate official game branding token">ⓘ</span>
+                            </label>
+                            <input type="checkbox" id="pandemoniumToken" class="toggle-switch" checked>
+                        </div>
 
                         <div class="option-group">
                             <label class="option-label" for="scriptNameToken">
@@ -341,6 +354,7 @@
                                 <option value="traveller">Travellers</option>
                                 <option value="fabled">Fabled</option>
                                 <option value="loric">Loric</option>
+                                <option value="special">Special</option>
                             </select>
                         </div>
 
@@ -392,6 +406,10 @@
                         <div class="count-item">
                             <span class="count-label">Loric:</span>
                             <span class="count-value" id="countLoric">0 / 0</span>
+                        </div>
+                        <div class="count-item">
+                            <span class="count-label">Special:</span>
+                            <span class="count-value" id="countSpecial">0 / 0</span>
                         </div>
                         <div class="count-item total">
                             <span class="count-label">Total:</span>

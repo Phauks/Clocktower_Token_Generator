@@ -4,7 +4,7 @@
  */
 
 // Team types
-export type Team = 'townsfolk' | 'outsider' | 'minion' | 'demon' | 'traveller' | 'fabled' | 'loric';
+export type Team = 'townsfolk' | 'outsider' | 'minion' | 'demon' | 'traveller' | 'fabled' | 'loric' | 'special';
 
 // Character data from BotC API
 export interface Character {
@@ -47,6 +47,7 @@ export interface TokenConfig {
     applyScriptName: boolean;
     scriptNameToken: boolean;
     almanacToken: boolean;
+    pandemoniumToken: boolean;
 
     // Style Options
     leafGeneration: string;
@@ -77,11 +78,12 @@ export interface GenerationOptions {
     characterReminderFont: string;
     scriptNameToken: boolean;
     almanacToken: boolean;
+    pandemoniumToken: boolean;
 }
 
 // Generated token
 export interface Token {
-    type: 'character' | 'reminder' | 'script-name' | 'almanac';
+    type: 'character' | 'reminder' | 'script-name' | 'almanac' | 'pandemonium';
     name: string;
     filename: string;
     team: Team | string;
@@ -133,6 +135,7 @@ export interface TokenCounts {
     traveller: TeamCounts;
     fabled: TeamCounts;
     loric: TeamCounts;
+    special: TeamCounts;
     total: TeamCounts;
 }
 
@@ -236,6 +239,7 @@ export interface UIElements {
     tokenCount: HTMLInputElement | null;
     scriptNameToken: HTMLInputElement | null;
     almanacToken: HTMLInputElement | null;
+    pandemoniumToken: HTMLInputElement | null;
 
     // Style Options
     setupFlowerStyle: HTMLSelectElement | null;
@@ -283,6 +287,7 @@ export interface UIElements {
     countTraveller: HTMLElement | null;
     countFabled: HTMLElement | null;
     countLoric: HTMLElement | null;
+    countSpecial: HTMLElement | null;
     countTotal: HTMLElement | null;
 }
 
@@ -310,6 +315,7 @@ export interface PresetConfig {
         tokenCount?: boolean;
         scriptNameToken?: boolean;
         almanacToken?: boolean;
+        pandemoniumToken?: boolean;
     };
 }
 

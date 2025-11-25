@@ -62,7 +62,7 @@ export const CONFIG: Config = {
     ],
 
     // Team Types
-    TEAMS: ['townsfolk', 'outsider', 'minion', 'demon', 'traveller', 'fabled', 'loric'] as Team[],
+    TEAMS: ['townsfolk', 'outsider', 'minion', 'demon', 'traveller', 'fabled', 'loric', 'special'] as Team[],
 
     // Font Settings
     FONTS: {
@@ -99,7 +99,8 @@ export const TEAM_COLORS: TeamColors = {
     demon: '#8b0000',
     traveller: '#5f4f1a',
     fabled: '#4f1a5f',
-    loric: '#2a5f5f'
+    loric: '#2a5f5f',
+    special: '#808080'
 };
 
 /**
@@ -112,7 +113,8 @@ export const TEAM_LABELS: TeamLabels = {
     demon: 'Demon',
     traveller: 'Traveller',
     fabled: 'Fabled',
-    loric: 'Loric'
+    loric: 'Loric',
+    special: 'Special'
 };
 
 export default CONFIG;

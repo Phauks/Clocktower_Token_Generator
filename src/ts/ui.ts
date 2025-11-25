@@ -124,6 +124,7 @@ export class UIController {
             tokenCount: document.getElementById('tokenCount') as HTMLInputElement | null,
             scriptNameToken: document.getElementById('scriptNameToken') as HTMLInputElement | null,
             almanacToken: document.getElementById('almanacToken') as HTMLInputElement | null,
+            pandemoniumToken: document.getElementById('pandemoniumToken') as HTMLInputElement | null,
 
             // Style Options
             setupFlowerStyle: document.getElementById('setupFlowerStyle') as HTMLSelectElement | null,
@@ -171,6 +172,7 @@ export class UIController {
             countTraveller: document.getElementById('countTraveller'),
             countFabled: document.getElementById('countFabled'),
             countLoric: document.getElementById('countLoric'),
+            countSpecial: document.getElementById('countSpecial'),
             countTotal: document.getElementById('countTotal')
         };
     }
@@ -217,7 +219,7 @@ export class UIController {
         // Option changes - trigger regeneration
         const optionElements: (keyof UIElements)[] = [
             'displayAbilityText', 'roleDiameter', 'reminderDiameter', 'tokenCount',
-            'scriptNameToken', 'almanacToken',
+            'scriptNameToken', 'almanacToken', 'pandemoniumToken',
             'setupFlowerStyle', 'reminderBackground', 'characterBackground',
             'characterNameFont', 'characterReminderFont'
         ];
@@ -509,7 +511,8 @@ export class UIController {
             characterNameFont: this.elements.characterNameFont?.value ?? CONFIG.STYLE.CHARACTER_NAME_FONT,
             characterReminderFont: this.elements.characterReminderFont?.value ?? CONFIG.STYLE.CHARACTER_REMINDER_FONT,
             scriptNameToken: this.elements.scriptNameToken?.checked ?? false,
-            almanacToken: this.elements.almanacToken?.checked ?? false
+            almanacToken: this.elements.almanacToken?.checked ?? false,
+            pandemoniumToken: this.elements.pandemoniumToken?.checked ?? false
         };
     }
 
@@ -585,7 +588,8 @@ export class UIController {
             demon: 'countDemon',
             traveller: 'countTraveller',
             fabled: 'countFabled',
-            loric: 'countLoric'
+            loric: 'countLoric',
+            special: 'countSpecial'
         };
 
         CONFIG.TEAMS.forEach(team => {
@@ -615,10 +619,10 @@ export class UIController {
                 return false;
             }
 
-            // Type filter - special tokens (script-name, almanac) show with 'all' or 'character'
+            // Type filter - special tokens (script-name, almanac, pandemonium) show with 'all' or 'character'
             if (typeFilter !== 'all') {
                 if (typeFilter === 'character') {
-                    if (token.type !== 'character' && token.type !== 'script-name' && token.type !== 'almanac') {
+                    if (token.type !== 'character' && token.type !== 'script-name' && token.type !== 'almanac' && token.type !== 'pandemonium') {
                         return false;
                     }
                 } else if (token.type !== typeFilter) {
@@ -680,7 +684,7 @@ export class UIController {
 
         // Separate tokens by type - special tokens go with character tokens
         const characterTokens = this.filteredTokens.filter(t => 
-            t.type === 'character' || t.type === 'script-name' || t.type === 'almanac'
+            t.type === 'character' || t.type === 'script-name' || t.type === 'almanac' || t.type === 'pandemonium'
         );
         const reminderTokens = this.filteredTokens.filter(t => t.type === 'reminder');
 

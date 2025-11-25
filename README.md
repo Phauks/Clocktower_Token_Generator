@@ -1,6 +1,8 @@
 # Blood on the Clocktower Token Generator
 
-A web application for generating custom character and reminder tokens for Blood on the Clocktower scripts with extensive customization options and PDF export functionality.
+🌐 **[Launch Web App](https://phauks.github.io/Clocktower_Token_Generator/)**
+
+A web-based tool for generating custom Blood on the Clocktower character and reminder tokens with PDF export. Built with TypeScript for type safety and maintainability.
 
 ## Features
 
@@ -11,14 +13,49 @@ A web application for generating custom character and reminder tokens for Blood 
 - **Filter & Sort**: Filter tokens by team type, token type, or reminder status
 - **Curved Text**: Character names and reminder text curve along the bottom of tokens
 - **Setup Flower Overlay**: Characters with setup modifications display decorative overlays
+- **No Installation Required**: Runs entirely in your browser!
 
-## How to Use
+## Usage
 
-### Running Locally
+Simply visit the link above - no download or installation needed!
 
-1. Clone or download this repository
-2. Open `index.html` in a modern web browser (Chrome, Firefox, Safari, or Edge recommended)
-3. No build step or server required!
+## Development
+
+### Prerequisites
+
+- Node.js 18+ and npm
+
+### Setup
+
+```bash
+npm install
+```
+
+### Build
+
+```bash
+npm run build
+```
+
+### Watch Mode (for development)
+
+```bash
+npm run watch
+```
+
+### Project Structure
+
+```
+/src/ts/          # TypeScript source files
+/dist/js/         # Compiled JavaScript (gitignored, generated on build)
+/assets/          # Fonts, images, backgrounds
+/css/             # Stylesheets
+/example_scripts/ # Example JSON scripts
+```
+
+### Type Safety
+
+This project uses TypeScript with strict type checking enabled. All data structures are properly typed for better IDE support and error prevention.
 
 ### Generating Tokens
 

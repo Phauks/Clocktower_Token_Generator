@@ -41,8 +41,6 @@ export interface TokenConfig {
     displayAbilityText: boolean;
     roleDiameter: number;
     reminderDiameter: number;
-    generateOfficialCharacters: boolean;
-    generateCustomCharacters: boolean;
     tokenCount: boolean;
     applyScriptName: boolean;
     scriptNameToken: boolean;
@@ -263,6 +261,7 @@ export interface UIElements {
     outputSection: HTMLElement | null;
     teamFilter: HTMLSelectElement | null;
     tokenTypeFilter: HTMLSelectElement | null;
+    displayFilter: HTMLSelectElement | null;
     reminderFilter: HTMLSelectElement | null;
     tokenSections: HTMLElement | null;
     characterTokensSection: HTMLElement | null;

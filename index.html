@@ -90,22 +90,6 @@
                             <input type="number" id="reminderDiameter" value="525" min="100" max="1000" class="number-input">
                         </div>
 
-                        <div class="option-group disabled-tbi">
-                            <label class="option-label" for="generateOfficialCharacters">
-                                <span>Generate Official Characters</span>
-                                <span class="badge-tbi">TBI</span>
-                            </label>
-                            <input type="checkbox" id="generateOfficialCharacters" checked disabled>
-                        </div>
-
-                        <div class="option-group disabled-tbi">
-                            <label class="option-label" for="generateCustomCharacters">
-                                <span>Generate Custom Characters</span>
-                                <span class="badge-tbi">TBI</span>
-                            </label>
-                            <input type="checkbox" id="generateCustomCharacters" checked disabled>
-                        </div>
-
                         <div class="option-group">
                             <label class="option-label" for="tokenCount">
                                 <span>Show Reminder Count</span>
@@ -346,6 +330,15 @@
                                 <option value="all">All Tokens</option>
                                 <option value="character">Characters Only</option>
                                 <option value="reminder">Reminders Only</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="displayFilter">Display:</label>
+                            <select id="displayFilter" class="select-input">
+                                <option value="all">All</option>
+                                <option value="official">Official</option>
+                                <option value="custom">Custom</option>
                             </select>
                         </div>
 

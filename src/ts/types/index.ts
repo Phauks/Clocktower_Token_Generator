@@ -164,6 +164,7 @@ export interface FontSettings {
 
 // Configuration structure
 export interface Config {
+    VERSION: string;
     TOKEN: {
         ROLE_DIAMETER: number;
         REMINDER_DIAMETER: number;

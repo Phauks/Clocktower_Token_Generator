@@ -94,7 +94,10 @@ export class TokenGenerator {
         const radius = diameter / 2;
         const center = { x: radius, y: radius };
 
-        // Create circular clipping path
+        // Save initial state before clipping
+        ctx.save();
+
+        // Create circular clipping path for background and character image
         ctx.beginPath();
         ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
         ctx.closePath();
@@ -135,9 +138,8 @@ export class TokenGenerator {
             }
         }
 
-        // Reset clipping for text
+        // Restore context to remove clipping path before drawing text
         ctx.restore();
-        ctx.save();
 
         // 4. Draw ability text if enabled
         if (this.options.displayAbilityText && character.ability) {

@@ -326,8 +326,19 @@ export class UIController {
     updateTokenCounts() {
         const counts = calculateTokenCounts(this.characters);
 
+        // Map team names to element IDs for reliable lookup
+        const teamElementMap = {
+            townsfolk: 'countTownsfolk',
+            outsider: 'countOutsider',
+            minion: 'countMinion',
+            demon: 'countDemon',
+            traveller: 'countTraveller',
+            fabled: 'countFabled'
+        };
+
         CONFIG.TEAMS.forEach(team => {
-            const element = this.elements[`count${team.charAt(0).toUpperCase() + team.slice(1)}`];
+            const elementId = teamElementMap[team];
+            const element = this.elements[elementId];
             if (element) {
                 element.textContent = `${counts[team].characters} / ${counts[team].reminders}`;
             }

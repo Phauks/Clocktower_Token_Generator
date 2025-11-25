@@ -201,6 +201,15 @@ export class PDFGenerator {
  * @returns {Promise<Blob>} ZIP file blob
  */
 export async function createTokensZip(tokens, progressCallback = null) {
+    // Validate input
+    if (!tokens || !Array.isArray(tokens)) {
+        throw new Error('Invalid tokens parameter: expected an array');
+    }
+    
+    if (tokens.length === 0) {
+        throw new Error('No tokens to export');
+    }
+
     const JSZip = window.JSZip;
     if (!JSZip) {
         throw new Error('JSZip library not loaded');

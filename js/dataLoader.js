@@ -257,10 +257,16 @@ export function calculateTokenCounts(characters) {
         }
     });
 
-    // Calculate totals
+    // Calculate totals in a single iteration
+    let totalCharacters = 0;
+    let totalReminders = 0;
+    for (const team of CONFIG.TEAMS) {
+        totalCharacters += counts[team].characters;
+        totalReminders += counts[team].reminders;
+    }
     counts.total = {
-        characters: Object.values(counts).reduce((sum, c) => sum + (c.characters || 0), 0),
-        reminders: Object.values(counts).reduce((sum, c) => sum + (c.reminders || 0), 0)
+        characters: totalCharacters,
+        reminders: totalReminders
     };
 
     return counts;

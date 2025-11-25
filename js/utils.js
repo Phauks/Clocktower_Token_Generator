@@ -212,11 +212,19 @@ export async function checkFontsLoaded(fontNames) {
 }
 
 /**
- * Deep clone an object
- * @param {Object} obj - Object to clone
+ * Deep clone an object using JSON serialization.
+ * Note: This method has limitations:
+ * - Does not handle functions, undefined, symbols, or circular references
+ * - Date objects are converted to strings
+ * - RegExp objects are converted to empty objects
+ * For simple configuration objects and data, this is sufficient.
+ * @param {Object} obj - Object to clone (must be JSON-serializable)
  * @returns {Object} Cloned object
  */
 export function deepClone(obj) {
+    if (obj === null || obj === undefined) {
+        return obj;
+    }
     return JSON.parse(JSON.stringify(obj));
 }
 

@@ -668,7 +668,8 @@ export class UIController {
                     const character = this.characters.find(c => c.name === characterName);
                     const characterId = character?.id?.toLowerCase();
                     
-                    // Check if this is an official character
+                    // A character is official if it has an ID that exists in the official data.
+                    // Characters without IDs or with IDs not in official data are considered custom.
                     const isOfficial = characterId ? officialCharacterIds.has(characterId) : false;
                     
                     if (displayFilter === 'official' && !isOfficial) {

@@ -365,7 +365,22 @@
                     </div>
 
                     <!-- Token Grid -->
-                    <div class="token-grid" id="tokenGrid">
+                    <div class="token-sections" id="tokenSections">
+                        <!-- Character Tokens Section -->
+                        <div class="token-section" id="characterTokensSection" style="display: none;">
+                            <h3 class="token-section-header">Character Tokens</h3>
+                            <div class="token-grid" id="characterTokenGrid">
+                            </div>
+                        </div>
+                        
+                        <!-- Reminder Tokens Section -->
+                        <div class="token-section" id="reminderTokensSection" style="display: none;">
+                            <h3 class="token-section-header">Reminder Tokens</h3>
+                            <div class="token-grid" id="reminderTokenGrid">
+                            </div>
+                        </div>
+                        
+                        <!-- Loading/Empty States -->
                         <div class="loading-state" id="loadingState" style="display: none;">
                             <div class="spinner"></div>
                             <p>Generating tokens...</p>

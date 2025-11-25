@@ -1,6 +1,10 @@
 # Blood on the Clocktower Token Generator
 
-A web application for generating custom character and reminder tokens for Blood on the Clocktower scripts with extensive customization options and PDF export functionality.
+🌐 **[Launch Web App](https://phauks.github.io/Clocktower_Token_Generator/)**
+
+A web-based tool for generating custom Blood on the Clocktower character and reminder tokens with PDF export.
+
+**No installation required** - runs entirely in your browser! All processing happens client-side, so your data never leaves your device.
 
 ## Features
 
@@ -11,8 +15,21 @@ A web application for generating custom character and reminder tokens for Blood 
 - **Filter & Sort**: Filter tokens by team type, token type, or reminder status
 - **Curved Text**: Character names and reminder text curve along the bottom of tokens
 - **Setup Flower Overlay**: Characters with setup modifications display decorative overlays
+- **Privacy**: All processing happens in your browser - no data is sent to any server
+
+## Quick Start
+
+Simply visit **[https://phauks.github.io/Clocktower_Token_Generator/](https://phauks.github.io/Clocktower_Token_Generator/)** - no download or installation needed!
 
 ## How to Use
+
+### Online (Recommended)
+
+1. Visit **[https://phauks.github.io/Clocktower_Token_Generator/](https://phauks.github.io/Clocktower_Token_Generator/)**
+2. Upload your JSON script or select an example
+3. Customize options in the left sidebar
+4. Click "Generate Tokens"
+5. Export as PDF or download individual tokens
 
 ### Running Locally
 

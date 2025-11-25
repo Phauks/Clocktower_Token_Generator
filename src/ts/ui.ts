@@ -180,7 +180,6 @@ export class UIController {
             countFabled: document.getElementById('countFabled'),
             countLoric: document.getElementById('countLoric'),
             countMeta: document.getElementById('countMeta'),
-            countTotal: document.getElementById('countTotal')
             countTotal: document.getElementById('countTotal'),
 
             // Settings Modal

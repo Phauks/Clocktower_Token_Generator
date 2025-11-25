@@ -56,6 +56,7 @@
     --color-secondary-dark: #1a252f;
     --color-accent: #c9a227;
     --color-accent-light: #e6c34a;
+    --color-accent-dark: #a88620;
     
     /* Background Colors */
     --bg-main: #1a1a1a;
@@ -550,8 +551,8 @@ body {
 
 .btn-secondary[aria-pressed="true"]:hover,
 .btn-secondary.active:hover {
-    background-color: var(--color-accent-dark, #c41e3a);
-    border-color: var(--color-accent-dark, #c41e3a);
+    background-color: var(--color-accent-dark);
+    border-color: var(--color-accent-dark);
 }
 
 .action-buttons {

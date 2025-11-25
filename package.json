@@ -1,0 +1,20 @@
+{
+  "name": "clocktower-token-generator",
+  "version": "1.0.0",
+  "description": "Blood on the Clocktower Token Generator",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "clean": "rm -rf dist/js/*"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  },
+  "keywords": [
+    "blood-on-the-clocktower",
+    "token-generator",
+    "board-game"
+  ],
+  "license": "MIT"
+}

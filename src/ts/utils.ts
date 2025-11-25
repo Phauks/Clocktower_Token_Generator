@@ -3,16 +3,21 @@
  * Utility Functions
  */
 
+import type { RGB, ValidationResult, ScriptEntry } from './types/index.js';
+
 /**
  * Debounce function to limit rate of function calls
- * @param {Function} func - Function to debounce
- * @param {number} wait - Wait time in milliseconds
- * @returns {Function} Debounced function
+ * @param func - Function to debounce
+ * @param wait - Wait time in milliseconds
+ * @returns Debounced function
  */
-export function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
+export function debounce<T extends (...args: unknown[]) => void>(
+    func: T,
+    wait: number
+): (...args: Parameters<T>) => void {
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    return function executedFunction(...args: Parameters<T>): void {
+        const later = (): void => {
             clearTimeout(timeout);
             func(...args);
         };
@@ -23,39 +28,39 @@ export function debounce(func, wait) {
 
 /**
  * Load an image from URL with CORS handling
- * @param {string} url - Image URL
- * @returns {Promise<HTMLImageElement>} Loaded image element
+ * @param url - Image URL
+ * @returns Loaded image element
  */
-export async function loadImage(url) {
+export async function loadImage(url: string): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
-        img.onload = () => resolve(img);
-        img.onerror = (err) => reject(new Error(`Failed to load image: ${url}`));
+        img.onload = (): void => resolve(img);
+        img.onerror = (): void => reject(new Error(`Failed to load image: ${url}`));
         img.src = url;
     });
 }
 
 /**
  * Load an image from local path
- * @param {string} path - Local file path
- * @returns {Promise<HTMLImageElement>} Loaded image element
+ * @param path - Local file path
+ * @returns Loaded image element
  */
-export async function loadLocalImage(path) {
+export async function loadLocalImage(path: string): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
         const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = (err) => reject(new Error(`Failed to load local image: ${path}`));
+        img.onload = (): void => resolve(img);
+        img.onerror = (): void => reject(new Error(`Failed to load local image: ${path}`));
         img.src = path;
     });
 }
 
 /**
  * Convert hex color to RGB object
- * @param {string} hex - Hex color string
- * @returns {Object} RGB object with r, g, b properties
+ * @param hex - Hex color string
+ * @returns RGB object with r, g, b properties
  */
-export function hexToRgb(hex) {
+export function hexToRgb(hex: string): RGB | null {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? {
         r: parseInt(result[1], 16),
@@ -66,17 +71,17 @@ export function hexToRgb(hex) {
 
 /**
  * Generate a unique filename suffix for duplicates
- * @param {Map} nameCount - Map tracking name occurrences
- * @param {string} baseName - Base filename
- * @returns {string} Filename with suffix if needed
+ * @param nameCount - Map tracking name occurrences
+ * @param baseName - Base filename
+ * @returns Filename with suffix if needed
  */
-export function generateUniqueFilename(nameCount, baseName) {
+export function generateUniqueFilename(nameCount: Map<string, number>, baseName: string): string {
     if (!nameCount.has(baseName)) {
         nameCount.set(baseName, 0);
     }
-    const count = nameCount.get(baseName);
+    const count = nameCount.get(baseName) ?? 0;
     nameCount.set(baseName, count + 1);
-    
+
     if (count === 0) {
         return baseName;
     }
@@ -85,10 +90,10 @@ export function generateUniqueFilename(nameCount, baseName) {
 
 /**
  * Sanitize filename by removing invalid characters
- * @param {string} filename - Original filename
- * @returns {string} Sanitized filename
+ * @param filename - Original filename
+ * @returns Sanitized filename
  */
-export function sanitizeFilename(filename) {
+export function sanitizeFilename(filename: string): string {
     return filename
         .replace(/[<>:"/\\|?*]/g, '')
         .replace(/\s+/g, '_')
@@ -97,12 +102,16 @@ export function sanitizeFilename(filename) {
 
 /**
  * Convert canvas to blob
- * @param {HTMLCanvasElement} canvas - Canvas element
- * @param {string} type - MIME type
- * @param {number} quality - Quality (0-1)
- * @returns {Promise<Blob>} Image blob
+ * @param canvas - Canvas element
+ * @param type - MIME type
+ * @param quality - Quality (0-1)
+ * @returns Image blob
  */
-export async function canvasToBlob(canvas, type = 'image/png', quality = 1) {
+export async function canvasToBlob(
+    canvas: HTMLCanvasElement,
+    type: string = 'image/png',
+    quality: number = 1
+): Promise<Blob> {
     return new Promise((resolve, reject) => {
         canvas.toBlob((blob) => {
             if (blob) {
@@ -116,10 +125,10 @@ export async function canvasToBlob(canvas, type = 'image/png', quality = 1) {
 
 /**
  * Download a file
- * @param {Blob|string} data - File data (Blob or data URL)
- * @param {string} filename - Download filename
+ * @param data - File data (Blob or data URL)
+ * @param filename - Download filename
  */
-export function downloadFile(data, filename) {
+export function downloadFile(data: Blob | string, filename: string): void {
     const link = document.createElement('a');
     if (data instanceof Blob) {
         link.href = URL.createObjectURL(data);
@@ -137,12 +146,12 @@ export function downloadFile(data, filename) {
 
 /**
  * Format JSON with pretty printing
- * @param {string} jsonString - JSON string to format
- * @returns {string} Formatted JSON string
+ * @param jsonString - JSON string to format
+ * @returns Formatted JSON string
  */
-export function formatJson(jsonString) {
+export function formatJson(jsonString: string): string {
     try {
-        const parsed = JSON.parse(jsonString);
+        const parsed = JSON.parse(jsonString) as unknown;
         return JSON.stringify(parsed, null, 2);
     } catch {
         return jsonString;
@@ -151,57 +160,58 @@ export function formatJson(jsonString) {
 
 /**
  * Validate JSON string
- * @param {string} jsonString - JSON string to validate
- * @returns {Object} Validation result with valid boolean and error message
+ * @param jsonString - JSON string to validate
+ * @returns Validation result with valid boolean and error message
  */
-export function validateJson(jsonString) {
+export function validateJson(jsonString: string): ValidationResult {
     if (!jsonString.trim()) {
         return { valid: false, error: 'JSON is empty' };
     }
     try {
-        const parsed = JSON.parse(jsonString);
+        const parsed = JSON.parse(jsonString) as unknown;
         if (!Array.isArray(parsed)) {
             return { valid: false, error: 'JSON must be an array' };
         }
-        return { valid: true, data: parsed };
+        return { valid: true, data: parsed as ScriptEntry[] };
     } catch (e) {
-        return { valid: false, error: `Invalid JSON: ${e.message}` };
+        const error = e instanceof Error ? e.message : 'Unknown error';
+        return { valid: false, error: `Invalid JSON: ${error}` };
     }
 }
 
 /**
  * Sleep for specified milliseconds
- * @param {number} ms - Milliseconds to sleep
- * @returns {Promise} Promise that resolves after delay
+ * @param ms - Milliseconds to sleep
+ * @returns Promise that resolves after delay
  */
-export function sleep(ms) {
+export function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**
  * Get contrast color (black or white) for given background
- * @param {string} hexColor - Background hex color
- * @returns {string} '#000000' or '#FFFFFF'
+ * @param hexColor - Background hex color
+ * @returns '#000000' or '#FFFFFF'
  */
-export function getContrastColor(hexColor) {
+export function getContrastColor(hexColor: string): string {
     const rgb = hexToRgb(hexColor);
     if (!rgb) return '#000000';
-    
+
     const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
     return luminance > 0.5 ? '#000000' : '#FFFFFF';
 }
 
 /**
  * Check if fonts are loaded
- * @param {string[]} fontNames - Array of font names to check
- * @returns {Promise<boolean>} Whether fonts are loaded
+ * @param fontNames - Array of font names to check
+ * @returns Whether fonts are loaded
  */
-export async function checkFontsLoaded(fontNames) {
+export async function checkFontsLoaded(fontNames: string[]): Promise<boolean> {
     if (!document.fonts) {
         // Fallback for older browsers
         return new Promise(resolve => setTimeout(() => resolve(true), 500));
     }
-    
+
     try {
         await document.fonts.ready;
         const checks = fontNames.map(name => document.fonts.check(`16px "${name}"`));
@@ -218,22 +228,22 @@ export async function checkFontsLoaded(fontNames) {
  * - Date objects are converted to strings
  * - RegExp objects are converted to empty objects
  * For simple configuration objects and data, this is sufficient.
- * @param {Object} obj - Object to clone (must be JSON-serializable)
- * @returns {Object} Cloned object
+ * @param obj - Object to clone (must be JSON-serializable)
+ * @returns Cloned object
  */
-export function deepClone(obj) {
+export function deepClone<T>(obj: T): T {
     if (obj === null || obj === undefined) {
         return obj;
     }
-    return JSON.parse(JSON.stringify(obj));
+    return JSON.parse(JSON.stringify(obj)) as T;
 }
 
 /**
  * Capitalize first letter of string
- * @param {string} str - String to capitalize
- * @returns {string} Capitalized string
+ * @param str - String to capitalize
+ * @returns Capitalized string
  */
-export function capitalize(str) {
+export function capitalize(str: string): string {
     if (!str) return '';
     return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }

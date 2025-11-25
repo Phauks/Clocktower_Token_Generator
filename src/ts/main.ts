@@ -10,6 +10,9 @@ import { checkFontsLoaded } from './utils.js';
  * Main application class
  */
 class TokenGeneratorApp {
+    private ui: UIController | null;
+    private fontsLoaded: boolean;
+
     constructor() {
         this.ui = null;
         this.fontsLoaded = false;
@@ -18,13 +21,13 @@ class TokenGeneratorApp {
     /**
      * Initialize the application
      */
-    async init() {
+    async init(): Promise<void> {
         console.log('Blood on the Clocktower Token Generator starting...');
 
         // Wait for DOM to be ready
         if (document.readyState === 'loading') {
-            await new Promise(resolve => {
-                document.addEventListener('DOMContentLoaded', resolve);
+            await new Promise<void>(resolve => {
+                document.addEventListener('DOMContentLoaded', () => resolve());
             });
         }
 
@@ -41,7 +44,7 @@ class TokenGeneratorApp {
     /**
      * Load custom fonts
      */
-    async loadFonts() {
+    private async loadFonts(): Promise<void> {
         const fontFamilies = [
             'Dumbledor',
             'DumbledorThin',
@@ -55,7 +58,7 @@ class TokenGeneratorApp {
             try {
                 await document.fonts.ready;
                 this.fontsLoaded = await checkFontsLoaded(fontFamilies);
-                
+
                 if (!this.fontsLoaded) {
                     console.warn('Some custom fonts may not have loaded properly');
                 } else {
@@ -66,7 +69,7 @@ class TokenGeneratorApp {
             }
         } else {
             // Fallback: wait a bit for fonts to load
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise<void>(resolve => setTimeout(resolve, 500));
             console.log('Font loading (fallback mode)');
         }
     }

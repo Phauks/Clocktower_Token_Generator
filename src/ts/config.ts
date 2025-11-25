@@ -3,7 +3,9 @@
  * Configuration and Constants
  */
 
-export const CONFIG = {
+import type { Config, Team, TeamColors, TeamLabels } from './types/index.js';
+
+export const CONFIG: Config = {
     // Token Generation Defaults
     TOKEN: {
         ROLE_DIAMETER: 300,
@@ -57,7 +59,7 @@ export const CONFIG = {
     ],
 
     // Team Types
-    TEAMS: ['townsfolk', 'outsider', 'minion', 'demon', 'traveller', 'fabled'],
+    TEAMS: ['townsfolk', 'outsider', 'minion', 'demon', 'traveller', 'fabled'] as Team[],
 
     // Font Settings
     FONTS: {
@@ -82,7 +84,7 @@ export const CONFIG = {
 /**
  * Team color mapping for display purposes
  */
-export const TEAM_COLORS = {
+export const TEAM_COLORS: TeamColors = {
     townsfolk: '#1a5f2a',
     outsider: '#1a3f5f',
     minion: '#5f1a3f',
@@ -94,7 +96,7 @@ export const TEAM_COLORS = {
 /**
  * Team labels for display
  */
-export const TEAM_LABELS = {
+export const TEAM_LABELS: TeamLabels = {
     townsfolk: 'Townsfolk',
     outsider: 'Outsider',
     minion: 'Minion',

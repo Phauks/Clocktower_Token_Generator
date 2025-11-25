@@ -4,17 +4,26 @@
  */
 
 import CONFIG from './config.js';
+import type {
+    Character,
+    ScriptEntry,
+    ScriptMeta,
+    Team,
+    TokenCounts,
+    TeamCounts,
+    CharacterValidationResult
+} from './types/index.js';
 
 /**
  * Cache for official character data
  */
-let officialDataCache = null;
+let officialDataCache: Character[] | null = null;
 
 /**
  * Fetch official Blood on the Clocktower character data
- * @returns {Promise<Object[]>} Array of character objects
+ * @returns Array of character objects
  */
-export async function fetchOfficialData() {
+export async function fetchOfficialData(): Promise<Character[]> {
     if (officialDataCache) {
         return officialDataCache;
     }
@@ -24,7 +33,7 @@ export async function fetchOfficialData() {
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        officialDataCache = await response.json();
+        officialDataCache = await response.json() as Character[];
         return officialDataCache;
     } catch (error) {
         console.warn('Failed to fetch official data, continuing with script data only:', error);
@@ -34,16 +43,16 @@ export async function fetchOfficialData() {
 
 /**
  * Load example script from file
- * @param {string} filename - Example script filename
- * @returns {Promise<Object[]>} Parsed script data
+ * @param filename - Example script filename
+ * @returns Parsed script data
  */
-export async function loadExampleScript(filename) {
+export async function loadExampleScript(filename: string): Promise<ScriptEntry[]> {
     try {
         const response = await fetch(`./example_scripts/${filename}`);
         if (!response.ok) {
             throw new Error(`Failed to load example script: ${filename}`);
         }
-        return await response.json();
+        return await response.json() as ScriptEntry[];
     } catch (error) {
         console.error('Error loading example script:', error);
         throw error;
@@ -51,18 +60,39 @@ export async function loadExampleScript(filename) {
 }
 
 /**
- * Parse script JSON and merge with official data where needed
- * @param {Object[]} scriptData - Raw script data array
- * @param {Object[]} officialData - Official character data
- * @returns {Object[]} Merged character data
+ * Type guard for checking if entry is a ScriptMeta
  */
-export function parseScriptData(scriptData, officialData = []) {
+function isScriptMeta(entry: ScriptEntry): entry is ScriptMeta {
+    return typeof entry === 'object' && entry !== null && 'id' in entry && entry.id === '_meta';
+}
+
+/**
+ * Type guard for checking if entry is a Character
+ */
+function isCharacter(entry: ScriptEntry): entry is Character {
+    return typeof entry === 'object' && entry !== null && 'name' in entry;
+}
+
+/**
+ * Type guard for checking if entry is an ID reference object
+ */
+function isIdReference(entry: ScriptEntry): entry is { id: string } {
+    return typeof entry === 'object' && entry !== null && 'id' in entry && Object.keys(entry).length === 1;
+}
+
+/**
+ * Parse script JSON and merge with official data where needed
+ * @param scriptData - Raw script data array
+ * @param officialData - Official character data
+ * @returns Merged character data
+ */
+export function parseScriptData(scriptData: ScriptEntry[], officialData: Character[] = []): Character[] {
     if (!Array.isArray(scriptData)) {
         throw new Error('Script data must be an array');
     }
 
     // Create a map of official characters by ID for quick lookup
-    const officialMap = new Map();
+    const officialMap = new Map<string, Character>();
     if (Array.isArray(officialData)) {
         officialData.forEach(char => {
             if (char && char.id) {
@@ -72,8 +102,8 @@ export function parseScriptData(scriptData, officialData = []) {
     }
 
     // Process script entries
-    const characters = [];
-    
+    const characters: Character[] = [];
+
     for (const entry of scriptData) {
         // Skip meta entries
         if (typeof entry === 'string') {
@@ -92,12 +122,12 @@ export function parseScriptData(scriptData, officialData = []) {
         }
 
         // Skip _meta entries
-        if (entry.id === '_meta') {
+        if (isScriptMeta(entry)) {
             continue;
         }
 
         // Check if it's just an ID reference object
-        if (entry.id && Object.keys(entry).length === 1) {
+        if (isIdReference(entry)) {
             const officialChar = officialMap.get(entry.id.toLowerCase());
             if (officialChar) {
                 characters.push({ ...officialChar });
@@ -108,11 +138,12 @@ export function parseScriptData(scriptData, officialData = []) {
         }
 
         // Custom character with full data
-        if (entry.name) {
+        if (isCharacter(entry)) {
             // Merge with official data if ID matches
-            const officialChar = entry.id ? officialMap.get(entry.id.toLowerCase()) : null;
-            const mergedChar = officialChar ? { ...officialChar, ...entry } : entry;
-            characters.push(mergedChar);
+            const entryWithId = entry as Character;
+            const officialChar = entryWithId.id ? officialMap.get(entryWithId.id.toLowerCase()) : null;
+            const mergedChar = officialChar ? { ...officialChar, ...entryWithId } : entryWithId;
+            characters.push(mergedChar as Character);
         }
     }
 
@@ -121,16 +152,16 @@ export function parseScriptData(scriptData, officialData = []) {
 
 /**
  * Extract meta information from script
- * @param {Object[]} scriptData - Raw script data
- * @returns {Object|null} Meta object or null
+ * @param scriptData - Raw script data
+ * @returns Meta object or null
  */
-export function extractScriptMeta(scriptData) {
+export function extractScriptMeta(scriptData: ScriptEntry[]): ScriptMeta | null {
     if (!Array.isArray(scriptData)) {
         return null;
     }
 
     for (const entry of scriptData) {
-        if (entry && entry.id === '_meta') {
+        if (isScriptMeta(entry)) {
             return entry;
         }
     }
@@ -140,11 +171,11 @@ export function extractScriptMeta(scriptData) {
 
 /**
  * Validate character data has required fields
- * @param {Object} character - Character object
- * @returns {Object} Validation result
+ * @param character - Character object
+ * @returns Validation result
  */
-export function validateCharacter(character) {
-    const errors = [];
+export function validateCharacter(character: Partial<Character>): CharacterValidationResult {
+    const errors: string[] = [];
 
     if (!character.name) {
         errors.push('Missing character name');
@@ -152,7 +183,7 @@ export function validateCharacter(character) {
 
     if (!character.team) {
         errors.push('Missing team type');
-    } else if (!CONFIG.TEAMS.includes(character.team.toLowerCase())) {
+    } else if (!CONFIG.TEAMS.includes(character.team as Team)) {
         errors.push(`Invalid team type: ${character.team}`);
     }
 
@@ -170,10 +201,10 @@ export function validateCharacter(character) {
 /**
  * Get image URL from character image field
  * Handles both string and array formats
- * @param {string|string[]} imageField - Image field value
- * @returns {string} Image URL
+ * @param imageField - Image field value
+ * @returns Image URL
  */
-export function getCharacterImageUrl(imageField) {
+export function getCharacterImageUrl(imageField: string | string[] | undefined): string {
     if (typeof imageField === 'string') {
         return imageField;
     }
@@ -185,10 +216,10 @@ export function getCharacterImageUrl(imageField) {
 
 /**
  * Count reminders for a character
- * @param {Object} character - Character object
- * @returns {number} Number of reminders
+ * @param character - Character object
+ * @returns Number of reminders
  */
-export function countReminders(character) {
+export function countReminders(character: Character): number {
     if (!character.reminders) {
         return 0;
     }
@@ -200,10 +231,10 @@ export function countReminders(character) {
 
 /**
  * Get global reminders for a character (used for tokens that affect other characters)
- * @param {Object} character - Character object
- * @returns {string[]} Array of global reminder strings
+ * @param character - Character object
+ * @returns Array of global reminder strings
  */
-export function getGlobalReminders(character) {
+export function getGlobalReminders(character: Character): string[] {
     if (!character.remindersGlobal) {
         return [];
     }
@@ -215,18 +246,21 @@ export function getGlobalReminders(character) {
 
 /**
  * Group characters by team
- * @param {Object[]} characters - Array of character objects
- * @returns {Object} Object with team names as keys and character arrays as values
+ * @param characters - Array of character objects
+ * @returns Object with team names as keys and character arrays as values
  */
-export function groupByTeam(characters) {
-    const groups = {};
-    
-    CONFIG.TEAMS.forEach(team => {
-        groups[team] = [];
-    });
+export function groupByTeam(characters: Character[]): Record<Team, Character[]> {
+    const groups: Record<Team, Character[]> = {
+        townsfolk: [],
+        outsider: [],
+        minion: [],
+        demon: [],
+        traveller: [],
+        fabled: []
+    };
 
     characters.forEach(char => {
-        const team = (char.team || 'townsfolk').toLowerCase();
+        const team = (char.team || 'townsfolk').toLowerCase() as Team;
         if (groups[team]) {
             groups[team].push(char);
         } else {
@@ -239,18 +273,21 @@ export function groupByTeam(characters) {
 
 /**
  * Calculate token counts by team
- * @param {Object[]} characters - Array of character objects
- * @returns {Object} Counts object with character and reminder counts per team
+ * @param characters - Array of character objects
+ * @returns Counts object with character and reminder counts per team
  */
-export function calculateTokenCounts(characters) {
-    const counts = {};
-
-    CONFIG.TEAMS.forEach(team => {
-        counts[team] = { characters: 0, reminders: 0 };
-    });
+export function calculateTokenCounts(characters: Character[]): TokenCounts {
+    const counts: Record<Team, TeamCounts> = {
+        townsfolk: { characters: 0, reminders: 0 },
+        outsider: { characters: 0, reminders: 0 },
+        minion: { characters: 0, reminders: 0 },
+        demon: { characters: 0, reminders: 0 },
+        traveller: { characters: 0, reminders: 0 },
+        fabled: { characters: 0, reminders: 0 }
+    };
 
     characters.forEach(char => {
-        const team = (char.team || 'townsfolk').toLowerCase();
+        const team = (char.team || 'townsfolk').toLowerCase() as Team;
         if (counts[team]) {
             counts[team].characters++;
             counts[team].reminders += countReminders(char);
@@ -264,31 +301,39 @@ export function calculateTokenCounts(characters) {
         totalCharacters += counts[team].characters;
         totalReminders += counts[team].reminders;
     }
-    counts.total = {
-        characters: totalCharacters,
-        reminders: totalReminders
-    };
 
-    return counts;
+    return {
+        ...counts,
+        total: {
+            characters: totalCharacters,
+            reminders: totalReminders
+        }
+    };
 }
 
 /**
  * Load and parse JSON from file
- * @param {File} file - File object
- * @returns {Promise<Object[]>} Parsed JSON data
+ * @param file - File object
+ * @returns Parsed JSON data
  */
-export async function loadJsonFile(file) {
+export async function loadJsonFile(file: File): Promise<ScriptEntry[]> {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = (event): void => {
             try {
-                const data = JSON.parse(event.target.result);
+                const result = event.target?.result;
+                if (typeof result !== 'string') {
+                    reject(new Error('Failed to read file as text'));
+                    return;
+                }
+                const data = JSON.parse(result) as ScriptEntry[];
                 resolve(data);
             } catch (error) {
-                reject(new Error(`Invalid JSON file: ${error.message}`));
+                const message = error instanceof Error ? error.message : 'Unknown error';
+                reject(new Error(`Invalid JSON file: ${message}`));
             }
         };
-        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.onerror = (): void => reject(new Error('Failed to read file'));
         reader.readAsText(file);
     });
 }

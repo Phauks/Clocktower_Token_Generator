@@ -130,6 +130,7 @@ export class UIController {
             tokenCount: document.getElementById('tokenCount') as HTMLInputElement | null,
             scriptNameToken: document.getElementById('scriptNameToken') as HTMLInputElement | null,
             almanacToken: document.getElementById('almanacToken') as HTMLInputElement | null,
+            pandemoniumToken: document.getElementById('pandemoniumToken') as HTMLInputElement | null,
 
             // Style Options
             setupFlowerStyle: document.getElementById('setupFlowerStyle') as HTMLSelectElement | null,
@@ -157,6 +158,7 @@ export class UIController {
             outputSection: document.getElementById('outputSection'),
             teamFilter: document.getElementById('teamFilter') as HTMLSelectElement | null,
             tokenTypeFilter: document.getElementById('tokenTypeFilter') as HTMLSelectElement | null,
+            displayFilter: document.getElementById('displayFilter') as HTMLSelectElement | null,
             reminderFilter: document.getElementById('reminderFilter') as HTMLSelectElement | null,
             tokenSections: document.getElementById('tokenSections'),
             characterTokensSection: document.getElementById('characterTokensSection'),
@@ -177,6 +179,8 @@ export class UIController {
             countTraveller: document.getElementById('countTraveller'),
             countFabled: document.getElementById('countFabled'),
             countLoric: document.getElementById('countLoric'),
+            countMeta: document.getElementById('countMeta'),
+            countTotal: document.getElementById('countTotal')
             countTotal: document.getElementById('countTotal'),
 
             // Settings Modal
@@ -226,6 +230,7 @@ export class UIController {
         // Filters
         this.elements.teamFilter?.addEventListener('change', () => this.applyFilters());
         this.elements.tokenTypeFilter?.addEventListener('change', () => this.applyFilters());
+        this.elements.displayFilter?.addEventListener('change', () => this.applyFilters());
         this.elements.reminderFilter?.addEventListener('change', () => this.applyFilters());
 
         // Export buttons
@@ -235,7 +240,7 @@ export class UIController {
         // Option changes - trigger regeneration
         const optionElements: (keyof UIElements)[] = [
             'displayAbilityText', 'roleDiameter', 'reminderDiameter', 'tokenCount',
-            'scriptNameToken', 'almanacToken',
+            'scriptNameToken', 'almanacToken', 'pandemoniumToken',
             'setupFlowerStyle', 'reminderBackground', 'characterBackground',
             'characterNameFont', 'characterReminderFont'
         ];
@@ -560,7 +565,8 @@ export class UIController {
             characterNameFont: this.elements.characterNameFont?.value ?? CONFIG.STYLE.CHARACTER_NAME_FONT,
             characterReminderFont: this.elements.characterReminderFont?.value ?? CONFIG.STYLE.CHARACTER_REMINDER_FONT,
             scriptNameToken: this.elements.scriptNameToken?.checked ?? false,
-            almanacToken: this.elements.almanacToken?.checked ?? false
+            almanacToken: this.elements.almanacToken?.checked ?? false,
+            pandemoniumToken: this.elements.pandemoniumToken?.checked ?? false
         };
     }
 
@@ -584,7 +590,7 @@ export class UIController {
                 this.officialData = await fetchOfficialData();
             }
 
-            // Extract script metadata for special tokens
+            // Extract script metadata for meta tokens
             this.scriptMeta = extractScriptMeta(validation.data);
 
             // Parse script data
@@ -636,7 +642,8 @@ export class UIController {
             demon: 'countDemon',
             traveller: 'countTraveller',
             fabled: 'countFabled',
-            loric: 'countLoric'
+            loric: 'countLoric',
+            meta: 'countMeta'
         };
 
         CONFIG.TEAMS.forEach(team => {
@@ -658,7 +665,11 @@ export class UIController {
     private applyFilters(): void {
         const teamFilter = this.elements.teamFilter?.value ?? 'all';
         const typeFilter = this.elements.tokenTypeFilter?.value ?? 'all';
+        const displayFilter = this.elements.displayFilter?.value ?? 'all';
         const reminderFilter = this.elements.reminderFilter?.value ?? 'all';
+
+        // Create a set of official character IDs for quick lookup
+        const officialCharacterIds = new Set(this.officialData.map(c => c.id.toLowerCase()));
 
         this.filteredTokens = this.tokens.filter(token => {
             // Team filter
@@ -666,14 +677,40 @@ export class UIController {
                 return false;
             }
 
-            // Type filter - special tokens (script-name, almanac) show with 'all' or 'character'
+            // Type filter - meta tokens (script-name, almanac, pandemonium) show with 'all' or 'character'
             if (typeFilter !== 'all') {
                 if (typeFilter === 'character') {
-                    if (token.type !== 'character' && token.type !== 'script-name' && token.type !== 'almanac') {
+                    if (token.type !== 'character' && token.type !== 'script-name' && token.type !== 'almanac' && token.type !== 'pandemonium') {
                         return false;
                     }
                 } else if (token.type !== typeFilter) {
                     return false;
+                }
+            }
+
+            // Display filter - official vs custom characters
+            if (displayFilter !== 'all') {
+                // Special tokens (script-name, almanac) always show regardless of filter
+                if (token.type === 'script-name' || token.type === 'almanac') {
+                    // Show special tokens with both filters
+                } else {
+                    // Get the character name to look up
+                    const characterName = token.type === 'reminder' ? token.parentCharacter : token.name;
+                    
+                    // Find the character in our loaded characters to get the ID
+                    const character = this.characters.find(c => c.name === characterName);
+                    const characterId = character?.id?.toLowerCase();
+                    
+                    // A character is official if it has an ID that exists in the official data.
+                    // Characters without IDs or with IDs not in official data are considered custom.
+                    const isOfficial = characterId ? officialCharacterIds.has(characterId) : false;
+                    
+                    if (displayFilter === 'official' && !isOfficial) {
+                        return false;
+                    }
+                    if (displayFilter === 'custom' && isOfficial) {
+                        return false;
+                    }
                 }
             }
 
@@ -729,9 +766,9 @@ export class UIController {
             this.elements.emptyState.style.display = 'none';
         }
 
-        // Separate tokens by type - special tokens go with character tokens
+        // Separate tokens by type - meta tokens go with character tokens
         const characterTokens = this.filteredTokens.filter(t => 
-            t.type === 'character' || t.type === 'script-name' || t.type === 'almanac'
+            t.type === 'character' || t.type === 'script-name' || t.type === 'almanac' || t.type === 'pandemonium'
         );
         const reminderTokens = this.filteredTokens.filter(t => t.type === 'reminder');
 
@@ -744,7 +781,7 @@ export class UIController {
         this.showSection(characterSection, showCharacters);
         this.showSection(reminderSection, showReminders);
 
-        // Render character tokens (including special tokens)
+        // Render character tokens (including meta tokens)
         for (const token of characterTokens) {
             const card = this.createTokenCard(token);
             characterGrid.appendChild(card);

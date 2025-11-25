@@ -540,6 +540,20 @@ body {
     background-color: var(--bg-hover);
 }
 
+/* Active/pressed state for toggle buttons */
+.btn-secondary[aria-pressed="true"],
+.btn-secondary.active {
+    background-color: var(--color-accent);
+    color: #ffffff;
+    border-color: var(--color-accent);
+}
+
+.btn-secondary[aria-pressed="true"]:hover,
+.btn-secondary.active:hover {
+    background-color: var(--color-accent-dark, #c41e3a);
+    border-color: var(--color-accent-dark, #c41e3a);
+}
+
 .action-buttons {
     display: flex;
     justify-content: center;

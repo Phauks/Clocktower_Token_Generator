@@ -151,6 +151,7 @@ export class UIController {
             outputSection: document.getElementById('outputSection'),
             teamFilter: document.getElementById('teamFilter') as HTMLSelectElement | null,
             tokenTypeFilter: document.getElementById('tokenTypeFilter') as HTMLSelectElement | null,
+            displayFilter: document.getElementById('displayFilter') as HTMLSelectElement | null,
             reminderFilter: document.getElementById('reminderFilter') as HTMLSelectElement | null,
             tokenSections: document.getElementById('tokenSections'),
             characterTokensSection: document.getElementById('characterTokensSection'),
@@ -211,6 +212,7 @@ export class UIController {
         // Filters
         this.elements.teamFilter?.addEventListener('change', () => this.applyFilters());
         this.elements.tokenTypeFilter?.addEventListener('change', () => this.applyFilters());
+        this.elements.displayFilter?.addEventListener('change', () => this.applyFilters());
         this.elements.reminderFilter?.addEventListener('change', () => this.applyFilters());
 
         // Export buttons
@@ -630,7 +632,11 @@ export class UIController {
     private applyFilters(): void {
         const teamFilter = this.elements.teamFilter?.value ?? 'all';
         const typeFilter = this.elements.tokenTypeFilter?.value ?? 'all';
+        const displayFilter = this.elements.displayFilter?.value ?? 'all';
         const reminderFilter = this.elements.reminderFilter?.value ?? 'all';
+
+        // Create a set of official character IDs for quick lookup
+        const officialCharacterIds = new Set(this.officialData.map(c => c.id.toLowerCase()));
 
         this.filteredTokens = this.tokens.filter(token => {
             // Team filter
@@ -646,6 +652,31 @@ export class UIController {
                     }
                 } else if (token.type !== typeFilter) {
                     return false;
+                }
+            }
+
+            // Display filter - official vs custom characters
+            if (displayFilter !== 'all') {
+                // Special tokens (script-name, almanac) always show regardless of filter
+                if (token.type === 'script-name' || token.type === 'almanac') {
+                    // Show special tokens with both filters
+                } else {
+                    // Get the character name to look up
+                    const characterName = token.type === 'reminder' ? token.parentCharacter : token.name;
+                    
+                    // Find the character in our loaded characters to get the ID
+                    const character = this.characters.find(c => c.name === characterName);
+                    const characterId = character?.id?.toLowerCase();
+                    
+                    // Check if this is an official character
+                    const isOfficial = characterId ? officialCharacterIds.has(characterId) : false;
+                    
+                    if (displayFilter === 'official' && !isOfficial) {
+                        return false;
+                    }
+                    if (displayFilter === 'custom' && isOfficial) {
+                        return false;
+                    }
                 }
             }
 

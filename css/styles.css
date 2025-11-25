@@ -421,6 +421,45 @@ body.modal-open {
     margin-bottom: var(--spacing-md);
 }
 
+/* Collapsible Section Styles */
+.option-section details {
+    width: 100%;
+}
+
+.option-section summary.section-header {
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+}
+
+.option-section summary.section-header::-webkit-details-marker {
+    display: none;
+}
+
+.section-arrow {
+    display: inline-block;
+    transition: transform var(--transition-fast);
+    margin-right: var(--spacing-xs);
+}
+
+.option-section details[open] .section-arrow {
+    transform: rotate(0deg);
+}
+
+.option-section details:not([open]) .section-arrow {
+    transform: rotate(-90deg);
+}
+
+.option-section summary.section-header:hover {
+    opacity: 0.8;
+}
+
+.option-section details[open] {
+    margin-bottom: var(--spacing-lg);
+}
+
 .subsection-header {
     font-size: 0.875rem;
     color: var(--text-secondary);

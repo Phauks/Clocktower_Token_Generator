@@ -79,7 +79,7 @@ export function generateUniqueFilename(nameCount: Map<string, number>, baseName:
     if (!nameCount.has(baseName)) {
         nameCount.set(baseName, 0);
     }
-    const count = nameCount.get(baseName)!;
+    const count = nameCount.get(baseName) ?? 0;
     nameCount.set(baseName, count + 1);
 
     if (count === 0) {

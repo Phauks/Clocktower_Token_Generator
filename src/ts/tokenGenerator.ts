@@ -60,8 +60,9 @@ export class TokenGenerator {
      * @returns Loaded image element
      */
     async getCachedImage(url: string): Promise<HTMLImageElement> {
-        if (this.imageCache.has(url)) {
-            return this.imageCache.get(url)!;
+        const cachedImage = this.imageCache.get(url);
+        if (cachedImage) {
+            return cachedImage;
         }
 
         try {
@@ -80,8 +81,9 @@ export class TokenGenerator {
      * @returns Loaded image element
      */
     async getLocalImage(path: string): Promise<HTMLImageElement> {
-        if (this.imageCache.has(path)) {
-            return this.imageCache.get(path)!;
+        const cachedImage = this.imageCache.get(path);
+        if (cachedImage) {
+            return cachedImage;
         }
 
         try {
@@ -517,7 +519,7 @@ export async function generateAllTokens(
             if (!nameCount.has(baseName)) {
                 nameCount.set(baseName, 0);
             }
-            const count = nameCount.get(baseName)!;
+            const count = nameCount.get(baseName) ?? 0;
             nameCount.set(baseName, count + 1);
 
             const filename = count === 0 ? baseName : `${baseName}_${String(count).padStart(2, '0')}`;
@@ -553,7 +555,7 @@ export async function generateAllTokens(
                     if (!reminderCount.has(reminderBaseName)) {
                         reminderCount.set(reminderBaseName, 0);
                     }
-                    const rCount = reminderCount.get(reminderBaseName)!;
+                    const rCount = reminderCount.get(reminderBaseName) ?? 0;
                     reminderCount.set(reminderBaseName, rCount + 1);
 
                     const reminderFilename = rCount === 0 ? reminderBaseName : `${reminderBaseName}_${String(rCount).padStart(2, '0')}`;

@@ -23,7 +23,7 @@ import type {
     Team,
     ProgressCallback,
     ScriptMeta,
-    ScriptEntry
+    ScriptEntry,
     PresetName
 } from './types/index.js';
 import { getPreset } from './presets.js';

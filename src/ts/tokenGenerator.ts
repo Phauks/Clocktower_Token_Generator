@@ -926,7 +926,7 @@ export async function generateAllTokens(
             tokens.push({
                 type: 'pandemonium',
                 name: 'Pandemonium Institute',
-                filename: 'pandemonium_institute',
+                filename: '_pandemonium_institute',
                 team: 'meta',
                 canvas: pandemoniumCanvas
             });
@@ -949,7 +949,7 @@ export async function generateAllTokens(
             tokens.push({
                 type: 'script-name',
                 name: scriptMeta.name,
-                filename: 'script_name',
+                filename: '_script_name',
                 team: 'meta',
                 canvas: scriptNameCanvas
             });
@@ -972,7 +972,7 @@ export async function generateAllTokens(
             tokens.push({
                 type: 'almanac',
                 name: `${scriptMeta.name} Almanac`,
-                filename: 'almanac_qr',
+                filename: '_almanac_qr',
                 team: 'meta',
                 canvas: almanacCanvas
             });

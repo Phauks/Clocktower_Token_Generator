@@ -291,7 +291,8 @@ body {
     background-color: var(--bg-input);
     border-radius: 4px;
     cursor: pointer;
-    margin-top: var(--spacing-sm);
+    margin-top: 0;
+    vertical-align: middle;
 }
 
 .range-slider::-webkit-slider-thumb {
@@ -1179,7 +1180,7 @@ body.modal-open {
 /* Preset Buttons */
 .preset-buttons {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: var(--spacing-sm);
     margin-bottom: var(--spacing-md);
 }

@@ -47,7 +47,7 @@ npm run watch
 ### Project Structure
 
 ```
-/src/ts/          # TypeScript source files
+/source/          # TypeScript source files
 /dist/js/         # Compiled JavaScript (gitignored, generated on build)
 /assets/          # Fonts, images, backgrounds
 /css/             # Stylesheets

@@ -4,7 +4,7 @@
     "module": "ES2020",
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "outDir": "./dist/js",
-    "rootDir": "./src/ts",
+    "rootDir": "./source",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -16,6 +16,6 @@
     "sourceMap": true,
     "removeComments": false
   },
-  "include": ["src/ts/**/*"],
+  "include": ["source/**/*"],
   "exclude": ["node_modules", "dist"]
 }

@@ -292,7 +292,6 @@ body {
     border-radius: 4px;
     cursor: pointer;
     margin-top: 0;
-    vertical-align: middle;
 }
 
 .range-slider::-webkit-slider-thumb {

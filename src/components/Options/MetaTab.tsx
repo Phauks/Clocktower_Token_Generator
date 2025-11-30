@@ -1,0 +1,119 @@
+import { memo, useState } from 'react'
+import type { GenerationOptions } from '../../ts/types/index'
+import { OptionGroup } from '../Shared/OptionGroup'
+
+interface MetaTabProps {
+  generationOptions: GenerationOptions
+  onOptionChange: (options: Partial<GenerationOptions>) => void
+}
+
+type SubTabType = 'tokens' | 'background' | 'font'
+
+export const MetaTab = memo(({ generationOptions, onOptionChange }: MetaTabProps) => {
+  const [activeSubTab, setActiveSubTab] = useState<SubTabType>('tokens')
+
+  return (
+    <div className="tab-content active" data-tab-content="meta">
+      <div className="subtabs-container">
+        <div className="subtabs-nav">
+          <button
+            className={`subtab-button ${activeSubTab === 'tokens' ? 'active' : ''}`}
+            onClick={() => setActiveSubTab('tokens')}
+          >
+            Tokens
+          </button>
+          <button
+            className={`subtab-button ${activeSubTab === 'background' ? 'active' : ''}`}
+            onClick={() => setActiveSubTab('background')}
+          >
+            Background
+          </button>
+          <button
+            className={`subtab-button ${activeSubTab === 'font' ? 'active' : ''}`}
+            onClick={() => setActiveSubTab('font')}
+          >
+            Font
+          </button>
+        </div>
+
+        {/* Tokens Sub-Tab */}
+        {activeSubTab === 'tokens' && (
+          <div className="subtab-content">
+            <div className="subsection">
+              <OptionGroup
+                label="Pandemonium Institute"
+                helpText="Generate official game branding token"
+              >
+                <input
+                  type="checkbox"
+                  className="toggle-switch"
+                  checked={generationOptions.pandemoniumToken}
+                  onChange={(e) => onOptionChange({ pandemoniumToken: e.target.checked })}
+                />
+              </OptionGroup>
+
+              <OptionGroup
+                label="Script Name"
+                helpText="Generate a meta token showing script name and author"
+              >
+                <input
+                  type="checkbox"
+                  className="toggle-switch"
+                  checked={generationOptions.scriptNameToken}
+                  onChange={(e) => onOptionChange({ scriptNameToken: e.target.checked })}
+                />
+              </OptionGroup>
+
+              <OptionGroup
+                label="Almanac QR"
+                helpText="Generate a QR code token linking to the almanac"
+              >
+                <input
+                  type="checkbox"
+                  className="toggle-switch"
+                  checked={generationOptions.almanacToken}
+                  onChange={(e) => onOptionChange({ almanacToken: e.target.checked })}
+                />
+              </OptionGroup>
+            </div>
+          </div>
+        )}
+
+        {/* Background Sub-Tab */}
+        {activeSubTab === 'background' && (
+          <div className="subtab-content">
+            <div className="subsection">
+              <OptionGroup
+                label="Background"
+                helpText="Select meta token background pattern"
+              >
+                <select
+                  className="select-input"
+                  value={generationOptions.metaBackground || 'character_background_1'}
+                  onChange={(e) => onOptionChange({ metaBackground: e.target.value })}
+                >
+                  {Array.from({ length: 7 }, (_, i) => (
+                    <option key={i + 1} value={`character_background_${i + 1}`}>
+                      Background {i + 1}
+                    </option>
+                  ))}
+                </select>
+              </OptionGroup>
+            </div>
+          </div>
+        )}
+
+        {/* Font Sub-Tab */}
+        {activeSubTab === 'font' && (
+          <div className="subtab-content">
+            <div className="subsection">
+              <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>TBI</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+})
+
+MetaTab.displayName = 'MetaTab'

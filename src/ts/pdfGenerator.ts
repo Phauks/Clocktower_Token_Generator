@@ -4,8 +4,10 @@
  */
 
 import CONFIG from './config.js';
+import { TEAM_LABELS } from './config.js';
 import { canvasToBlob } from './utils.js';
-import type { Token, PDFOptions, TokenLayoutItem, ProgressCallback, jsPDFDocument, JSZipInstance } from './types/index.js';
+import { embedPngMetadata, type PngMetadata } from './png-metadata.js';
+import type { Token, PDFOptions, TokenLayoutItem, ProgressCallback, jsPDFDocument, JSZipInstance, ZipExportOptions, PngExportOptions } from './types/index.js';
 
 /**
  * PDFGenerator class handles PDF creation and layout
@@ -57,9 +59,35 @@ export class PDFGenerator {
     /**
      * Calculate grid layout for tokens
      * @param tokens - Array of token objects with canvas
+     * @param separateByType - Whether to separate character and reminder tokens onto different pages
      * @returns Array of pages with token positions
      */
-    calculateGridLayout(tokens: Token[]): TokenLayoutItem[][] {
+    calculateGridLayout(tokens: Token[], separateByType: boolean = true): TokenLayoutItem[][] {
+        if (!separateByType) {
+            return this.calculateSingleLayout(tokens);
+        }
+
+        // Separate tokens by type
+        const characterTokens = tokens.filter(t =>
+            t.type === 'character' || t.type === 'script-name' ||
+            t.type === 'almanac' || t.type === 'pandemonium'
+        );
+        const reminderTokens = tokens.filter(t => t.type === 'reminder');
+
+        // Layout each group separately
+        const charPages = this.calculateSingleLayout(characterTokens);
+        const reminderPages = this.calculateSingleLayout(reminderTokens);
+
+        // Character pages first, then reminder pages
+        return [...charPages, ...reminderPages];
+    }
+
+    /**
+     * Calculate grid layout for a single array of tokens
+     * @param tokens - Array of token objects with canvas
+     * @returns Array of pages with token positions
+     */
+    private calculateSingleLayout(tokens: Token[]): TokenLayoutItem[][] {
         const pages: TokenLayoutItem[][] = [];
         let currentPage: TokenLayoutItem[] = [];
         let currentX = this.options.xOffset;
@@ -67,9 +95,8 @@ export class PDFGenerator {
         let rowHeight = 0;
 
         for (const token of tokens) {
-            const tokenWidth = token.canvas.width;
-            const tokenHeight = token.canvas.height;
-            const tokenSize = Math.max(tokenWidth, tokenHeight);
+            // Use the original diameter instead of scaled canvas dimensions
+            const tokenSize = token.diameter;
 
             // Check if token fits on current row
             if (currentX + tokenSize > this.usableWidth) {
@@ -94,8 +121,8 @@ export class PDFGenerator {
                 token,
                 x: currentX,
                 y: currentY,
-                width: tokenWidth,
-                height: tokenHeight
+                width: tokenSize,
+                height: tokenSize
             });
 
             // Update position
@@ -115,9 +142,10 @@ export class PDFGenerator {
      * Generate PDF from tokens
      * @param tokens - Array of token objects with canvas
      * @param progressCallback - Progress callback (page, totalPages)
+     * @param separatePages - Whether to separate character and reminder tokens onto different pages (default: true)
      * @returns Generated PDF document
      */
-    async generatePDF(tokens: Token[], progressCallback: ProgressCallback | null = null): Promise<jsPDFDocument> {
+    async generatePDF(tokens: Token[], progressCallback: ProgressCallback | null = null, separatePages: boolean = true): Promise<jsPDFDocument> {
         const jspdfLib = window.jspdf;
         if (!jspdfLib) {
             throw new Error('jsPDF library not loaded');
@@ -131,7 +159,7 @@ export class PDFGenerator {
         });
 
         // Calculate layout
-        const pages = this.calculateGridLayout(tokens);
+        const pages = this.calculateGridLayout(tokens, separatePages);
 
         if (pages.length === 0) {
             return pdf;
@@ -180,13 +208,15 @@ export class PDFGenerator {
      * @param tokens - Array of token objects with canvas
      * @param filename - Output filename
      * @param progressCallback - Progress callback
+     * @param separatePages - Whether to separate character and reminder tokens onto different pages (default: true)
      */
     async downloadPDF(
         tokens: Token[],
         filename: string = 'tokens.pdf',
-        progressCallback: ProgressCallback | null = null
+        progressCallback: ProgressCallback | null = null,
+        separatePages: boolean = true
     ): Promise<void> {
-        const pdf = await this.generatePDF(tokens, progressCallback);
+        const pdf = await this.generatePDF(tokens, progressCallback, separatePages);
         pdf.save(filename);
     }
 
@@ -194,10 +224,11 @@ export class PDFGenerator {
      * Generate and return PDF as blob
      * @param tokens - Array of token objects with canvas
      * @param progressCallback - Progress callback
+     * @param separatePages - Whether to separate character and reminder tokens onto different pages (default: true)
      * @returns PDF blob
      */
-    async getPDFBlob(tokens: Token[], progressCallback: ProgressCallback | null = null): Promise<Blob> {
-        const pdf = await this.generatePDF(tokens, progressCallback);
+    async getPDFBlob(tokens: Token[], progressCallback: ProgressCallback | null = null, separatePages: boolean = true): Promise<Blob> {
+        const pdf = await this.generatePDF(tokens, progressCallback, separatePages);
         return pdf.output('blob');
     }
 }
@@ -206,11 +237,23 @@ export class PDFGenerator {
  * Create a ZIP file with all token images
  * @param tokens - Array of token objects with canvas
  * @param progressCallback - Progress callback
+ * @param zipSettings - ZIP folder structure settings
+ * @param scriptJson - Optional script JSON to include
+ * @param pngSettings - Optional PNG export settings (for metadata embedding)
  * @returns ZIP file blob
  */
 export async function createTokensZip(
     tokens: Token[],
-    progressCallback: ProgressCallback | null = null
+    progressCallback: ProgressCallback | null = null,
+    zipSettings: ZipExportOptions = {
+        saveInTeamFolders: true,
+        saveRemindersSeparately: true,
+        metaTokenFolder: true,
+        includeScriptJson: false,
+        compressionLevel: 'normal'
+    },
+    scriptJson?: string,
+    pngSettings?: PngExportOptions
 ): Promise<Blob> {
     // Validate input
     if (!tokens || !Array.isArray(tokens)) {
@@ -227,10 +270,21 @@ export async function createTokensZip(
     }
 
     const zip: JSZipInstance = new JSZipConstructor();
+    const { 
+        saveInTeamFolders, 
+        saveRemindersSeparately, 
+        metaTokenFolder = true,
+        includeScriptJson = false,
+        compressionLevel = 'normal'
+    } = zipSettings;
 
-    // Create folders for character and reminder tokens
-    const charFolder = zip.folder('character_tokens');
-    const reminderFolder = zip.folder('reminder_tokens');
+    // Map compression level to JSZip compression options
+    const compressionOptions: Record<string, number> = {
+        'fast': 1,
+        'normal': 6,
+        'maximum': 9
+    };
+    const compressionValue = compressionOptions[compressionLevel] ?? 6;
 
     for (let i = 0; i < tokens.length; i++) {
         const token = tokens[i];
@@ -240,27 +294,122 @@ export async function createTokensZip(
         }
 
         // Convert canvas to blob
-        const blob = await canvasToBlob(token.canvas);
-        const filename = `${token.filename}.png`;
+        let blob = await canvasToBlob(token.canvas);
 
-        // Add to appropriate folder - meta tokens go in character_tokens
-        if (token.type === 'character' || token.type === 'script-name' || token.type === 'almanac' || token.type === 'pandemonium') {
-            charFolder.file(filename, blob);
-        } else {
-            reminderFolder.file(filename, blob);
+        // Embed metadata if enabled
+        if (pngSettings?.embedMetadata) {
+            const metadata: PngMetadata = {
+                Title: token.name,
+                Description: `${token.type} token${token.team ? ` - ${token.team}` : ''}`,
+                Source: 'Clocktower Token Generator',
+            };
+            
+            // Add extra info in comment
+            if (token.reminderText) {
+                metadata.Comment = JSON.stringify({
+                    type: token.type,
+                    team: token.team,
+                    reminderText: token.reminderText,
+                    parentCharacter: token.parentCharacter,
+                });
+            } else {
+                metadata.Comment = JSON.stringify({
+                    type: token.type,
+                    team: token.team,
+                });
+            }
+            
+            blob = await embedPngMetadata(blob, metadata);
         }
+
+        // Add underscore prefix to meta tokens if not present
+        let filename = token.filename;
+        if (token.type === 'script-name' || token.type === 'almanac' || token.type === 'pandemonium') {
+            if (!filename.startsWith('_')) {
+                filename = `_${filename}`;
+            }
+        }
+        filename = `${filename}.png`;
+
+        // Determine folder path
+        let folderPath = '';
+        const isMetaToken = token.type === 'script-name' || token.type === 'almanac' || token.type === 'pandemonium';
+
+        // Meta tokens go to _meta folder if enabled
+        if (isMetaToken && metaTokenFolder) {
+            folderPath = '_meta/';
+        } else if (saveRemindersSeparately) {
+            // Step 1: Separate by token type if enabled
+            if (token.type === 'character' || isMetaToken) {
+                folderPath = 'character_tokens/';
+            } else {
+                folderPath = 'reminder_tokens/';
+            }
+        }
+
+        // Step 2: Add team subfolder if enabled (except meta tokens)
+        if (saveInTeamFolders && !isMetaToken) {
+            const teamName = TEAM_LABELS[token.team as keyof typeof TEAM_LABELS] ?? token.team;
+            folderPath += `${teamName}/`;
+        }
+
+        // Create file at path (JSZip creates folders automatically)
+        zip.file(folderPath + filename, blob);
     }
 
-    // Generate ZIP
-    return await zip.generateAsync({ type: 'blob' });
+    // Include script JSON if enabled
+    if (includeScriptJson && scriptJson) {
+        const metaFolder = metaTokenFolder ? '_meta/' : '';
+        zip.file(`${metaFolder}script.json`, scriptJson);
+    }
+
+    // Generate ZIP with compression settings
+    return await zip.generateAsync({ 
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: {
+            level: compressionValue
+        }
+    });
 }
 
 /**
  * Download a single token as PNG
  * @param token - Token object with canvas
+ * @param pngSettings - Optional PNG export settings
  */
-export async function downloadTokenPNG(token: Token): Promise<void> {
-    const blob = await canvasToBlob(token.canvas);
+export async function downloadTokenPNG(
+    token: Token, 
+    pngSettings?: PngExportOptions
+): Promise<void> {
+    let blob = await canvasToBlob(token.canvas);
+    
+    // Embed metadata if enabled
+    if (pngSettings?.embedMetadata) {
+        const metadata: PngMetadata = {
+            Title: token.name,
+            Description: `${token.type} token${token.team ? ` - ${token.team}` : ''}`,
+            Source: 'Clocktower Token Generator',
+        };
+        
+        // Add reminder text if present
+        if (token.reminderText) {
+            metadata.Comment = JSON.stringify({
+                type: token.type,
+                team: token.team,
+                reminderText: token.reminderText,
+                parentCharacter: token.parentCharacter,
+            });
+        } else {
+            metadata.Comment = JSON.stringify({
+                type: token.type,
+                team: token.team,
+            });
+        }
+        
+        blob = await embedPngMetadata(blob, metadata);
+    }
+    
     const url = URL.createObjectURL(blob);
 
     const link = document.createElement('a');

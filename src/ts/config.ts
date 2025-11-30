@@ -7,26 +7,33 @@ import type { Config, Team, TeamColors, TeamLabels } from './types/index.js';
 
 export const CONFIG: Config = {
     // Application Version
-    VERSION: '0.1.0',
+    VERSION: '0.2.0',
 
     // Token Generation Defaults
     TOKEN: {
-        ROLE_DIAMETER: 300,
-        REMINDER_DIAMETER: 525,
+        // Physical sizes in inches (not configurable by users)
+        ROLE_DIAMETER_INCHES: 1.75,      // Character token diameter
+        REMINDER_DIAMETER_INCHES: 1,      // Reminder token diameter
         DISPLAY_ABILITY_TEXT: false,
         TOKEN_COUNT: false
     },
 
     // Style Defaults
     STYLE: {
-        LEAF_GENERATION: 'leaves_1',
-        MAXIMUM_LEAVES: 3,
+        LEAF_GENERATION: 'classic',
+        MAXIMUM_LEAVES: 0,
         LEAF_POPULATION_PROBABILITY: 30,
+        LEAF_ARC_SPAN: 120,
+        LEAF_SLOTS: 7,
         SETUP_FLOWER_STYLE: 'setup_flower_1',
         REMINDER_BACKGROUND: '#FFFFFF',
         CHARACTER_BACKGROUND: 'character_background_1',
         CHARACTER_NAME_FONT: 'Dumbledor',
-        CHARACTER_REMINDER_FONT: 'TradeGothic'
+        CHARACTER_NAME_COLOR: '#000000',
+        CHARACTER_REMINDER_FONT: 'TradeGothic',
+        ABILITY_TEXT_FONT: 'TradeGothic',
+        ABILITY_TEXT_COLOR: '#000000',
+        REMINDER_TEXT_COLOR: '#FFFFFF'
     },
 
     // PDF Generation Defaults
@@ -39,6 +46,29 @@ export const CONFIG: Config = {
         DPI: 300,
         MARGIN: 0.25       // inches
     },
+
+    // Font Spacing Defaults
+    FONT_SPACING: {
+        CHARACTER_NAME: 0,    // 0px = normal spacing
+        ABILITY_TEXT: 0,
+        REMINDER_TEXT: 0
+    },
+
+    // Text Shadow Defaults
+    TEXT_SHADOW: {
+        CHARACTER_NAME: 4,    // 4px blur radius
+        ABILITY_TEXT: 3,      // 3px blur radius
+        REMINDER_TEXT: 4      // 4px blur radius
+    },
+
+    // ZIP Export Settings
+    ZIP: {
+        SAVE_IN_TEAM_FOLDERS: true,
+        SAVE_REMINDERS_SEPARATELY: true
+    },
+
+    // Auto-generation Default
+    AUTO_GENERATE_DEFAULT: true,
 
     // API Endpoints
     API: {
@@ -57,8 +87,8 @@ export const CONFIG: Config = {
     // Example Scripts
     EXAMPLE_SCRIPTS: [
         'Catfishing.json',
-        'Uncertain Death.json',
-        'Fall of Rome.json'
+        'Uncertain_Death.json',
+        'Fall_of_Rome.json'
     ],
 
     // Team Types

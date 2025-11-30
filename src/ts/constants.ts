@@ -1,0 +1,277 @@
+/**
+ * Blood on the Clocktower Token Generator
+ * Constants - Design values and magic numbers extracted for maintainability
+ */
+
+// ============================================================================
+// LAYOUT RATIOS - Used for token element positioning and sizing
+// ============================================================================
+
+/**
+ * Layout ratios for character token generation
+ * All values are relative to the token diameter
+ */
+export const CHARACTER_LAYOUT = {
+    /** Size of character image relative to diameter */
+    IMAGE_SIZE_RATIO: 0.65,
+    /** Vertical offset for character image (pushes image up slightly) */
+    IMAGE_VERTICAL_OFFSET: 0.05,
+    /** Y position for ability text from top of token */
+    ABILITY_TEXT_Y_POSITION: 0.15,
+    /** Y position for token count badge from top */
+    TOKEN_COUNT_Y_POSITION: 0.12,
+    /** Radius ratio for curved text placement */
+    CURVED_TEXT_RADIUS: 0.85,
+    /** Maximum arc span for curved text (~126 degrees) */
+    MAX_TEXT_ARC_SPAN: Math.PI * 0.7,
+    /** Width ratio for ability text wrapping */
+    ABILITY_TEXT_MAX_WIDTH: 0.7,
+} as const;
+
+/**
+ * Layout ratios for reminder token generation
+ */
+export const REMINDER_LAYOUT = {
+    /** Size of character image on reminder tokens (smaller than character tokens) */
+    IMAGE_SIZE_RATIO: 0.5,
+    /** Vertical offset for character image */
+    IMAGE_VERTICAL_OFFSET: 0.05,
+    /** Radius ratio for curved text placement */
+    CURVED_TEXT_RADIUS: 0.85,
+} as const;
+
+/**
+ * Layout ratios for meta tokens (script name, pandemonium, almanac)
+ */
+export const META_TOKEN_LAYOUT = {
+    /** Font size ratio for Pandemonium Institute text */
+    PANDEMONIUM_TEXT_SIZE: 0.11,
+    /** Font size ratio for centered script name text */
+    CENTERED_TEXT_SIZE: 0.12,
+    /** Max width ratio for centered text wrapping */
+    CENTERED_TEXT_MAX_WIDTH: 0.75,
+    /** Font size ratio for author name (smaller than main text) */
+    AUTHOR_TEXT_SIZE_FACTOR: 0.7,
+    /** Font size ratio for "Blood on the Clocktower" text */
+    BOTC_TEXT_SIZE_FACTOR: 0.75,
+} as const;
+
+/**
+ * Layout ratios for QR code almanac token
+ */
+export const QR_TOKEN_LAYOUT = {
+    /** Size of QR code relative to diameter */
+    QR_CODE_SIZE: 0.8,
+    /** Font size ratio for script name overlay on QR */
+    OVERLAY_TEXT_SIZE: 0.08,
+    /** Max width ratio for overlay text wrapping */
+    OVERLAY_TEXT_MAX_WIDTH: 0.4,
+    /** Vertical offset for QR code (pushes up slightly) */
+    QR_VERTICAL_OFFSET: 0.05,
+    /** Width ratio for white box behind text */
+    TEXT_BOX_WIDTH: 0.45,
+    /** Height ratio for white box behind text */
+    TEXT_BOX_HEIGHT: 0.15,
+} as const;
+
+// ============================================================================
+// TEXT SIZING - Line heights and typography settings
+// ============================================================================
+
+/**
+ * Line height multipliers for multi-line text
+ */
+export const LINE_HEIGHTS = {
+    /** Standard line height for most text */
+    STANDARD: 1.3,
+    /** Tighter line height for QR overlay text */
+    TIGHT: 1.2,
+} as const;
+
+/**
+ * Token count badge sizing
+ */
+export const TOKEN_COUNT_BADGE = {
+    /** Radius multiplier for background circle */
+    BACKGROUND_RADIUS: 0.8,
+    /** Line width for badge stroke */
+    STROKE_WIDTH: 2,
+} as const;
+
+/**
+ * Leaf decoration configuration for token generation
+ * Uses leaf assets dynamically positioned around the token edge
+ */
+export const LEAF_LAYOUT = {
+    /** Arc configuration for top leaves (in degrees, centered at top) */
+    ARC: {
+        /** Default arc span in degrees (e.g., 120 = 60deg left to 60deg right of top) */
+        DEFAULT_SPAN: 120,
+        /** Maximum configurable arc span */
+        MAX_SPAN: 180,
+        /** Minimum configurable arc span */
+        MIN_SPAN: 30,
+    },
+    /** Number of potential leaf positions along the arc */
+    SLOTS: {
+        DEFAULT: 7,
+        MIN: 3,
+        MAX: 15,
+    },
+    /** Left and right side leaf configuration */
+    SIDE_LEAVES: {
+        /** How far from center (as ratio of radius) */
+        RADIAL_OFFSET: 0.88,
+        /** Scale relative to diameter */
+        SCALE: 0.30,
+        /** Rotation in degrees (positive = clockwise) - leaves point outward */
+        LEFT_ROTATION: -90,
+        RIGHT_ROTATION: 90,
+    },
+    /** Arc leaf configuration */
+    ARC_LEAVES: {
+        /** How far from center leaves are placed (as ratio of radius) */
+        RADIAL_OFFSET: 0.78,
+        /** Scale relative to diameter */
+        SCALE: 0.22,
+    },
+    /** Asset configuration */
+    ASSETS: {
+        /** Base path for leaves folder */
+        LEAVES_PATH: 'leaves/',
+        /** Filename prefix for leaf variants (leaf_1.png, leaf_2.png, etc.) */
+        LEAF_FILENAME: 'leaf',
+        /** Number of leaf variants available */
+        DEFAULT_VARIANTS: 1,
+        MIN_VARIANTS: 1,
+        MAX_VARIANTS: 10,
+    },
+    /** Default generation settings */
+    DEFAULTS: {
+        MAX_LEAVES: 5,
+        PROBABILITY: 30,
+    },
+} as const;
+
+// ============================================================================
+// COLORS - Default colors used throughout token generation
+// ============================================================================
+
+/**
+ * Default colors for token rendering
+ */
+export const DEFAULT_COLORS = {
+    /** Fallback background color when image fails to load */
+    FALLBACK_BACKGROUND: '#1a1a1a',
+    /** Default text color (white) */
+    TEXT_PRIMARY: '#FFFFFF',
+    /** Black text color for QR tokens */
+    TEXT_DARK: '#000000',
+    /** Text shadow color for readability */
+    TEXT_SHADOW: 'rgba(0, 0, 0, 0.8)',
+    /** Semi-transparent background for badges */
+    BADGE_BACKGROUND: 'rgba(0, 0, 0, 0.6)',
+} as const;
+
+/**
+ * QR code colors
+ */
+export const QR_COLORS = {
+    /** Dark color for QR modules */
+    DARK: '#000000',
+    /** Light color for QR background */
+    LIGHT: '#FFFFFF',
+    /** Error correction level (3 = H = 30% recovery) */
+    ERROR_CORRECTION_LEVEL: 3,
+} as const;
+
+// ============================================================================
+// SHADOW SETTINGS - Text shadow configuration for readability
+// ============================================================================
+
+/**
+ * Text shadow settings for curved text and titles
+ */
+export const TEXT_SHADOW = {
+    /** Shadow blur radius in pixels */
+    BLUR: 4,
+    /** Shadow horizontal offset */
+    OFFSET_X: 2,
+    /** Shadow vertical offset */
+    OFFSET_Y: 2,
+} as const;
+
+/**
+ * Text shadow settings for ability text (smaller shadows)
+ */
+export const ABILITY_TEXT_SHADOW = {
+    /** Shadow blur radius in pixels */
+    BLUR: 3,
+    /** Shadow horizontal offset */
+    OFFSET_X: 1,
+    /** Shadow vertical offset */
+    OFFSET_Y: 1,
+} as const;
+
+// ============================================================================
+// TIMING - Delays and timeouts
+// ============================================================================
+
+/**
+ * Timing constants
+ */
+export const TIMING = {
+    /** Delay for QR code generation (ms) - allows library to render */
+    QR_GENERATION_DELAY: 100,
+    /** Debounce delay for JSON validation (ms) */
+    JSON_VALIDATION_DEBOUNCE: 300,
+    /** Debounce delay for option changes (ms) */
+    OPTION_CHANGE_DEBOUNCE: 500,
+} as const;
+
+// ============================================================================
+// UI CONSTANTS - User interface settings
+// ============================================================================
+
+/**
+ * UI size settings
+ */
+export const UI_SIZE = {
+    /** Minimum UI scale percentage */
+    MIN: 50,
+    /** Maximum UI scale percentage */
+    MAX: 200,
+    /** Default UI scale percentage */
+    DEFAULT: 100,
+    /** Base font size in pixels */
+    BASE_FONT_SIZE_PX: 16,
+} as const;
+
+/**
+ * Token preview display settings
+ */
+export const TOKEN_PREVIEW = {
+    /** Display size for token cards in the grid */
+    DISPLAY_SIZE: 180,
+} as const;
+
+// ============================================================================
+// EXPORT DEFAULT - For convenience imports
+// ============================================================================
+
+export default {
+    CHARACTER_LAYOUT,
+    REMINDER_LAYOUT,
+    META_TOKEN_LAYOUT,
+    QR_TOKEN_LAYOUT,
+    LINE_HEIGHTS,
+    TOKEN_COUNT_BADGE,
+    LEAF_LAYOUT,
+    DEFAULT_COLORS,
+    QR_COLORS,
+    TEXT_SHADOW,
+    ABILITY_TEXT_SHADOW,
+    TIMING,
+    UI_SIZE,
+    TOKEN_PREVIEW,
+};

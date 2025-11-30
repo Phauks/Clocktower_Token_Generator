@@ -1,0 +1,84 @@
+import { useState, useCallback } from 'react'
+import { TokenProvider } from './contexts/TokenContext'
+import { ToastProvider } from './contexts/ToastContext'
+import { AppHeader } from './components/Layout/AppHeader'
+import { AppFooter } from './components/Layout/AppFooter'
+import { TabNavigation, type TabType } from './components/Layout/TabNavigation'
+import { SettingsModal } from './components/Modals/SettingsModal'
+import { InfoModal } from './components/Modals/InfoModal'
+import { ToastContainer } from './components/Shared/Toast'
+import { EditorView } from './components/Views/EditorView'
+import { GalleryView } from './components/Views/GalleryView'
+import { CustomizeView } from './components/Views/CustomizeView'
+import { ScriptView } from './components/Views/ScriptView'
+import { DownloadView } from './components/Views/DownloadView'
+import type { Token } from './ts/types/index.js'
+
+function AppContent() {
+  const [showSettings, setShowSettings] = useState(false)
+  const [showInfo, setShowInfo] = useState(false)
+  const [activeTab, setActiveTab] = useState<TabType>('editor')
+  const [selectedTokenForCustomize, setSelectedTokenForCustomize] = useState<Token | undefined>(undefined)
+
+  const handleTokenClick = useCallback((token: Token) => {
+    setSelectedTokenForCustomize(token)
+    setActiveTab('customize')
+  }, [])
+
+  const handleTabChange = useCallback((tab: TabType) => {
+    setActiveTab(tab)
+  }, [])
+
+  const renderActiveView = () => {
+    switch (activeTab) {
+      case 'editor':
+        return <EditorView />
+      case 'gallery':
+        return <GalleryView onTokenClick={handleTokenClick} />
+      case 'customize':
+        return (
+          <CustomizeView 
+            initialToken={selectedTokenForCustomize}
+            onGoToGallery={() => setActiveTab('gallery')}
+          />
+        )
+      case 'script':
+        return <ScriptView />
+      case 'download':
+        return <DownloadView />
+      default:
+        return <EditorView />
+    }
+  }
+
+  return (
+    <div className="app-container">
+      <AppHeader
+        onSettingsClick={() => setShowSettings(true)}
+        onInfoClick={() => setShowInfo(true)}
+      />
+      <TabNavigation activeTab={activeTab} onTabChange={handleTabChange} />
+      <main className="main-content tab-view-content">
+        {renderActiveView()}
+      </main>
+      <AppFooter />
+
+      {/* Modals */}
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
+      <InfoModal isOpen={showInfo} onClose={() => setShowInfo(false)} />
+      
+      {/* Toast Notifications */}
+      <ToastContainer />
+    </div>
+  )
+}
+
+export default function App() {
+  return (
+    <ToastProvider>
+      <TokenProvider>
+        <AppContent />
+      </TokenProvider>
+    </ToastProvider>
+  )
+}

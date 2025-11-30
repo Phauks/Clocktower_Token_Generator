@@ -44,6 +44,91 @@ npm run build
 npm run watch
 ```
 
+### Development Workflow
+
+#### Daily Development
+
+Start the development server with automatic browser refresh:
+
+```bash
+npm run dev
+```
+
+This runs TypeScript in watch mode and starts Vite dev server at http://localhost:7221.
+Changes to TypeScript files automatically compile and refresh your browser.
+
+#### Running Tests
+
+```bash
+# Run all tests once
+npm test
+
+# Watch mode (re-runs on changes)
+npm run test:watch
+
+# Visual UI for tests
+npm run test:ui
+
+# Coverage report
+npm run test:coverage
+```
+
+#### Before Committing
+
+Run pre-commit checks to ensure code quality:
+
+```bash
+npm run precommit
+```
+
+This runs type checking, unit tests, and build verification.
+
+For faster checks during rapid development:
+
+```bash
+npm run precommit:quick
+```
+
+#### Before Releasing
+
+Run full validation before tagging a release:
+
+```bash
+npm run prerelease
+```
+
+Follow the E2E testing checklist that appears after running this command.
+
+#### Useful Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server with auto-refresh |
+| `npm run dev:test` | Development server + test watch mode |
+| `npm run lint` | Type check TypeScript without building |
+| `npm run precommit` | Run all pre-commit checks |
+| `npm run prerelease` | Full release validation |
+| `npm run validate` | Run CI-equivalent checks locally |
+| `npm run preview` | Preview production build locally |
+
+#### Troubleshooting
+
+**Dev server won't start**
+- Check if port 7221 is in use
+- Try: `npm run dev:serve -- --port 3000`
+
+**TypeScript errors but code works**
+- Run: `npm run build` to see full errors
+- Check: `tsconfig.json` for strict settings
+
+**Tests failing**
+- Run: `npm run test:ui` for detailed view
+- Check: Browser console for runtime errors
+
+**Changes not reflecting**
+- Hard refresh: Ctrl+Shift+R (Windows)
+- Clear dist: `npm run clean && npm run build`
+
 ### Project Structure
 
 ```
@@ -173,9 +258,10 @@ This project uses TypeScript with strict type checking enabled. All data structu
 ## Dependencies
 
 External libraries loaded via CDN:
-- [jsPDF](https://github.com/parallax/jsPDF) - PDF generation
-- [JSZip](https://stuk.github.io/jszip/) - ZIP file creation
-- [FileSaver.js](https://github.com/eligrey/FileSaver.js/) - File downloads
+- [jsPDF](https://github.com/parallax/jsPDF) 2.5.1 - PDF generation
+- [JSZip](https://stuk.github.io/jszip/) 3.10.1 - ZIP file creation
+- [FileSaver.js](https://github.com/eligrey/FileSaver.js/) 2.0.5 - File downloads
+- [QRCode.js](https://davidshimjs.github.io/qrcodejs/) 1.0.0 - QR code generation for almanac tokens
 
 ## Credits
 
@@ -183,6 +269,145 @@ External libraries loaded via CDN:
 - Character data sourced from the official Blood on the Clocktower API
 - Fonts: Dumbledor, Trade Gothic
 - A trademark token is automatically generated with every token set to credit The Pandemonium Institute
+
+## Architecture
+
+### Technology Stack
+
+- **TypeScript 5.3+** with strict type checking
+- **ES2020 modules** for modern JavaScript features
+- **HTML5 Canvas API** for token rendering
+- **Client-side only** - no backend required
+
+### Module Structure
+
+```
+src/ts/
+├── main.ts              - Application entry point and initialization
+├── ui.ts                - UI controller and event handling
+├── tokenGenerator.ts    - Canvas-based token rendering engine
+├── pdfGenerator.ts      - PDF and ZIP export functionality
+├── dataLoader.ts        - Data fetching and JSON parsing
+├── config.ts            - Configuration constants and defaults
+├── presets.ts           - UI preset configurations
+├── utils.ts             - Utility functions (debounce, image loading, etc.)
+└── types/index.ts       - TypeScript type definitions
+```
+
+### Data Flow
+
+1. **Input**: User provides JSON (upload/paste/example)
+2. **Parsing**: `dataLoader.ts` validates and merges with official character data
+3. **Generation**: `tokenGenerator.ts` creates canvas elements for each token
+4. **Display**: `ui.ts` filters and renders tokens in grid view
+5. **Export**: `pdfGenerator.ts` converts tokens to PNG/ZIP/PDF
+
+### CI/CD Workflows
+
+The project uses GitHub Actions for:
+- **Build verification** on all PRs (Node.js 18.x and 20.x)
+- **Code quality checks** (TypeScript type checking)
+- **Automatic versioning** (patch version bump on main commits)
+- **Deployment** to GitHub Pages
+- **Security audits** (weekly dependency checks)
+- **Release creation** with ZIP artifacts
+
+## Troubleshooting
+
+### Common Issues
+
+**Q: Tokens are not generating**
+- Ensure your JSON is valid (use the "Beautify JSON" button)
+- Check browser console for error messages
+- Verify character IDs match official characters or include full character objects
+
+**Q: Character images not loading**
+- Images must be publicly accessible URLs
+- CORS restrictions may block some images
+- Try using images from official sources or CORS-enabled hosts
+
+**Q: PDF is blank or incomplete**
+- Ensure all images have loaded before generating PDF
+- Try reducing the number of tokens per page using token padding
+- Check browser console for errors
+
+**Q: ZIP download not working**
+- Ensure pop-ups are not blocked in your browser
+- Try disabling browser extensions that might interfere
+- Check browser console for errors
+
+**Q: Fonts look incorrect**
+- Fonts load automatically on app start
+- Some browsers may need a page refresh
+- Check Network tab to ensure font files loaded successfully
+
+### Performance Tips
+
+- **Large scripts**: Generation time increases with token count (especially reminder tokens)
+- **Image caching**: First generation is slower; subsequent generations use cached images
+- **PDF generation**: Can be slow for 50+ tokens; be patient and watch progress indicator
+- **Browser choice**: Chrome and Edge typically have best Canvas performance
+
+## Contributing
+
+### Code Quality Standards
+
+This project maintains high code quality standards:
+
+**Naming Conventions:**
+- **Files**: camelCase (e.g., `tokenGenerator.ts`)
+- **Variables/Functions**: camelCase (e.g., `generateToken()`)
+- **Classes**: PascalCase (e.g., `TokenGenerator`)
+- **Constants**: SCREAMING_SNAKE_CASE (e.g., `CONFIG`)
+- **Types/Interfaces**: PascalCase (e.g., `Character`)
+
+**TypeScript:**
+- Strict type checking enabled
+- All public functions should have type annotations
+- Use interfaces/types from `types/index.ts`
+- No `any` types unless absolutely necessary
+
+**Code Organization:**
+- Keep functions focused and under 100 lines when possible
+- Extract reusable logic to utility functions
+- Use meaningful variable and function names
+- Add JSDoc comments for exported functions
+
+### Development Workflow
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes in `src/ts/`
+4. Build and test locally (`npm run build`)
+5. Ensure TypeScript compiles without errors
+6. Commit your changes (`git commit -m 'Add amazing feature'`)
+7. Push to your branch (`git push origin feature/amazing-feature`)
+8. Open a Pull Request
+
+### Testing Locally
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server (recommended)
+npm run dev
+
+# OR: Build and serve manually
+npm run build
+# Then use VS Code Live Server, Python's http.server, or similar
+```
+
+For comprehensive testing before commits, see the "Development Workflow" section above.
+
+### Pull Request Guidelines
+
+- Ensure all TypeScript compiles without errors
+- Follow existing code style and naming conventions
+- Update README if adding new features
+- Add entries to CHANGELOG.md
+- Keep commits focused and atomic
+- Write clear commit messages
 
 ## Changelog
 
@@ -192,11 +417,40 @@ See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes.
 
 See [LICENSE](LICENSE) file for details.
 
+## Advanced Features
+
+### Meta Tokens
+
+The generator automatically creates special meta tokens for each script:
+
+- **Pandemonium Institute Credit Token**: Automatically generated with every token set to properly credit The Pandemonium Institute
+- **Script Name Token**: Generated when your JSON includes a `_meta` entry with script name and author
+- **Almanac QR Code Token**: Generated when your JSON includes an `almanacUrl` field in the `_meta` entry
+
+Example meta entry:
+```json
+{
+  "id": "_meta",
+  "name": "My Custom Script",
+  "author": "Your Name",
+  "almanacUrl": "https://example.com/almanac"
+}
+```
+
+### Image Caching
+
+Character images are automatically cached in memory to improve performance when generating multiple tokens. The cache persists across token generation sessions.
+
+### Progress Tracking
+
+When generating large token sets or PDFs, the application provides real-time progress updates showing the current operation status.
+
 ## To Be Implemented (TBI)
 
 The following features are planned but not yet implemented:
-- Leaf generation and probability system
-- Official vs custom character filtering
-- Script name token generation
-- Almanac QR code token
-- Advanced layout algorithms beyond grid
+- Decorative leaf generation and probability system (referenced in config)
+- Official vs custom character filtering in the UI
+- Additional preset configurations (Full Bloom and Minimal are partially implemented)
+- Light theme and high contrast theme options
+- A4 paper size support for PDF generation
+- Custom DPI configuration for PDF export

@@ -20,6 +20,25 @@ import type {
 let officialDataCache: Character[] | null = null;
 
 /**
+ * Validate JSON string
+ * @param jsonString - JSON string to validate
+ * @returns Validation result with isValid flag and optional error message
+ */
+export function validateJson(jsonString: string): { isValid: boolean; error?: string } {
+    if (!jsonString || !jsonString.trim()) {
+        return { isValid: false, error: 'JSON is empty' };
+    }
+
+    try {
+        JSON.parse(jsonString);
+        return { isValid: true };
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Invalid JSON format';
+        return { isValid: false, error: message };
+    }
+}
+
+/**
  * Fetch official Blood on the Clocktower character data
  * @returns Array of character objects
  */
@@ -43,22 +62,26 @@ export async function fetchOfficialData(): Promise<Character[]> {
 
 /**
  * Load example script from file
- * @param filename - Example script filename
+ * @param filename - Example script filename (with or without .json extension)
  * @returns Parsed script data
  */
 export async function loadExampleScript(filename: string): Promise<ScriptEntry[]> {
     console.log(`[loadExampleScript] Loading example script: ${filename}`);
-    
+
+    // Ensure filename has .json extension
+    const jsonFilename = filename.endsWith('.json') ? filename : `${filename}.json`;
+
     // Try multiple path variations for compatibility with different deployment scenarios
     const basePath = new URL('.', window.location.href).href;
     const pathsToTry = [
-        `./example_scripts/${filename}`,
-        `example_scripts/${filename}`,
-        new URL(`example_scripts/${filename}`, basePath).href
+        `/example_scripts/${jsonFilename}`,
+        `./example_scripts/${jsonFilename}`,
+        `example_scripts/${jsonFilename}`,
+        new URL(`example_scripts/${jsonFilename}`, basePath).href
     ];
-    
+
     let lastError: Error | null = null;
-    
+
     for (const path of pathsToTry) {
         try {
             console.log(`[loadExampleScript] Trying path: ${path}`);
@@ -74,7 +97,7 @@ export async function loadExampleScript(filename: string): Promise<ScriptEntry[]
             lastError = error instanceof Error ? error : new Error(String(error));
         }
     }
-    
+
     const errorMessage = `Failed to load example script: ${filename}. ${lastError?.message ?? 'Unknown error'}`;
     console.error('[loadExampleScript]', errorMessage);
     throw new Error(errorMessage);
@@ -169,6 +192,132 @@ export function parseScriptData(scriptData: ScriptEntry[], officialData: Charact
     }
 
     return characters;
+}
+
+/**
+ * Result of lenient script validation
+ */
+export interface ScriptValidationResult {
+    characters: Character[];
+    warnings: string[];
+}
+
+/**
+ * Validate and parse script with lenient filtering
+ * Invalid entries are filtered out with warnings instead of failing
+ * @param scriptData - Raw script data array
+ * @param officialData - Official character data
+ * @returns Object containing valid characters and warnings for filtered entries
+ */
+export function validateAndParseScript(
+    scriptData: ScriptEntry[],
+    officialData: Character[] = []
+): ScriptValidationResult {
+    const warnings: string[] = [];
+
+    if (!Array.isArray(scriptData)) {
+        return {
+            characters: [],
+            warnings: ['Script data must be an array']
+        };
+    }
+
+    // Create a map of official characters by ID for quick lookup
+    const officialMap = new Map<string, Character>();
+    if (Array.isArray(officialData)) {
+        officialData.forEach(char => {
+            if (char && char.id) {
+                officialMap.set(char.id.toLowerCase(), char);
+            }
+        });
+    }
+
+    const characters: Character[] = [];
+    const validTeams = CONFIG.TEAMS as readonly string[];
+
+    for (let i = 0; i < scriptData.length; i++) {
+        const entry = scriptData[i];
+        const position = `Entry ${i + 1}`;
+
+        // Handle string ID references
+        if (typeof entry === 'string') {
+            const officialChar = officialMap.get(entry.toLowerCase());
+            if (officialChar) {
+                characters.push({ ...officialChar });
+            } else {
+                warnings.push(`${position}: Character "${entry}" not found in official data`);
+            }
+            continue;
+        }
+
+        // Skip null/undefined/non-objects
+        if (!entry || typeof entry !== 'object') {
+            warnings.push(`${position}: Invalid entry type (expected object or string)`);
+            continue;
+        }
+
+        // Skip _meta entries (valid, no warning)
+        if (isScriptMeta(entry)) {
+            continue;
+        }
+
+        // Handle ID reference objects
+        if (isIdReference(entry)) {
+            if (typeof entry.id !== 'string') {
+                warnings.push(`${position}: Invalid id field type`);
+                continue;
+            }
+            const officialChar = officialMap.get(entry.id.toLowerCase());
+            if (officialChar) {
+                characters.push({ ...officialChar });
+            } else {
+                warnings.push(`${position}: Character "${entry.id}" not found in official data`);
+            }
+            continue;
+        }
+
+        // Handle custom characters with full data
+        if (isCharacter(entry)) {
+            const entryWithId = entry as Character;
+            const entryWarnings: string[] = [];
+
+            // Validate team field
+            if (entryWithId.team && !validTeams.includes(entryWithId.team)) {
+                entryWarnings.push(`invalid team "${entryWithId.team}"`);
+            }
+
+            // Validate image field
+            if (entryWithId.image !== undefined) {
+                if (
+                    typeof entryWithId.image !== 'string' &&
+                    (!Array.isArray(entryWithId.image) || 
+                     !entryWithId.image.every(img => typeof img === 'string'))
+                ) {
+                    entryWarnings.push('image must be a string or array of strings');
+                }
+            }
+
+            // Validate reminders field
+            if (entryWithId.reminders !== undefined) {
+                if (!Array.isArray(entryWithId.reminders)) {
+                    entryWarnings.push('reminders must be an array');
+                }
+            }
+
+            // If there are validation issues, add warnings but still include character
+            if (entryWarnings.length > 0) {
+                const charName = entryWithId.name || entryWithId.id || 'Unknown';
+                warnings.push(`${position} (${charName}): ${entryWarnings.join(', ')}`);
+            }
+
+            // Merge with official data if ID matches
+            const officialChar = entryWithId.id ? officialMap.get(entryWithId.id.toLowerCase()) : null;
+            const mergedChar = officialChar ? { ...officialChar, ...entryWithId } : entryWithId;
+            characters.push(mergedChar as Character);
+        }
+    }
+
+    return { characters, warnings };
 }
 
 /**

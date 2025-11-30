@@ -4,23 +4,58 @@
  */
 
 import CONFIG from './config.js';
-import { loadImage, loadLocalImage, getContrastColor } from './utils.js';
+import {
+    CHARACTER_LAYOUT,
+    REMINDER_LAYOUT,
+    META_TOKEN_LAYOUT,
+    QR_TOKEN_LAYOUT,
+    LINE_HEIGHTS,
+    TOKEN_COUNT_BADGE,
+    LEAF_LAYOUT,
+    DEFAULT_COLORS,
+    QR_COLORS,
+    TIMING
+} from './constants.js';
+import { loadImage, loadLocalImage, shuffleArray } from './utils.js';
 import { getCharacterImageUrl, countReminders } from './dataLoader.js';
 import type { Character, Token, GenerationOptions, ProgressCallback, Team, ScriptMeta } from './types/index.js';
+import { TokenCreationError } from './errors.js';
 
 /**
  * Token generator options
  */
 interface TokenGeneratorOptions {
-    roleDiameter: number;
-    reminderDiameter: number;
     displayAbilityText: boolean;
     tokenCount: boolean;
     setupFlowerStyle: string;
     reminderBackground: string;
+    reminderBackgroundImage?: string;
     characterBackground: string;
+    characterBackgroundColor?: string;
+    metaBackground?: string;
     characterNameFont: string;
+    characterNameColor: string;
     characterReminderFont: string;
+    abilityTextFont: string;
+    abilityTextColor: string;
+    reminderTextColor: string;
+    leafGeneration: string;
+    maximumLeaves: number;
+    leafPopulationProbability: number;
+    leafArcSpan: number;
+    leafSlots: number;
+    transparentBackground: boolean;
+    dpi: number;
+    fontSpacing: {
+        characterName: number;
+        abilityText: number;
+        reminderText: number;
+    };
+    textShadow?: {
+        characterName: number;
+        abilityText: number;
+        reminderText: number;
+    };
 }
 
 /**
@@ -32,15 +67,29 @@ export class TokenGenerator {
 
     constructor(options: Partial<TokenGeneratorOptions> = {}) {
         this.options = {
-            roleDiameter: options.roleDiameter ?? CONFIG.TOKEN.ROLE_DIAMETER,
-            reminderDiameter: options.reminderDiameter ?? CONFIG.TOKEN.REMINDER_DIAMETER,
             displayAbilityText: options.displayAbilityText ?? CONFIG.TOKEN.DISPLAY_ABILITY_TEXT,
             tokenCount: options.tokenCount ?? CONFIG.TOKEN.TOKEN_COUNT,
             setupFlowerStyle: options.setupFlowerStyle ?? CONFIG.STYLE.SETUP_FLOWER_STYLE,
             reminderBackground: options.reminderBackground ?? CONFIG.STYLE.REMINDER_BACKGROUND,
             characterBackground: options.characterBackground ?? CONFIG.STYLE.CHARACTER_BACKGROUND,
             characterNameFont: options.characterNameFont ?? CONFIG.STYLE.CHARACTER_NAME_FONT,
-            characterReminderFont: options.characterReminderFont ?? CONFIG.STYLE.CHARACTER_REMINDER_FONT
+            characterNameColor: options.characterNameColor ?? CONFIG.STYLE.CHARACTER_NAME_COLOR,
+            characterReminderFont: options.characterReminderFont ?? CONFIG.STYLE.CHARACTER_REMINDER_FONT,
+            abilityTextFont: options.abilityTextFont ?? CONFIG.STYLE.ABILITY_TEXT_FONT,
+            abilityTextColor: options.abilityTextColor ?? CONFIG.STYLE.ABILITY_TEXT_COLOR,
+            reminderTextColor: options.reminderTextColor ?? CONFIG.STYLE.REMINDER_TEXT_COLOR,
+            leafGeneration: options.leafGeneration ?? CONFIG.STYLE.LEAF_GENERATION,
+            maximumLeaves: options.maximumLeaves ?? CONFIG.STYLE.MAXIMUM_LEAVES,
+            leafPopulationProbability: options.leafPopulationProbability ?? CONFIG.STYLE.LEAF_POPULATION_PROBABILITY,
+            leafArcSpan: options.leafArcSpan ?? CONFIG.STYLE.LEAF_ARC_SPAN,
+            leafSlots: options.leafSlots ?? CONFIG.STYLE.LEAF_SLOTS,
+            transparentBackground: options.transparentBackground ?? false,
+            dpi: options.dpi ?? CONFIG.PDF.DPI,
+            fontSpacing: options.fontSpacing ?? {
+                characterName: CONFIG.FONT_SPACING.CHARACTER_NAME,
+                abilityText: CONFIG.FONT_SPACING.ABILITY_TEXT,
+                reminderText: CONFIG.FONT_SPACING.REMINDER_TEXT
+            }
         };
 
         this.imageCache = new Map();
@@ -97,46 +146,160 @@ export class TokenGenerator {
     }
 
     /**
+     * Draw leaf decorations on a token
+     * Dynamically positions leaves along an arc at the top and on left/right sides
+     * @param ctx - Canvas context
+     * @param diameter - Token diameter
+     */
+    async drawLeaves(ctx: CanvasRenderingContext2D, diameter: number): Promise<void> {
+        const { 
+            maximumLeaves, 
+            leafPopulationProbability, 
+            leafGeneration,
+            leafArcSpan,
+            leafSlots
+        } = this.options;
+        
+        // Auto-detect available leaf variants by trying to load them
+        const basePath = `${CONFIG.ASSETS.LEAVES}${LEAF_LAYOUT.ASSETS.LEAVES_PATH}${leafGeneration}/`;
+        let availableVariants = 0;
+        for (let i = 1; i <= 20; i++) { // Check up to 20 variants
+            try {
+                await this.getLocalImage(`${basePath}${LEAF_LAYOUT.ASSETS.LEAF_FILENAME}_${i}.png`);
+                availableVariants = i;
+            } catch {
+                break; // Stop when we can't load the next variant
+            }
+        }
+        
+        if (availableVariants === 0) {
+            console.warn(`No leaf variants found for style: ${leafGeneration}`);
+            return;
+        }
+        
+        const radius = diameter / 2;
+        const center = { x: radius, y: radius };
+        
+        // Build array of all possible leaf positions
+        // 2 side positions + leafSlots arc positions
+        interface LeafPosition {
+            type: 'left' | 'right' | 'arc';
+            angle: number; // in radians, 0 = top, positive = clockwise
+            scale: number;
+            radialOffset: number;
+        }
+        
+        const positions: LeafPosition[] = [];
+        
+        // Add left side position (at 270 degrees / -90 degrees from top)
+        positions.push({
+            type: 'left',
+            angle: -Math.PI / 2, // -90 degrees (left side)
+            scale: LEAF_LAYOUT.SIDE_LEAVES.SCALE,
+            radialOffset: LEAF_LAYOUT.SIDE_LEAVES.RADIAL_OFFSET,
+        });
+        
+        // Add right side position (at 90 degrees from top)
+        positions.push({
+            type: 'right',
+            angle: Math.PI / 2, // 90 degrees (right side)
+            scale: LEAF_LAYOUT.SIDE_LEAVES.SCALE,
+            radialOffset: LEAF_LAYOUT.SIDE_LEAVES.RADIAL_OFFSET,
+        });
+        
+        // Add arc positions along the top
+        // Arc is centered at top (0 degrees), spanning leafArcSpan degrees
+        const arcSpanRad = (leafArcSpan * Math.PI) / 180;
+        const startAngle = -arcSpanRad / 2; // Start from left side of arc
+        const angleStep = arcSpanRad / (leafSlots - 1);
+        
+        for (let i = 0; i < leafSlots; i++) {
+            const angle = startAngle + (i * angleStep);
+            positions.push({
+                type: 'arc',
+                angle: angle,
+                scale: LEAF_LAYOUT.ARC_LEAVES.SCALE,
+                radialOffset: LEAF_LAYOUT.ARC_LEAVES.RADIAL_OFFSET,
+            });
+        }
+        
+        // Shuffle positions to randomize which leaves are checked first
+        const shuffledPositions = shuffleArray(positions);
+        
+        let leavesDrawn = 0;
+        
+        for (const position of shuffledPositions) {
+            // Stop if we've drawn the maximum number of leaves
+            if (leavesDrawn >= maximumLeaves) {
+                break;
+            }
+            
+            // Roll probability check
+            const roll = Math.random() * 100;
+            if (roll >= leafPopulationProbability) {
+                continue; // Skip this leaf position
+            }
+            
+            // Pick a random leaf variant from available ones
+            const variantIndex = Math.floor(Math.random() * availableVariants) + 1;
+            
+            // Load and draw the leaf
+            try {
+                const leafPath = `${CONFIG.ASSETS.LEAVES}${LEAF_LAYOUT.ASSETS.LEAVES_PATH}${leafGeneration}/${LEAF_LAYOUT.ASSETS.LEAF_FILENAME}_${variantIndex}.png`;
+                const leafImage = await this.getLocalImage(leafPath);
+                
+                const leafSize = diameter * position.scale;
+                
+                // Calculate position on the circle
+                // Angle 0 = top center, positive = clockwise
+                const posX = center.x + (radius * position.radialOffset) * Math.sin(position.angle);
+                const posY = center.y - (radius * position.radialOffset) * Math.cos(position.angle);
+                
+                ctx.save();
+                
+                // Move to the leaf position
+                ctx.translate(posX, posY);
+                
+                // Rotate leaf to point outward from center
+                // The leaf image should point upward (12 o'clock)
+                // We rotate it to follow the circle's tangent + point outward
+                ctx.rotate(position.angle);
+                
+                // Draw leaf centered at this position
+                ctx.drawImage(leafImage, -leafSize / 2, -leafSize / 2, leafSize, leafSize);
+                
+                ctx.restore();
+                
+                leavesDrawn++;
+            } catch (error) {
+                console.warn(`Could not load leaf variant ${variantIndex}`, error);
+            }
+        }
+    }
+
+    /**
      * Generate a character token
      * @param character - Character data
      * @returns Generated canvas element
      */
     async generateCharacterToken(character: Character): Promise<HTMLCanvasElement> {
-        const diameter = this.options.roleDiameter;
-        const canvas = document.createElement('canvas');
-        canvas.width = diameter;
-        canvas.height = diameter;
-        const ctx = canvas.getContext('2d');
+        const diameter = CONFIG.TOKEN.ROLE_DIAMETER_INCHES * this.options.dpi;
+        const { canvas, ctx, center, radius } = this.createBaseCanvas(diameter);
 
-        if (!ctx) {
-            throw new Error('Failed to get canvas context');
-        }
+        // Apply circular clipping path for background and character image
+        this.applyCircularClip(ctx, center, radius);
 
-        // Enable high-quality rendering
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-
-        const radius = diameter / 2;
-        const center = { x: radius, y: radius };
-
-        // Save initial state before clipping
-        ctx.save();
-
-        // Create circular clipping path for background and character image
-        ctx.beginPath();
-        ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
-        ctx.closePath();
-        ctx.clip();
-
-        // 1. Draw character background
+        // 1. Draw character background (skip solid fill if transparent mode)
         try {
             const bgPath = `${CONFIG.ASSETS.CHARACTER_BACKGROUNDS}${this.options.characterBackground}.png`;
             const bgImage = await this.getLocalImage(bgPath);
             this.drawImageCover(ctx, bgImage, diameter, diameter);
         } catch {
-            // Fallback to solid color if background fails
-            ctx.fillStyle = '#1a1a1a';
-            ctx.fill();
+            // Fallback to solid color if background fails (unless transparent mode)
+            if (!this.options.transparentBackground) {
+                ctx.fillStyle = DEFAULT_COLORS.FALLBACK_BACKGROUND;
+                ctx.fill();
+            }
         }
 
         // 2. Draw character image (centered)
@@ -144,9 +307,9 @@ export class TokenGenerator {
         if (imageUrl) {
             try {
                 const charImage = await this.getCachedImage(imageUrl);
-                const imgSize = diameter * 0.65;
+                const imgSize = diameter * CHARACTER_LAYOUT.IMAGE_SIZE_RATIO;
                 const imgOffset = (diameter - imgSize) / 2;
-                ctx.drawImage(charImage, imgOffset, imgOffset - diameter * 0.05, imgSize, imgSize);
+                ctx.drawImage(charImage, imgOffset, imgOffset - diameter * CHARACTER_LAYOUT.IMAGE_VERTICAL_OFFSET, imgSize, imgSize);
             } catch (error) {
                 console.warn(`Could not load character image for ${character.name}. This may be due to CORS restrictions. Token will be generated without portrait image.`, error);
             }
@@ -163,10 +326,15 @@ export class TokenGenerator {
             }
         }
 
-        // Restore context to remove clipping path before drawing text
+        // Restore context to remove clipping path before drawing leaves and text
         ctx.restore();
 
-        // 4. Draw ability text if enabled
+        // 4. Draw leaves if enabled (must be after clipping is removed so leaves can extend beyond token edge)
+        if (this.options.maximumLeaves > 0) {
+            await this.drawLeaves(ctx, diameter);
+        }
+
+        // 5. Draw ability text if enabled
         if (this.options.displayAbilityText && character.ability) {
             this.drawAbilityText(ctx, character.ability, diameter);
         }
@@ -178,10 +346,13 @@ export class TokenGenerator {
                 character.name.toUpperCase(),
                 center.x,
                 center.y,
-                radius * 0.85,
+                radius * CHARACTER_LAYOUT.CURVED_TEXT_RADIUS,
                 this.options.characterNameFont,
                 diameter * CONFIG.FONTS.CHARACTER_NAME.SIZE_RATIO,
-                'bottom'
+                'bottom',
+                this.options.characterNameColor,
+                this.options.fontSpacing.characterName,
+                this.options.textShadow?.characterName ?? 4
             );
         }
 
@@ -203,41 +374,26 @@ export class TokenGenerator {
      * @returns Generated canvas element
      */
     async generateReminderToken(character: Character, reminderText: string): Promise<HTMLCanvasElement> {
-        const diameter = this.options.reminderDiameter;
-        const canvas = document.createElement('canvas');
-        canvas.width = diameter;
-        canvas.height = diameter;
-        const ctx = canvas.getContext('2d');
+        const diameter = CONFIG.TOKEN.REMINDER_DIAMETER_INCHES * this.options.dpi;
+        const { canvas, ctx, center, radius } = this.createBaseCanvas(diameter);
 
-        if (!ctx) {
-            throw new Error('Failed to get canvas context');
+        // Apply circular clipping path
+        this.applyCircularClip(ctx, center, radius);
+
+        // 1. Fill with reminder background color (skip if transparent mode)
+        if (!this.options.transparentBackground) {
+            ctx.fillStyle = this.options.reminderBackground;
+            ctx.fill();
         }
-
-        // Enable high-quality rendering
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-
-        const radius = diameter / 2;
-        const center = { x: radius, y: radius };
-
-        // Create circular clipping path
-        ctx.beginPath();
-        ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
-        ctx.closePath();
-        ctx.clip();
-
-        // 1. Fill with reminder background color
-        ctx.fillStyle = this.options.reminderBackground;
-        ctx.fill();
 
         // 2. Draw character image (centered, smaller)
         const imageUrl = getCharacterImageUrl(character.image);
         if (imageUrl) {
             try {
                 const charImage = await this.getCachedImage(imageUrl);
-                const imgSize = diameter * 0.5;
+                const imgSize = diameter * REMINDER_LAYOUT.IMAGE_SIZE_RATIO;
                 const imgOffset = (diameter - imgSize) / 2;
-                ctx.drawImage(charImage, imgOffset, imgOffset - diameter * 0.05, imgSize, imgSize);
+                ctx.drawImage(charImage, imgOffset, imgOffset - diameter * REMINDER_LAYOUT.IMAGE_VERTICAL_OFFSET, imgSize, imgSize);
             } catch (error) {
                 console.warn(`Could not load character image for reminder: ${character.name}. This may be due to CORS restrictions. Token will be generated without portrait image.`, error);
             }
@@ -248,17 +404,18 @@ export class TokenGenerator {
         ctx.save();
 
         // 3. Draw reminder text curved along bottom
-        const textColor = getContrastColor(this.options.reminderBackground);
         this.drawCurvedText(
             ctx,
             reminderText.toUpperCase(),
             center.x,
             center.y,
-            radius * 0.85,
+            radius * REMINDER_LAYOUT.CURVED_TEXT_RADIUS,
             this.options.characterReminderFont,
             diameter * CONFIG.FONTS.REMINDER_TEXT.SIZE_RATIO,
             'bottom',
-            textColor
+            this.options.reminderTextColor,
+            this.options.fontSpacing.reminderText,
+            this.options.textShadow?.reminderText ?? 4
         );
 
         return canvas;
@@ -275,6 +432,8 @@ export class TokenGenerator {
      * @param fontSize - Font size in pixels
      * @param position - 'top' or 'bottom'
      * @param color - Text color
+     * @param letterSpacing - Letter spacing in pixels
+     * @param shadowBlur - Shadow blur radius (optional, defaults to character name shadow)
      */
     drawCurvedText(
         ctx: CanvasRenderingContext2D,
@@ -285,7 +444,9 @@ export class TokenGenerator {
         fontFamily: string,
         fontSize: number,
         position: 'top' | 'bottom' = 'bottom',
-        color: string = '#FFFFFF'
+        color: string = '#FFFFFF',
+        letterSpacing: number = 0,
+        shadowBlur?: number
     ): void {
         ctx.save();
 
@@ -295,17 +456,18 @@ export class TokenGenerator {
         ctx.textBaseline = 'middle';
 
         // Add text shadow for readability
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-        ctx.shadowBlur = 4;
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
+        const blur = shadowBlur ?? this.options.textShadow?.characterName ?? 4;
+        ctx.shadowColor = DEFAULT_COLORS.TEXT_SHADOW;
+        ctx.shadowBlur = blur;
+        ctx.shadowOffsetX = blur / 2;
+        ctx.shadowOffsetY = blur / 2;
 
         // Measure total text width
         const totalWidth = ctx.measureText(text).width;
 
         // Calculate the angle span based on text width and radius
         // Limit to a maximum arc span to keep text readable
-        const maxArcSpan = Math.PI * 0.7; // ~126 degrees
+        const maxArcSpan = CHARACTER_LAYOUT.MAX_TEXT_ARC_SPAN;
         const arcSpan = Math.min(totalWidth / radius, maxArcSpan);
 
         // Starting angle for bottom text (centered)
@@ -320,7 +482,7 @@ export class TokenGenerator {
         const charWidths: number[] = [];
         let totalCharWidth = 0;
         for (const char of text) {
-            const width = ctx.measureText(char).width;
+            const width = ctx.measureText(char).width + letterSpacing;
             charWidths.push(width);
             totalCharWidth += width;
         }
@@ -371,20 +533,28 @@ export class TokenGenerator {
         ctx.save();
 
         const fontSize = diameter * CONFIG.FONTS.ABILITY_TEXT.SIZE_RATIO;
-        ctx.font = `${fontSize}px "${this.options.characterReminderFont}", sans-serif`;
-        ctx.fillStyle = '#FFFFFF';
+        const letterSpacing = this.options.fontSpacing.abilityText;
+
+        ctx.font = `${fontSize}px "${this.options.abilityTextFont}", sans-serif`;
+        ctx.fillStyle = this.options.abilityTextColor;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
 
+        // Apply letterSpacing if supported (modern browsers)
+        if ('letterSpacing' in ctx && letterSpacing !== 0) {
+            (ctx as any).letterSpacing = `${letterSpacing}px`;
+        }
+
         // Add shadow for readability
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-        ctx.shadowBlur = 3;
-        ctx.shadowOffsetX = 1;
-        ctx.shadowOffsetY = 1;
+        const shadowBlur = this.options.textShadow?.abilityText ?? 3;
+        ctx.shadowColor = DEFAULT_COLORS.TEXT_SHADOW;
+        ctx.shadowBlur = shadowBlur;
+        ctx.shadowOffsetX = shadowBlur / 3;
+        ctx.shadowOffsetY = shadowBlur / 3;
 
         // Word wrap the text
-        const maxWidth = diameter * 0.7;
-        const lineHeight = fontSize * (CONFIG.FONTS.ABILITY_TEXT.LINE_HEIGHT ?? 1.3);
+        const maxWidth = diameter * CHARACTER_LAYOUT.ABILITY_TEXT_MAX_WIDTH;
+        const lineHeight = fontSize * (CONFIG.FONTS.ABILITY_TEXT.LINE_HEIGHT ?? LINE_HEIGHTS.STANDARD);
         const words = ability.split(' ');
         const lines: string[] = [];
         let currentLine = '';
@@ -405,7 +575,7 @@ export class TokenGenerator {
         }
 
         // Draw lines centered vertically in upper portion of token
-        const startY = diameter * 0.15;
+        const startY = diameter * CHARACTER_LAYOUT.ABILITY_TEXT_Y_POSITION;
 
         for (let i = 0; i < lines.length; i++) {
             ctx.fillText(lines[i], diameter / 2, startY + i * lineHeight);
@@ -425,27 +595,81 @@ export class TokenGenerator {
 
         const fontSize = diameter * CONFIG.FONTS.TOKEN_COUNT.SIZE_RATIO;
         ctx.font = `bold ${fontSize}px "${this.options.characterNameFont}", Georgia, serif`;
-        ctx.fillStyle = '#FFFFFF';
+        ctx.fillStyle = DEFAULT_COLORS.TEXT_PRIMARY;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
         // Draw at top of token
-        const y = diameter * 0.12;
+        const y = diameter * CHARACTER_LAYOUT.TOKEN_COUNT_Y_POSITION;
 
         // Add background circle
         ctx.beginPath();
-        ctx.arc(diameter / 2, y, fontSize * 0.8, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.arc(diameter / 2, y, fontSize * TOKEN_COUNT_BADGE.BACKGROUND_RADIUS, 0, Math.PI * 2);
+        ctx.fillStyle = DEFAULT_COLORS.BADGE_BACKGROUND;
         ctx.fill();
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = DEFAULT_COLORS.TEXT_PRIMARY;
+        ctx.lineWidth = TOKEN_COUNT_BADGE.STROKE_WIDTH;
         ctx.stroke();
 
         // Draw count
-        ctx.fillStyle = '#FFFFFF';
+        ctx.fillStyle = DEFAULT_COLORS.TEXT_PRIMARY;
         ctx.fillText(count.toString(), diameter / 2, y);
 
         ctx.restore();
+    }
+
+    /**
+     * Create a base canvas with DPI scaling
+     * @param diameter - Token diameter
+     * @returns Canvas setup with context, center point, and radius
+     */
+    private createBaseCanvas(diameter: number): {
+        canvas: HTMLCanvasElement;
+        ctx: CanvasRenderingContext2D;
+        center: { x: number; y: number };
+        radius: number;
+    } {
+        const dpiScale = this.options.dpi / 300;
+        const scaledDiameter = Math.floor(diameter * dpiScale);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = scaledDiameter;
+        canvas.height = scaledDiameter;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+            throw new TokenCreationError('Failed to get canvas 2D context');
+        }
+
+        // Set high-quality rendering
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
+        // Apply DPI scaling
+        if (dpiScale !== 1) {
+            ctx.scale(dpiScale, dpiScale);
+        }
+
+        return {
+            canvas,
+            ctx,
+            center: { x: diameter / 2, y: diameter / 2 },
+            radius: diameter / 2
+        };
+    }
+
+    /**
+     * Apply circular clipping path to canvas context
+     * @param ctx - Canvas rendering context
+     * @param center - Center point coordinates
+     * @param radius - Circle radius
+     */
+    private applyCircularClip(ctx: CanvasRenderingContext2D, center: { x: number; y: number }, radius: number): void {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
     }
 
     /**
@@ -488,10 +712,13 @@ export class TokenGenerator {
      * @returns Generated canvas element
      */
     async generateScriptNameToken(scriptName: string, author?: string): Promise<HTMLCanvasElement> {
-        const diameter = this.options.roleDiameter;
+        const diameter = CONFIG.TOKEN.ROLE_DIAMETER_INCHES * this.options.dpi;
+        const dpiScale = this.options.dpi / 300;
+        const scaledDiameter = Math.floor(diameter * dpiScale);
+
         const canvas = document.createElement('canvas');
-        canvas.width = diameter;
-        canvas.height = diameter;
+        canvas.width = scaledDiameter;
+        canvas.height = scaledDiameter;
         const ctx = canvas.getContext('2d');
 
         if (!ctx) {
@@ -501,6 +728,11 @@ export class TokenGenerator {
         // Enable high-quality rendering
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
+
+        // Scale context for DPI - all drawing operations use original diameter
+        if (dpiScale !== 1) {
+            ctx.scale(dpiScale, dpiScale);
+        }
 
         const radius = diameter / 2;
         const center = { x: radius, y: radius };
@@ -514,15 +746,17 @@ export class TokenGenerator {
         ctx.closePath();
         ctx.clip();
 
-        // Draw character background
+        // Draw meta token background
         try {
-            const bgPath = `${CONFIG.ASSETS.CHARACTER_BACKGROUNDS}${this.options.characterBackground}.png`;
+            const bgPath = `${CONFIG.ASSETS.CHARACTER_BACKGROUNDS}${this.options.metaBackground || this.options.characterBackground}.png`;
             const bgImage = await this.getLocalImage(bgPath);
             this.drawImageCover(ctx, bgImage, diameter, diameter);
         } catch {
-            // Fallback to solid color if background fails
-            ctx.fillStyle = '#1a1a1a';
-            ctx.fill();
+            // Fallback to solid color if background fails (unless transparent mode)
+            if (!this.options.transparentBackground) {
+                ctx.fillStyle = DEFAULT_COLORS.FALLBACK_BACKGROUND;
+                ctx.fill();
+            }
         }
 
         // Restore context to remove clipping path before drawing text
@@ -538,10 +772,12 @@ export class TokenGenerator {
                 author,
                 center.x,
                 center.y,
-                radius * 0.85,
+                radius * CHARACTER_LAYOUT.CURVED_TEXT_RADIUS,
                 this.options.characterNameFont,
-                diameter * CONFIG.FONTS.CHARACTER_NAME.SIZE_RATIO * 0.7,
-                'bottom'
+                diameter * CONFIG.FONTS.CHARACTER_NAME.SIZE_RATIO * META_TOKEN_LAYOUT.AUTHOR_TEXT_SIZE_FACTOR,
+                'bottom',
+                DEFAULT_COLORS.TEXT_PRIMARY,
+                this.options.fontSpacing.characterName
             );
         }
 
@@ -553,10 +789,13 @@ export class TokenGenerator {
      * @returns Generated canvas element
      */
     async generatePandemoniumToken(): Promise<HTMLCanvasElement> {
-        const diameter = this.options.roleDiameter;
+        const diameter = CONFIG.TOKEN.ROLE_DIAMETER_INCHES * this.options.dpi;
+        const dpiScale = this.options.dpi / 300;
+        const scaledDiameter = Math.floor(diameter * dpiScale);
+
         const canvas = document.createElement('canvas');
-        canvas.width = diameter;
-        canvas.height = diameter;
+        canvas.width = scaledDiameter;
+        canvas.height = scaledDiameter;
         const ctx = canvas.getContext('2d');
 
         if (!ctx) {
@@ -566,6 +805,11 @@ export class TokenGenerator {
         // Enable high-quality rendering
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
+
+        // Scale context for DPI - all drawing operations use original diameter
+        if (dpiScale !== 1) {
+            ctx.scale(dpiScale, dpiScale);
+        }
 
         const radius = diameter / 2;
         const center = { x: radius, y: radius };
@@ -579,15 +823,17 @@ export class TokenGenerator {
         ctx.closePath();
         ctx.clip();
 
-        // Draw character background
+        // Draw meta token background
         try {
-            const bgPath = `${CONFIG.ASSETS.CHARACTER_BACKGROUNDS}${this.options.characterBackground}.png`;
+            const bgPath = `${CONFIG.ASSETS.CHARACTER_BACKGROUNDS}${this.options.metaBackground || this.options.characterBackground}.png`;
             const bgImage = await this.getLocalImage(bgPath);
             this.drawImageCover(ctx, bgImage, diameter, diameter);
         } catch {
-            // Fallback to solid color if background fails
-            ctx.fillStyle = '#1a1a1a';
-            ctx.fill();
+            // Fallback to solid color if background fails (unless transparent mode)
+            if (!this.options.transparentBackground) {
+                ctx.fillStyle = DEFAULT_COLORS.FALLBACK_BACKGROUND;
+                ctx.fill();
+            }
         }
 
         // Restore context to remove clipping path before drawing text
@@ -602,10 +848,12 @@ export class TokenGenerator {
             'BLOOD ON THE CLOCKTOWER',
             center.x,
             center.y,
-            radius * 0.85,
+            radius * CHARACTER_LAYOUT.CURVED_TEXT_RADIUS,
             this.options.characterNameFont,
-            diameter * CONFIG.FONTS.CHARACTER_NAME.SIZE_RATIO * 0.75,
-            'bottom'
+            diameter * CONFIG.FONTS.CHARACTER_NAME.SIZE_RATIO * META_TOKEN_LAYOUT.BOTC_TEXT_SIZE_FACTOR,
+            'bottom',
+            DEFAULT_COLORS.TEXT_PRIMARY,
+            this.options.fontSpacing.characterName
         );
 
         return canvas;
@@ -619,19 +867,20 @@ export class TokenGenerator {
     private drawPandemoniumText(ctx: CanvasRenderingContext2D, diameter: number): void {
         ctx.save();
 
-        const fontSize = diameter * 0.11;
+        const fontSize = diameter * META_TOKEN_LAYOUT.PANDEMONIUM_TEXT_SIZE;
         ctx.font = `bold ${fontSize}px "${this.options.characterNameFont}", Georgia, serif`;
-        ctx.fillStyle = '#FFFFFF';
+        ctx.fillStyle = DEFAULT_COLORS.TEXT_PRIMARY;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
         // Add shadow for readability
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-        ctx.shadowBlur = 4;
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
+        const shadowBlur = this.options.textShadow?.characterName ?? 4;
+        ctx.shadowColor = DEFAULT_COLORS.TEXT_SHADOW;
+        ctx.shadowBlur = shadowBlur;
+        ctx.shadowOffsetX = shadowBlur / 2;
+        ctx.shadowOffsetY = shadowBlur / 2;
 
-        const lineHeight = fontSize * 1.3;
+        const lineHeight = fontSize * LINE_HEIGHTS.STANDARD;
         const centerY = diameter / 2;
 
         // Draw "PANDEMONIUM" on first line
@@ -651,20 +900,21 @@ export class TokenGenerator {
     private drawCenteredText(ctx: CanvasRenderingContext2D, text: string, diameter: number): void {
         ctx.save();
 
-        const fontSize = diameter * 0.12;
+        const fontSize = diameter * META_TOKEN_LAYOUT.CENTERED_TEXT_SIZE;
         ctx.font = `bold ${fontSize}px "${this.options.characterNameFont}", Georgia, serif`;
-        ctx.fillStyle = '#FFFFFF';
+        ctx.fillStyle = DEFAULT_COLORS.TEXT_PRIMARY;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
         // Add shadow for readability
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-        ctx.shadowBlur = 4;
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
+        const shadowBlur = this.options.textShadow?.characterName ?? 4;
+        ctx.shadowColor = DEFAULT_COLORS.TEXT_SHADOW;
+        ctx.shadowBlur = shadowBlur;
+        ctx.shadowOffsetX = shadowBlur / 2;
+        ctx.shadowOffsetY = shadowBlur / 2;
 
         // Word wrap the text
-        const maxWidth = diameter * 0.75;
+        const maxWidth = diameter * META_TOKEN_LAYOUT.CENTERED_TEXT_MAX_WIDTH;
         const words = text.split(' ');
         const lines: string[] = [];
         let currentLine = '';
@@ -685,7 +935,7 @@ export class TokenGenerator {
         }
 
         // Draw lines centered vertically
-        const lineHeight = fontSize * 1.3;
+        const lineHeight = fontSize * LINE_HEIGHTS.STANDARD;
         const totalHeight = lines.length * lineHeight;
         const startY = (diameter - totalHeight) / 2 + fontSize / 2;
 
@@ -703,10 +953,13 @@ export class TokenGenerator {
      * @returns Generated canvas element
      */
     async generateAlmanacQRToken(almanacUrl: string, scriptName: string): Promise<HTMLCanvasElement> {
-        const diameter = this.options.roleDiameter;
+        const diameter = CONFIG.TOKEN.ROLE_DIAMETER_INCHES * this.options.dpi;
+        const dpiScale = this.options.dpi / 300;
+        const scaledDiameter = Math.floor(diameter * dpiScale);
+
         const canvas = document.createElement('canvas');
-        canvas.width = diameter;
-        canvas.height = diameter;
+        canvas.width = scaledDiameter;
+        canvas.height = scaledDiameter;
         const ctx = canvas.getContext('2d');
 
         if (!ctx) {
@@ -716,6 +969,11 @@ export class TokenGenerator {
         // Enable high-quality rendering
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
+
+        // Scale context for DPI - all drawing operations use original diameter
+        if (dpiScale !== 1) {
+            ctx.scale(dpiScale, dpiScale);
+        }
 
         const radius = diameter / 2;
         const center = { x: radius, y: radius };
@@ -727,28 +985,35 @@ export class TokenGenerator {
         ctx.closePath();
         ctx.clip();
 
-        // Fill with white background
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fill();
+        // Draw meta token background
+        try {
+            const bgPath = `${CONFIG.ASSETS.CHARACTER_BACKGROUNDS}${this.options.metaBackground || this.options.characterBackground}.png`;
+            const bgImage = await this.getLocalImage(bgPath);
+            this.drawImageCover(ctx, bgImage, diameter, diameter);
+        } catch {
+            // Fallback to white background
+            ctx.fillStyle = QR_COLORS.LIGHT;
+            ctx.fill();
+        }
 
         // Generate QR code
-        const qrSize = Math.floor(diameter * 0.8);
+        const qrSize = Math.floor(diameter * QR_TOKEN_LAYOUT.QR_CODE_SIZE);
         const qrCanvas = await this.generateQRCode(almanacUrl, qrSize);
 
         // Draw QR code centered
         const qrOffset = (diameter - qrSize) / 2;
-        ctx.drawImage(qrCanvas, qrOffset, qrOffset - diameter * 0.05, qrSize, qrSize);
+        ctx.drawImage(qrCanvas, qrOffset, qrOffset - diameter * QR_TOKEN_LAYOUT.QR_VERTICAL_OFFSET, qrSize, qrSize);
 
         // Restore context
         ctx.restore();
 
         // Draw white box behind script name text
-        const boxWidth = diameter * 0.45;
-        const boxHeight = diameter * 0.15;
+        const boxWidth = diameter * QR_TOKEN_LAYOUT.TEXT_BOX_WIDTH;
+        const boxHeight = diameter * QR_TOKEN_LAYOUT.TEXT_BOX_HEIGHT;
         const boxX = (diameter - boxWidth) / 2;
-        const boxY = (diameter - boxHeight) / 2 - diameter * 0.05;
+        const boxY = (diameter - boxHeight) / 2 - diameter * QR_TOKEN_LAYOUT.QR_VERTICAL_OFFSET;
 
-        ctx.fillStyle = '#FFFFFF';
+        ctx.fillStyle = QR_COLORS.LIGHT;
         ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
 
         // Draw script name in center using LHF Unlovable font
@@ -760,11 +1025,12 @@ export class TokenGenerator {
             'ALMANAC',
             center.x,
             center.y,
-            radius * 0.85,
+            radius * CHARACTER_LAYOUT.CURVED_TEXT_RADIUS,
             this.options.characterNameFont,
             diameter * CONFIG.FONTS.CHARACTER_NAME.SIZE_RATIO,
             'bottom',
-            '#000000'
+            QR_COLORS.DARK,
+            this.options.fontSpacing.characterName
         );
 
         return canvas;
@@ -795,9 +1061,9 @@ export class TokenGenerator {
                     text: text,
                     width: size,
                     height: size,
-                    colorDark: '#000000',
-                    colorLight: '#FFFFFF',
-                    correctLevel: 3 // QRCode.CorrectLevel.H = 3 (30% error recovery)
+                    colorDark: QR_COLORS.DARK,
+                    colorLight: QR_COLORS.LIGHT,
+                    correctLevel: QR_COLORS.ERROR_CORRECTION_LEVEL
                 });
 
                 // Wait a bit for the QR code to be generated
@@ -818,7 +1084,7 @@ export class TokenGenerator {
                         document.body.removeChild(container);
                         reject(new Error('Failed to generate QR code canvas'));
                     }
-                }, 100);
+                }, TIMING.QR_GENERATION_DELAY);
             } catch (error) {
                 document.body.removeChild(container);
                 reject(error);
@@ -835,14 +1101,14 @@ export class TokenGenerator {
     private drawQROverlayText(ctx: CanvasRenderingContext2D, text: string, diameter: number): void {
         ctx.save();
 
-        const fontSize = diameter * 0.08;
+        const fontSize = diameter * QR_TOKEN_LAYOUT.OVERLAY_TEXT_SIZE;
         ctx.font = `bold ${fontSize}px "LHF Unlovable", Georgia, serif`;
-        ctx.fillStyle = '#000000';
+        ctx.fillStyle = QR_COLORS.DARK;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
         // Word wrap the text for long names
-        const maxWidth = diameter * 0.4;
+        const maxWidth = diameter * QR_TOKEN_LAYOUT.OVERLAY_TEXT_MAX_WIDTH;
         const words = text.split(' ');
         const lines: string[] = [];
         let currentLine = '';
@@ -863,9 +1129,9 @@ export class TokenGenerator {
         }
 
         // Draw lines centered vertically (slightly above center)
-        const lineHeight = fontSize * 1.2;
+        const lineHeight = fontSize * LINE_HEIGHTS.TIGHT;
         const totalHeight = lines.length * lineHeight;
-        const startY = (diameter - totalHeight) / 2 + fontSize / 2 - diameter * 0.05;
+        const startY = (diameter - totalHeight) / 2 + fontSize / 2 - diameter * QR_TOKEN_LAYOUT.QR_VERTICAL_OFFSET;
 
         for (let i = 0; i < lines.length; i++) {
             ctx.fillText(lines[i], diameter / 2, startY + i * lineHeight);
@@ -884,6 +1150,265 @@ export class TokenGenerator {
 }
 
 /**
+ * Progress state for token generation tracking
+ */
+interface ProgressState {
+    processed: number;
+    total: number;
+    callback: ProgressCallback | null;
+}
+
+/**
+ * Update progress and call callback if provided
+ * @param state - Progress state object
+ */
+function updateProgress(state: ProgressState): void {
+    state.processed++;
+    if (state.callback) {
+        state.callback(state.processed, state.total);
+    }
+}
+
+/**
+ * Calculate total token count including meta tokens
+ * @param characters - Array of characters
+ * @param options - Generation options
+ * @param scriptMeta - Script metadata
+ * @returns Total token count
+ */
+function calculateTotalTokenCount(
+    characters: Character[],
+    options: Partial<GenerationOptions>,
+    scriptMeta: ScriptMeta | null
+): number {
+    let metaTokenCount = 0;
+    if (options.pandemoniumToken) metaTokenCount++;
+    if (options.scriptNameToken && scriptMeta?.name) metaTokenCount++;
+    if (options.almanacToken && scriptMeta?.almanac) metaTokenCount++;
+
+    const characterTokenCount = characters.reduce((sum, char) => {
+        return sum + 1 + (char.reminders?.length ?? 0);
+    }, 0);
+
+    return characterTokenCount + metaTokenCount;
+}
+
+/**
+ * Generate meta tokens (Pandemonium, Script Name, Almanac QR)
+ * @param generator - Token generator instance
+ * @param options - Generation options
+ * @param scriptMeta - Script metadata
+ * @param progress - Progress state
+ * @param dpi - DPI setting for calculating diameter
+ * @returns Array of meta tokens
+ */
+async function generateMetaTokens(
+    generator: TokenGenerator,
+    options: Partial<GenerationOptions>,
+    scriptMeta: ScriptMeta | null,
+    progress: ProgressState,
+    dpi: number
+): Promise<Token[]> {
+    const tokens: Token[] = [];
+
+    // Generate Pandemonium Institute token
+    if (options.pandemoniumToken) {
+        try {
+            const canvas = await generator.generatePandemoniumToken();
+            tokens.push({
+                type: 'pandemonium',
+                name: 'Pandemonium Institute',
+                filename: '_pandemonium_institute',
+                team: 'meta',
+                canvas,
+                diameter: CONFIG.TOKEN.ROLE_DIAMETER_INCHES * dpi
+            });
+        } catch (error) {
+            console.error('Failed to generate pandemonium token:', error);
+        }
+        updateProgress(progress);
+    }
+
+    // Generate Script Name token
+    if (options.scriptNameToken && scriptMeta?.name) {
+        try {
+            const canvas = await generator.generateScriptNameToken(
+                scriptMeta.name,
+                scriptMeta.author
+            );
+            tokens.push({
+                type: 'script-name',
+                name: scriptMeta.name,
+                filename: '_script_name',
+                team: 'meta',
+                canvas,
+                diameter: CONFIG.TOKEN.ROLE_DIAMETER_INCHES * dpi
+            });
+        } catch (error) {
+            console.error('Failed to generate script name token:', error);
+        }
+        updateProgress(progress);
+    }
+
+    // Generate Almanac QR token
+    if (options.almanacToken && scriptMeta?.almanac && scriptMeta?.name) {
+        try {
+            const canvas = await generator.generateAlmanacQRToken(
+                scriptMeta.almanac,
+                scriptMeta.name
+            );
+            tokens.push({
+                type: 'almanac',
+                name: `${scriptMeta.name} Almanac`,
+                filename: '_almanac_qr',
+                team: 'meta',
+                canvas,
+                diameter: CONFIG.TOKEN.ROLE_DIAMETER_INCHES * dpi
+            });
+        } catch (error) {
+            console.error('Failed to generate almanac QR token:', error);
+        }
+        updateProgress(progress);
+    }
+
+    return tokens;
+}
+
+/**
+ * Generate a single character token with unique filename
+ * @param generator - Token generator instance
+ * @param character - Character data
+ * @param nameCount - Map for tracking duplicate names
+ * @param dpi - DPI setting for calculating diameter
+ * @returns Character token or null if generation fails
+ */
+async function generateSingleCharacterToken(
+    generator: TokenGenerator,
+    character: Character,
+    nameCount: Map<string, number>,
+    dpi: number
+): Promise<Token | null> {
+    if (!character.name) return null;
+
+    try {
+        const canvas = await generator.generateCharacterToken(character);
+        const baseName = character.name.replace(/[^a-zA-Z0-9]/g, '_');
+
+        // Handle duplicates
+        if (!nameCount.has(baseName)) {
+            nameCount.set(baseName, 0);
+        }
+        const count = nameCount.get(baseName) ?? 0;
+        nameCount.set(baseName, count + 1);
+
+        const filename = count === 0 ? baseName : `${baseName}_${String(count).padStart(2, '0')}`;
+
+        return {
+            type: 'character',
+            name: character.name,
+            filename,
+            team: (character.team || 'townsfolk') as Team,
+            canvas,
+            diameter: CONFIG.TOKEN.ROLE_DIAMETER_INCHES * dpi,
+            hasReminders: (character.reminders?.length ?? 0) > 0,
+            reminderCount: character.reminders?.length ?? 0
+        };
+    } catch (error) {
+        console.error(`Failed to generate token for ${character.name}:`, error);
+        return null;
+    }
+}
+
+/**
+ * Generate reminder tokens for a character
+ * @param generator - Token generator instance
+ * @param character - Parent character data
+ * @param progress - Progress state
+ * @param dpi - DPI setting for calculating diameter
+ * @returns Array of reminder tokens
+ */
+async function generateReminderTokensForCharacter(
+    generator: TokenGenerator,
+    character: Character,
+    progress: ProgressState,
+    dpi: number
+): Promise<Token[]> {
+    const tokens: Token[] = [];
+
+    if (!character.reminders || !Array.isArray(character.reminders)) {
+        return tokens;
+    }
+
+    const reminderNameCount = new Map<string, number>();
+
+    for (const reminder of character.reminders) {
+        try {
+            const canvas = await generator.generateReminderToken(character, reminder);
+            const reminderBaseName = `${character.name}_${reminder}`.replace(/[^a-zA-Z0-9]/g, '_');
+
+            // Handle duplicate reminders
+            if (!reminderNameCount.has(reminderBaseName)) {
+                reminderNameCount.set(reminderBaseName, 0);
+            }
+            const count = reminderNameCount.get(reminderBaseName) ?? 0;
+            reminderNameCount.set(reminderBaseName, count + 1);
+
+            const filename = count === 0 ? reminderBaseName : `${reminderBaseName}_${String(count).padStart(2, '0')}`;
+
+            tokens.push({
+                type: 'reminder',
+                name: `${character.name} - ${reminder}`,
+                filename,
+                team: (character.team || 'townsfolk') as Team,
+                canvas,
+                diameter: CONFIG.TOKEN.REMINDER_DIAMETER_INCHES * dpi,
+                parentCharacter: character.name,
+                reminderText: reminder
+            });
+        } catch (error) {
+            console.error(`Failed to generate reminder token "${reminder}" for ${character.name}:`, error);
+        }
+
+        updateProgress(progress);
+    }
+
+    return tokens;
+}
+
+/**
+ * Generate character and reminder tokens for all characters
+ * @param generator - Token generator instance
+ * @param characters - Array of characters
+ * @param progress - Progress state
+ * @param dpi - DPI setting for diameter calculations
+ * @returns Array of character and reminder tokens
+ */
+async function generateCharacterAndReminderTokens(
+    generator: TokenGenerator,
+    characters: Character[],
+    progress: ProgressState,
+    dpi: number
+): Promise<Token[]> {
+    const tokens: Token[] = [];
+    const nameCount = new Map<string, number>();
+
+    for (const character of characters) {
+        // Generate character token
+        const charToken = await generateSingleCharacterToken(generator, character, nameCount, dpi);
+        if (charToken) {
+            tokens.push(charToken);
+        }
+        updateProgress(progress);
+
+        // Generate reminder tokens
+        const reminderTokens = await generateReminderTokensForCharacter(generator, character, progress, dpi);
+        tokens.push(...reminderTokens);
+    }
+
+    return tokens;
+}
+
+/**
  * Generate all tokens for a list of characters
  * @param characters - Array of character objects
  * @param options - Generation options
@@ -897,170 +1422,31 @@ export async function generateAllTokens(
     progressCallback: ProgressCallback | null = null,
     scriptMeta: ScriptMeta | null = null
 ): Promise<Token[]> {
-    const generator = new TokenGenerator(options);
-    const tokens: Token[] = [];
-    const nameCount = new Map<string, number>();
+    // Extract transparentBackground from pngSettings for TokenGenerator
+    const generatorOptions = {
+        ...options,
+        transparentBackground: options.pngSettings?.transparentBackground ?? false,
+    };
+    const generator = new TokenGenerator(generatorOptions);
 
-    // Calculate total including meta tokens
-    let metaTokenCount = 0;
-    if (options.pandemoniumToken) {
-        metaTokenCount++;
-    }
-    if (options.scriptNameToken && scriptMeta?.name) {
-        metaTokenCount++;
-    }
-    if (options.almanacToken && scriptMeta?.almanac) {
-        metaTokenCount++;
-    }
+    // Calculate total and create progress state
+    const total = calculateTotalTokenCount(characters, options, scriptMeta);
+    const progress: ProgressState = {
+        processed: 0,
+        total,
+        callback: progressCallback
+    };
 
-    let processed = 0;
-    // Calculate total: characters + reminders + meta tokens
-    let total = characters.reduce((sum, char) => {
-        return sum + 1 + (char.reminders?.length ?? 0);
-    }, 0) + metaTokenCount;
+    // Get DPI value for diameter calculations
+    const dpi = options.dpi ?? CONFIG.PDF.DPI;
 
-    // Generate meta tokens first
-    if (options.pandemoniumToken) {
-        try {
-            const pandemoniumCanvas = await generator.generatePandemoniumToken();
-            tokens.push({
-                type: 'pandemonium',
-                name: 'Pandemonium Institute',
-                filename: '_pandemonium_institute',
-                team: 'meta',
-                canvas: pandemoniumCanvas
-            });
-        } catch (error) {
-            console.error('Failed to generate pandemonium token:', error);
-        }
+    // Generate character and reminder tokens first
+    const characterTokens = await generateCharacterAndReminderTokens(generator, characters, progress, dpi);
 
-        processed++;
-        if (progressCallback) {
-            progressCallback(processed, total);
-        }
-    }
+    // Generate meta tokens last
+    const metaTokens = await generateMetaTokens(generator, options, scriptMeta, progress, dpi);
 
-    if (options.scriptNameToken && scriptMeta?.name) {
-        try {
-            const scriptNameCanvas = await generator.generateScriptNameToken(
-                scriptMeta.name,
-                scriptMeta.author
-            );
-            tokens.push({
-                type: 'script-name',
-                name: scriptMeta.name,
-                filename: '_script_name',
-                team: 'meta',
-                canvas: scriptNameCanvas
-            });
-        } catch (error) {
-            console.error('Failed to generate script name token:', error);
-        }
-
-        processed++;
-        if (progressCallback) {
-            progressCallback(processed, total);
-        }
-    }
-
-    if (options.almanacToken && scriptMeta?.almanac && scriptMeta?.name) {
-        try {
-            const almanacCanvas = await generator.generateAlmanacQRToken(
-                scriptMeta.almanac,
-                scriptMeta.name
-            );
-            tokens.push({
-                type: 'almanac',
-                name: `${scriptMeta.name} Almanac`,
-                filename: '_almanac_qr',
-                team: 'meta',
-                canvas: almanacCanvas
-            });
-        } catch (error) {
-            console.error('Failed to generate almanac QR token:', error);
-        }
-
-        processed++;
-        if (progressCallback) {
-            progressCallback(processed, total);
-        }
-    }
-
-    for (const character of characters) {
-        if (!character.name) continue;
-
-        // Generate character token
-        try {
-            const charCanvas = await generator.generateCharacterToken(character);
-            const baseName = character.name.replace(/[^a-zA-Z0-9]/g, '_');
-
-            // Handle duplicates
-            if (!nameCount.has(baseName)) {
-                nameCount.set(baseName, 0);
-            }
-            const count = nameCount.get(baseName) ?? 0;
-            nameCount.set(baseName, count + 1);
-
-            const filename = count === 0 ? baseName : `${baseName}_${String(count).padStart(2, '0')}`;
-
-            tokens.push({
-                type: 'character',
-                name: character.name,
-                filename: filename,
-                team: (character.team || 'townsfolk') as Team,
-                canvas: charCanvas,
-                hasReminders: (character.reminders?.length ?? 0) > 0,
-                reminderCount: character.reminders?.length ?? 0
-            });
-        } catch (error) {
-            console.error(`Failed to generate token for ${character.name}:`, error);
-        }
-
-        processed++;
-        if (progressCallback) {
-            progressCallback(processed, total);
-        }
-
-        // Generate reminder tokens
-        if (character.reminders && Array.isArray(character.reminders)) {
-            const reminderCount = new Map<string, number>();
-
-            for (const reminder of character.reminders) {
-                try {
-                    const reminderCanvas = await generator.generateReminderToken(character, reminder);
-                    const reminderBaseName = `${character.name}_${reminder}`.replace(/[^a-zA-Z0-9]/g, '_');
-
-                    // Handle duplicate reminders
-                    if (!reminderCount.has(reminderBaseName)) {
-                        reminderCount.set(reminderBaseName, 0);
-                    }
-                    const rCount = reminderCount.get(reminderBaseName) ?? 0;
-                    reminderCount.set(reminderBaseName, rCount + 1);
-
-                    const reminderFilename = rCount === 0 ? reminderBaseName : `${reminderBaseName}_${String(rCount).padStart(2, '0')}`;
-
-                    tokens.push({
-                        type: 'reminder',
-                        name: `${character.name} - ${reminder}`,
-                        filename: reminderFilename,
-                        team: (character.team || 'townsfolk') as Team,
-                        canvas: reminderCanvas,
-                        parentCharacter: character.name,
-                        reminderText: reminder
-                    });
-                } catch (error) {
-                    console.error(`Failed to generate reminder token "${reminder}" for ${character.name}:`, error);
-                }
-
-                processed++;
-                if (progressCallback) {
-                    progressCallback(processed, total);
-                }
-            }
-        }
-    }
-
-    return tokens;
+    return [...characterTokens, ...metaTokens];
 }
 
 export default {

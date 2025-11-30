@@ -39,8 +39,6 @@ export type ScriptEntry = string | ScriptMeta | Character | { id: string };
 export interface TokenConfig {
     // Token Generation
     displayAbilityText: boolean;
-    roleDiameter: number;
-    reminderDiameter: number;
     tokenCount: boolean;
     applyScriptName: boolean;
     scriptNameToken: boolean;
@@ -63,20 +61,82 @@ export interface TokenConfig {
     yOffset: number;
 }
 
+// Font spacing configuration
+export interface FontSpacingOptions {
+    characterName: number;
+    abilityText: number;
+    reminderText: number;
+}
+
+// Text shadow configuration
+export interface TextShadowOptions {
+    characterName: number;
+    abilityText: number;
+    reminderText: number;
+}
+
+// PNG export configuration
+export interface PngExportOptions {
+    embedMetadata: boolean;
+    transparentBackground: boolean;
+}
+
+// ZIP compression level
+export type CompressionLevel = 'fast' | 'normal' | 'maximum';
+
+// ZIP export configuration
+export interface ZipExportOptions {
+    saveInTeamFolders: boolean;
+    saveRemindersSeparately: boolean;
+    metaTokenFolder: boolean;
+    includeScriptJson: boolean;
+    compressionLevel: CompressionLevel;
+}
+
+// DPI type
+export type DPIOption = 300 | 600;
+
+// Custom preset structure
+export interface CustomPreset {
+    id: string;           // "custom_" + timestamp
+    name: string;
+    icon: string;         // emoji
+    settings: GenerationOptions;
+    isCustom: true;
+}
+
 // Generation options (subset of TokenConfig)
 export interface GenerationOptions {
     displayAbilityText: boolean;
-    roleDiameter: number;
-    reminderDiameter: number;
     tokenCount: boolean;
     setupFlowerStyle: string;
     reminderBackground: string;
+    reminderBackgroundImage?: string;
     characterBackground: string;
+    characterBackgroundColor?: string;
+    metaBackground?: string;
     characterNameFont: string;
+    characterNameColor?: string;
     characterReminderFont: string;
+    abilityTextFont?: string;
+    abilityTextColor?: string;
+    reminderTextColor?: string;
     scriptNameToken: boolean;
     almanacToken: boolean;
     pandemoniumToken: boolean;
+    leafGeneration?: string;
+    maximumLeaves?: number;
+    leafPopulationProbability?: number;
+    leafArcSpan?: number;
+    leafSlots?: number;
+    dpi?: DPIOption;
+    fontSpacing?: FontSpacingOptions;
+    textShadow?: TextShadowOptions;
+    pngSettings?: PngExportOptions;
+    zipSettings?: ZipExportOptions;
+    pdfPadding?: number;
+    pdfXOffset?: number;
+    pdfYOffset?: number;
 }
 
 // Generated token
@@ -86,6 +146,7 @@ export interface Token {
     filename: string;
     team: Team | string;
     canvas: HTMLCanvasElement;
+    diameter: number;  // Original diameter before DPI scaling
     hasReminders?: boolean;
     reminderCount?: number;
     parentCharacter?: string;
@@ -171,8 +232,8 @@ export interface FontSettings {
 export interface Config {
     VERSION: string;
     TOKEN: {
-        ROLE_DIAMETER: number;
-        REMINDER_DIAMETER: number;
+        ROLE_DIAMETER_INCHES: number;
+        REMINDER_DIAMETER_INCHES: number;
         DISPLAY_ABILITY_TEXT: boolean;
         TOKEN_COUNT: boolean;
     };
@@ -180,11 +241,17 @@ export interface Config {
         LEAF_GENERATION: string;
         MAXIMUM_LEAVES: number;
         LEAF_POPULATION_PROBABILITY: number;
+        LEAF_ARC_SPAN: number;
+        LEAF_SLOTS: number;
         SETUP_FLOWER_STYLE: string;
         REMINDER_BACKGROUND: string;
         CHARACTER_BACKGROUND: string;
         CHARACTER_NAME_FONT: string;
+        CHARACTER_NAME_COLOR: string;
         CHARACTER_REMINDER_FONT: string;
+        ABILITY_TEXT_FONT: string;
+        ABILITY_TEXT_COLOR: string;
+        REMINDER_TEXT_COLOR: string;
     };
     PDF: {
         TOKEN_PADDING: number;
@@ -195,6 +262,21 @@ export interface Config {
         DPI: number;
         MARGIN: number;
     };
+    FONT_SPACING: {
+        CHARACTER_NAME: number;
+        ABILITY_TEXT: number;
+        REMINDER_TEXT: number;
+    };
+    TEXT_SHADOW: {
+        CHARACTER_NAME: number;
+        ABILITY_TEXT: number;
+        REMINDER_TEXT: number;
+    };
+    ZIP: {
+        SAVE_IN_TEAM_FOLDERS: boolean;
+        SAVE_REMINDERS_SEPARATELY: boolean;
+    };
+    AUTO_GENERATE_DEFAULT: boolean;
     API: {
         BOTC_DATA: string;
     };
@@ -220,31 +302,51 @@ export interface Config {
 
 // Element references for UI
 export interface UIElements {
-    // Panel
-    optionsPanel: HTMLElement | null;
-    panelToggle: HTMLButtonElement | null;
-
     // Presets
-    presetDefault: HTMLButtonElement | null;
+    presetClassic: HTMLButtonElement | null;
     presetFullBloom: HTMLButtonElement | null;
     presetMinimal: HTMLButtonElement | null;
     presetDescription: HTMLElement | null;
+    presetGrid: HTMLElement | null;
+    addPresetButton: HTMLButtonElement | null;
 
     // Token Generation Options
     displayAbilityText: HTMLInputElement | null;
-    roleDiameter: HTMLInputElement | null;
-    reminderDiameter: HTMLInputElement | null;
     tokenCount: HTMLInputElement | null;
     scriptNameToken: HTMLInputElement | null;
     almanacToken: HTMLInputElement | null;
     pandemoniumToken: HTMLInputElement | null;
+
+    // Font Spacing
+    characterNameSpacing: HTMLInputElement | null;
+    abilityTextSpacing: HTMLInputElement | null;
+    reminderTextSpacing: HTMLInputElement | null;
+
+    // Text Shadow
+    characterNameShadow: HTMLInputElement | null;
+    abilityTextShadow: HTMLInputElement | null;
+    reminderTextShadow: HTMLInputElement | null;
+
+    // ZIP Settings
+    saveInTeamFolders: HTMLInputElement | null;
+    saveRemindersSeparately: HTMLInputElement | null;
+
+    // DPI Selection
+    dpiSelection: HTMLSelectElement | null;
 
     // Style Options
     setupFlowerStyle: HTMLSelectElement | null;
     reminderBackground: HTMLInputElement | null;
     characterBackground: HTMLSelectElement | null;
     characterNameFont: HTMLSelectElement | null;
+    characterNameColor: HTMLInputElement | null;
     characterReminderFont: HTMLSelectElement | null;
+    abilityTextFont: HTMLSelectElement | null;
+    abilityTextColor: HTMLInputElement | null;
+    reminderTextColor: HTMLInputElement | null;
+    leafGeneration: HTMLSelectElement | null;
+    maximumLeaves: HTMLInputElement | null;
+    leafPopulationProbability: HTMLInputElement | null;
 
     // PDF Options
     tokenPadding: HTMLInputElement | null;
@@ -255,11 +357,13 @@ export interface UIElements {
     fileUpload: HTMLInputElement | null;
     exampleScripts: HTMLSelectElement | null;
     jsonEditor: HTMLTextAreaElement | null;
+    jsonHighlight: HTMLElement | null;
     jsonValidation: HTMLElement | null;
     formatJson: HTMLButtonElement | null;
     clearJson: HTMLButtonElement | null;
     generateTokens: HTMLButtonElement | null;
     autoGenerate: HTMLButtonElement | null;
+    downloadJson: HTMLButtonElement | null;
 
     // Output Section
     outputSection: HTMLElement | null;
@@ -277,6 +381,11 @@ export interface UIElements {
     exportOptions: HTMLElement | null;
     downloadAllPng: HTMLButtonElement | null;
     generatePdf: HTMLButtonElement | null;
+
+    // Sticky Export Bar
+    stickyExportBar: HTMLElement | null;
+    downloadAllPngSticky: HTMLButtonElement | null;
+    generatePdfSticky: HTMLButtonElement | null;
 
     // Token Counts
     countTownsfolk: HTMLElement | null;
@@ -297,6 +406,13 @@ export interface UIElements {
     uiSizeSlider: HTMLInputElement | null;
     uiSizeValue: HTMLElement | null;
     colorSchema: HTMLSelectElement | null;
+    wipeDataButton: HTMLButtonElement | null;
+
+    // Info Modal
+    infoButton: HTMLButtonElement | null;
+    infoModal: HTMLElement | null;
+    infoModalBackdrop: HTMLElement | null;
+    infoModalClose: HTMLButtonElement | null;
 }
 
 // Team color mapping
@@ -306,7 +422,7 @@ export type TeamColors = Record<Team, string>;
 export type TeamLabels = Record<Team, string>;
 
 // Preset configurations
-export type PresetName = 'default' | 'fullbloom' | 'minimal';
+export type PresetName = 'classic' | 'fullbloom' | 'minimal';
 
 export interface PresetConfig {
     name: string;
@@ -373,10 +489,15 @@ export interface jsPDFDocument {
 
 // JSZip types
 export interface JSZipFolder {
-    file(name: string, data: Blob): void;
+    file(name: string, data: Blob | string): void;
 }
 
 export interface JSZipInstance {
     folder(name: string): JSZipFolder;
-    generateAsync(options: { type: 'blob' }): Promise<Blob>;
+    file(name: string, data: Blob | string): void;
+    generateAsync(options: { 
+        type: 'blob';
+        compression?: string;
+        compressionOptions?: { level: number };
+    }): Promise<Blob>;
 }

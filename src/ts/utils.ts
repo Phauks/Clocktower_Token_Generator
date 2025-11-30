@@ -6,6 +6,20 @@
 import type { RGB, ValidationResult, ScriptEntry } from './types/index.js';
 
 /**
+ * Fisher-Yates shuffle algorithm - returns a new shuffled array
+ * @param array - Array to shuffle (can be readonly)
+ * @returns New shuffled array (original unchanged)
+ */
+export function shuffleArray<T>(array: readonly T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
+
+/**
  * Debounce function to limit rate of function calls
  * @param func - Function to debounce
  * @param wait - Wait time in milliseconds
@@ -95,9 +109,9 @@ export function generateUniqueFilename(nameCount: Map<string, number>, baseName:
  */
 export function sanitizeFilename(filename: string): string {
     return filename
-        .replace(/[<>:"/\\|?*]/g, '')
-        .replace(/\s+/g, '_')
-        .trim();
+        .trim()
+        .replace(/[<>:"/\\|?*']/g, '')
+        .replace(/\s+/g, '_');
 }
 
 /**
@@ -248,7 +262,69 @@ export function capitalize(str: string): string {
     return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
 
+/**
+ * Highlight JSON syntax with HTML spans for color coding
+ * @param json - JSON string to highlight
+ * @returns HTML string with syntax highlighting
+ */
+export function highlightJson(json: string): string {
+    if (!json) return '';
+
+    // Escape HTML special characters to prevent XSS
+    const escapeHtml = (str: string): string => {
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    };
+
+    // Regular expression to match JSON tokens
+    const tokenPattern = /"(?:[^"\\]|\\.)*"(?=\s*:)|"(?:[^"\\]|\\.)*"|true|false|null|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|[{}\[\]:,]/g;
+
+    let result = '';
+    let lastIndex = 0;
+    let match;
+
+    while ((match = tokenPattern.exec(json)) !== null) {
+        // Add non-matching text before this match
+        if (match.index > lastIndex) {
+            result += escapeHtml(json.substring(lastIndex, match.index));
+        }
+
+        const token = match[0];
+        let className = '';
+
+        // Determine token type and assign class
+        if (token === '{' || token === '}' || token === '[' || token === ']' || token === ':' || token === ',') {
+            className = 'json-punctuation';
+        } else if (token === 'true' || token === 'false') {
+            className = 'json-boolean';
+        } else if (token === 'null') {
+            className = 'json-null';
+        } else if (token.match(/^-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?$/)) {
+            className = 'json-number';
+        } else if (token.startsWith('"')) {
+            // Check if it's a key (followed by :) or a string value
+            const nextNonWhitespace = json.slice(match.index + token.length).match(/^\s*:/);
+            className = nextNonWhitespace ? 'json-key' : 'json-string';
+        }
+
+        result += `<span class="${className}">${escapeHtml(token)}</span>`;
+        lastIndex = match.index + token.length;
+    }
+
+    // Add any remaining text
+    if (lastIndex < json.length) {
+        result += escapeHtml(json.substring(lastIndex));
+    }
+
+    return result;
+}
+
 export default {
+    shuffleArray,
     debounce,
     loadImage,
     loadLocalImage,
@@ -263,5 +339,6 @@ export default {
     getContrastColor,
     checkFontsLoaded,
     deepClone,
-    capitalize
+    capitalize,
+    highlightJson
 };

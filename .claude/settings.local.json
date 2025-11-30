@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(cat:*)",
+      "Bash(ren \"Fall of Rome.json\" \"Fall_of_Rome.json\")",
+      "Bash(ren:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm audit:*)",
+      "Bash(npm install)",
+      "Bash(npm test:*)",
+      "Bash(npx vitest run:*)",
+      "Bash(node --loader ts-node/esm --eval \"import(''./src/ts/utils.test.ts'').catch(e => console.log(''Error:'', e.message))\")",
+      "Bash(npm run test:coverage:*)",
+      "Bash(ls:*)",
+      "Bash(test:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run test:e2e-checklist:*)",
+      "Bash(npm run validate:*)",
+      "Bash(npm run precommit:*)",
+      "Bash(npm run clean:*)",
+      "Bash(npm run vite-build:*)",
+      "Bash(npm run:*)",
+      "Bash(dir:*)",
+      "Bash(git log:*)",
+      "Bash(grep:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

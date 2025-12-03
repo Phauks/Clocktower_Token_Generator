@@ -77,6 +77,12 @@
   padding: var(--spacing-md);
 }
 
+.tabsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 1024px) {
   .sidebar {
@@ -96,3 +102,5 @@
     right: -44px;
   }
 }
+
+

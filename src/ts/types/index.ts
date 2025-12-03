@@ -3,6 +3,9 @@
  * Type Definitions
  */
 
+// Token generator options
+export * from './tokenOptions.js';
+
 // Team types
 export type Team = 'townsfolk' | 'outsider' | 'minion' | 'demon' | 'traveller' | 'fabled' | 'loric' | 'meta';
 
@@ -12,6 +15,7 @@ export interface Character {
     name: string;
     team: Team;
     ability?: string;
+    flavor?: string;
     image: string | string[];
     setup?: boolean;
     reminders?: string[];
@@ -105,8 +109,13 @@ export interface CustomPreset {
     isCustom: true;
 }
 
+// CORS proxy options for loading external images
+// TODO: Replace allorigins with Cloudflare Workers proxy for better reliability
+export type CorsProxyOption = 'allorigins' | 'disabled';
+
 // Generation options (subset of TokenConfig)
 export interface GenerationOptions {
+    corsProxy?: CorsProxyOption;
     displayAbilityText: boolean;
     tokenCount: boolean;
     setupFlowerStyle: string;
@@ -221,6 +230,9 @@ export interface CharacterValidationResult {
 // Progress callback type
 export type ProgressCallback = (current: number, total: number) => void;
 
+// Incremental token callback - called as each token is generated
+export type TokenCallback = (token: Token) => void;
+
 // Font settings
 export interface FontSettings {
     SIZE_RATIO: number;
@@ -275,6 +287,11 @@ export interface Config {
     ZIP: {
         SAVE_IN_TEAM_FOLDERS: boolean;
         SAVE_REMINDERS_SEPARATELY: boolean;
+    };
+    GENERATION: {
+        BATCH_SIZE: number;
+        MIN_BATCH_SIZE: number;
+        MAX_BATCH_SIZE: number;
     };
     AUTO_GENERATE_DEFAULT: boolean;
     API: {

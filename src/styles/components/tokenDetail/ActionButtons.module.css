@@ -1,0 +1,239 @@
+/* ActionButtons.module.css - Action buttons for token detail view */
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-color);
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* Toggle buttons (live update, auto-save) */
+.toggleBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--border-radius);
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.toggleBtn:hover {
+  background: var(--bg-card);
+  border-color: var(--color-primary);
+}
+
+.toggleBtn.active {
+  background: var(--color-primary-subtle);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.toggleBtn .icon {
+  font-size: 1.125rem;
+}
+
+.toggleBtn.deleteBtn {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+  background: var(--color-danger-subtle);
+}
+
+.toggleBtn.deleteBtn:hover {
+  background: var(--color-danger);
+  color: white;
+}
+
+/* Secondary buttons */
+.secondaryBtn {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  transition: all var(--transition-fast);
+}
+
+.secondaryBtn:hover:not(:disabled) {
+  background: var(--bg-card);
+  border-color: var(--color-primary);
+}
+
+.secondaryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Download dropdown */
+.downloadDropdown {
+  position: relative;
+}
+
+.downloadButtonGroup {
+  display: flex;
+}
+
+.downloadMainBtn {
+  position: relative;
+  overflow: hidden;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  border-right: none;
+  border-radius: var(--border-radius) 0 0 var(--border-radius);
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  transition: all var(--transition-fast);
+  z-index: 1;
+}
+
+.downloadMainBtn .downloadProgress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0;
+  background: var(--color-success, #27ae60);
+  opacity: 0;
+  transition: width 0.2s ease-out, opacity 0.2s ease;
+  z-index: -1;
+}
+
+.downloadMainBtn.downloading {
+  border-color: var(--color-success, #27ae60);
+  color: white;
+}
+
+.downloadMainBtn.downloading .downloadProgress {
+  width: var(--progress, 0%);
+  opacity: 1;
+}
+
+.downloadMainBtn .icon {
+  position: relative;
+  z-index: 1;
+}
+
+.downloadMainBtn:hover:not(:disabled) {
+  background: var(--bg-card);
+}
+
+.downloadMainBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.downloadMainBtn.downloading:disabled {
+  opacity: 1;
+}
+
+.downloadCaretBtn {
+  padding: var(--spacing-sm) var(--spacing-xs);
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  border-radius: 0 var(--border-radius) var(--border-radius) 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.downloadCaretBtn:hover:not(:disabled) {
+  background: var(--bg-card);
+}
+
+.downloadCaretBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.downloadCaretBtn.downloading {
+  background: var(--color-success, #27ae60);
+  border-color: var(--color-success, #27ae60);
+  color: white;
+}
+
+.caretIcon {
+  font-size: 10px;
+}
+
+.downloadMenu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: var(--spacing-xs);
+  min-width: 180px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  z-index: 100;
+}
+
+.downloadMenuItem {
+  display: block;
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: none;
+  border: none;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.downloadMenuItem:hover {
+  background: var(--bg-hover);
+}
+
+/* Save button group */
+.saveGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.primaryBtn {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: var(--color-primary);
+  border: none;
+  border-radius: var(--border-radius);
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-on-accent);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.primaryBtn:hover:not(:disabled) {
+  background: var(--color-primary-light);
+}
+
+.primaryBtn:disabled,
+.primaryBtn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+

@@ -1,3 +1,6 @@
+import styles from '../../styles/components/presets/PresetModal.module.css'
+import modalStyles from '../../styles/components/layout/Modal.module.css'
+
 interface ConfirmModalProps {
   isOpen: boolean
   title: string
@@ -20,23 +23,23 @@ export function ConfirmModal({
   if (!isOpen) return null
 
   return (
-    <div className="settings-modal">
-      <div className="modal-backdrop" onClick={onCancel} />
-      <div className="modal-container modal-confirm">
-        <div className="modal-header">
+    <div className={modalStyles.overlay}>
+      <div className={modalStyles.backdrop} onClick={onCancel} />
+      <div className={`${modalStyles.container} ${styles.modalConfirm}`}>
+        <div className={modalStyles.header}>
           <h2>{title}</h2>
-          <button className="modal-close" onClick={onCancel}>
+          <button className={modalStyles.closeBtn} onClick={onCancel}>
             ×
           </button>
         </div>
-        <div className="modal-body">
+        <div className={modalStyles.body}>
           <p>{message}</p>
         </div>
-        <div className="modal-actions">
-          <button className="btn-primary" onClick={onConfirm}>
+        <div className={modalStyles.actions}>
+          <button className={modalStyles.primaryBtn} onClick={onConfirm}>
             {confirmText}
           </button>
-          <button className="btn-secondary" onClick={onCancel}>
+          <button className={modalStyles.secondaryBtn} onClick={onCancel}>
             {cancelText}
           </button>
         </div>

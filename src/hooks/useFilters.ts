@@ -1,6 +1,5 @@
 import { useCallback, useEffect } from 'react'
 import { useTokenContext } from '../contexts/TokenContext'
-import type { Token } from '../ts/types/index.js'
 
 export function useFilters() {
   const {
@@ -13,37 +12,35 @@ export function useFilters() {
   const applyFilters = useCallback(() => {
     let result = [...tokens]
 
-    // Filter by team
-    if (filters.team !== 'all') {
-      result = result.filter((token) => token.team === filters.team)
+    // Filter by teams (multi-select)
+    if (filters.teams.length > 0) {
+      result = result.filter((token) => filters.teams.includes(token.team || ''))
     }
 
-    // Filter by token type
-    if (filters.tokenType !== 'all') {
-      if (filters.tokenType === 'meta') {
-        // Meta includes script-name, almanac, pandemonium tokens
-        result = result.filter((token) => token.type !== 'character' && token.type !== 'reminder')
-      } else {
-        result = result.filter((token) => token.type === filters.tokenType)
-      }
-    }
-
-    // Filter by display (official vs custom)
-    if (filters.display !== 'all') {
+    // Filter by token types (multi-select)
+    if (filters.tokenTypes.length > 0) {
       result = result.filter((token) => {
-        // This would need to be determined by comparing with officialData
-        // For now, we'll skip this filter as it requires more context
-        return true
+        if (filters.tokenTypes.includes('meta')) {
+          // Meta includes script-name, almanac, pandemonium tokens
+          if (token.type !== 'character' && token.type !== 'reminder') {
+            return true
+          }
+        }
+        return filters.tokenTypes.includes(token.type)
       })
     }
 
-    // Filter by reminders
-    if (filters.reminders !== 'all') {
-      if (filters.reminders === 'has') {
-        result = result.filter((token) => token.hasReminders)
-      } else if (filters.reminders === 'none') {
-        result = result.filter((token) => !token.hasReminders)
-      }
+    // Filter by display (official vs custom) - multi-select
+    // Note: This would need to be determined by comparing with officialData
+    // For now, we'll skip this filter as it requires more context
+
+    // Filter by reminders (multi-select)
+    if (filters.reminders.length > 0) {
+      result = result.filter((token) => {
+        if (filters.reminders.includes('has') && token.hasReminders) return true
+        if (filters.reminders.includes('none') && !token.hasReminders) return true
+        return false
+      })
     }
 
     setFilteredTokens(result)
@@ -56,19 +53,55 @@ export function useFilters() {
 
   const resetFilters = useCallback(() => {
     updateFilters({
-      team: 'all',
-      tokenType: 'all',
-      display: 'all',
-      reminders: 'all',
+      teams: [],
+      tokenTypes: [],
+      display: [],
+      reminders: [],
     })
   }, [updateFilters])
+
+  const toggleTeam = useCallback((team: string) => {
+    const current = filters.teams
+    if (current.includes(team)) {
+      updateFilters({ teams: current.filter(t => t !== team) })
+    } else {
+      updateFilters({ teams: [...current, team] })
+    }
+  }, [filters.teams, updateFilters])
+
+  const toggleTokenType = useCallback((type: string) => {
+    const current = filters.tokenTypes
+    if (current.includes(type)) {
+      updateFilters({ tokenTypes: current.filter(t => t !== type) })
+    } else {
+      updateFilters({ tokenTypes: [...current, type] })
+    }
+  }, [filters.tokenTypes, updateFilters])
+
+  const toggleDisplay = useCallback((display: string) => {
+    const current = filters.display
+    if (current.includes(display)) {
+      updateFilters({ display: current.filter(d => d !== display) })
+    } else {
+      updateFilters({ display: [...current, display] })
+    }
+  }, [filters.display, updateFilters])
+
+  const toggleReminders = useCallback((reminder: string) => {
+    const current = filters.reminders
+    if (current.includes(reminder)) {
+      updateFilters({ reminders: current.filter(r => r !== reminder) })
+    } else {
+      updateFilters({ reminders: [...current, reminder] })
+    }
+  }, [filters.reminders, updateFilters])
 
   return {
     applyFilters,
     resetFilters,
-    setTeamFilter: (team: string) => updateFilters({ team }),
-    setTokenTypeFilter: (tokenType: string) => updateFilters({ tokenType }),
-    setDisplayFilter: (display: string) => updateFilters({ display }),
-    setRemindersFilter: (reminders: string) => updateFilters({ reminders }),
+    toggleTeam,
+    toggleTokenType,
+    toggleDisplay,
+    toggleReminders,
   }
 }

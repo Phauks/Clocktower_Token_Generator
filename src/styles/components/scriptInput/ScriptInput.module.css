@@ -1,0 +1,291 @@
+/**
+ * ScriptInput Component Styles
+ * JSON editor with file upload and syntax highlighting
+ */
+
+/* Section container */
+.section {
+  background-color: var(--bg-card);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.header {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--bg-panel);
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 1.125rem;
+  color: var(--text-primary);
+}
+
+.content {
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.content.dragOver {
+  background-color: var(--color-accent-light);
+  border: 2px dashed var(--color-accent);
+}
+
+/* Input methods section */
+.inputMethods {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.inputMethod {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.inputMethod label {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+/* File upload */
+.fileUploadLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background-color: var(--bg-input);
+  border: 2px dashed var(--border-color);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: var(--transition);
+  color: var(--text-muted);
+}
+
+.fileUploadLabel:hover {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent-light);
+}
+
+.uploadIcon {
+  font-size: 1.25rem;
+}
+
+.fileInput {
+  display: none;
+}
+
+/* Example select group */
+.exampleSelectGroup {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.selectInput {
+  flex: 1;
+  padding: var(--spacing-sm);
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.selectInput:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+/* JSON Editor */
+.editorContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.editorHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm);
+  background-color: var(--bg-panel);
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+  border: 1px solid var(--border-color);
+  border-bottom: none;
+}
+
+.editorHeader span {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.editorActions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+/* Button styles */
+.secondaryBtn {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: var(--btn-secondary-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+}
+
+.secondaryBtn:hover:not(:disabled) {
+  background-color: var(--btn-secondary-hover-bg);
+  border-color: var(--color-accent);
+}
+
+.secondaryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.secondaryBtn.activeHighlight {
+  background-color: var(--color-accent);
+  color: var(--text-on-accent);
+  border-color: var(--color-accent);
+}
+
+.primaryBtn {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--btn-primary-bg);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+}
+
+.primaryBtn:hover:not(:disabled) {
+  background-color: var(--btn-primary-hover-bg);
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnIcon {
+  font-size: 1rem;
+}
+
+/* JSON editor wrapper */
+.editorWrapper {
+  position: relative;
+  height: 300px;
+  border: 1px solid var(--border-color);
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+  overflow: hidden;
+}
+
+.jsonHighlight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: var(--spacing-md);
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow: auto;
+  pointer-events: none;
+  color: var(--text-primary);
+  background-color: var(--bg-input);
+}
+
+.jsonEditor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  padding: var(--spacing-md);
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  border: none;
+  resize: none;
+  background-color: transparent;
+  color: transparent;
+  caret-color: var(--text-primary);
+}
+
+.jsonEditor::placeholder {
+  color: var(--text-muted);
+}
+
+.jsonEditor:focus {
+  outline: none;
+}
+
+/* Validation messages */
+.validationMessage {
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius);
+  font-size: 0.875rem;
+}
+
+.validationMessage.error {
+  background-color: var(--danger-light);
+  color: var(--danger-color);
+  border: 1px solid var(--danger-color);
+}
+
+.validationMessage.warning {
+  background-color: var(--warning-light);
+  color: var(--warning-color);
+  border: 1px solid var(--warning-color);
+}
+
+.validationMessage.success {
+  background-color: var(--success-light);
+  color: var(--success-color);
+  border: 1px solid var(--success-color);
+}
+
+.warningList {
+  margin: var(--spacing-xs) 0 0 var(--spacing-md);
+  padding: 0;
+  list-style: disc;
+}
+
+.warningList li {
+  margin: var(--spacing-xs) 0;
+}
+
+/* Action buttons */
+.actionButtons {
+  display: flex;
+  justify-content: center;
+}
+
+

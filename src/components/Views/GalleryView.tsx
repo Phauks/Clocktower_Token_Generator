@@ -8,6 +8,7 @@ import { ReminderTab } from '../Options/ReminderTab'
 import { MetaTab } from '../Options/MetaTab'
 import { TokenGrid } from '../TokenGrid/TokenGrid'
 import type { Token } from '../../ts/types/index'
+import styles from '../../styles/components/views/Views.module.css'
 
 interface GalleryViewProps {
   onTokenClick: (token: Token) => void
@@ -19,13 +20,13 @@ export function GalleryView({ onTokenClick }: GalleryViewProps) {
   const [customPresets, setCustomPresets] = useState<CustomPreset[]>([])
 
   return (
-    <div className="gallery-view">
+    <div className={styles.galleryView}>
       {/* Left Sidebar - Presets and Options */}
-      <aside className="gallery-sidebar">
-        <div className="panel-content">
-          <div className="sidebar-card">
-            <h2 className="section-header">Presets</h2>
-            <div className="option-section">
+      <aside className={styles.gallerySidebar}>
+        <div className={styles.panelContent}>
+          <div className={styles.sidebarCard}>
+            <h2 className={styles.sectionHeader}>Presets</h2>
+            <div className={styles.optionSection}>
               <PresetSection
                 customPresets={customPresets}
                 onCustomPresetsChange={setCustomPresets}
@@ -34,10 +35,10 @@ export function GalleryView({ onTokenClick }: GalleryViewProps) {
             </div>
           </div>
 
-          <div className="sidebar-card">
-            <h2 className="section-header">Options</h2>
-            <div className="option-section">
-              <div className="tabs-container">
+          <div className={styles.sidebarCard}>
+            <h2 className={styles.sectionHeader}>Options</h2>
+            <div className={styles.optionSection}>
+              <div className={styles.tabsContainer}>
                 <OptionsTabNavigation 
                   activeTab={activeTab} 
                   onTabChange={(tab) => {
@@ -73,10 +74,10 @@ export function GalleryView({ onTokenClick }: GalleryViewProps) {
       </aside>
 
       {/* Right Content - Token Grid */}
-      <div className="gallery-content">
-        <div className="gallery-header">
+      <div className={styles.galleryContent}>
+        <div className={styles.galleryHeader}>
           {isLoading && generationProgress && (
-            <div className="generation-progress">
+            <div className={styles.generationProgress}>
               Generating {generationProgress.current}/{generationProgress.total}...
             </div>
           )}

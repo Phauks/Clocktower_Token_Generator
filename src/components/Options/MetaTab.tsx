@@ -1,6 +1,7 @@
 import { memo, useState } from 'react'
 import type { GenerationOptions } from '../../ts/types/index'
 import { OptionGroup } from '../Shared/OptionGroup'
+import styles from '../../styles/components/options/OptionsTab.module.css'
 
 interface MetaTabProps {
   generationOptions: GenerationOptions
@@ -13,23 +14,23 @@ export const MetaTab = memo(({ generationOptions, onOptionChange }: MetaTabProps
   const [activeSubTab, setActiveSubTab] = useState<SubTabType>('tokens')
 
   return (
-    <div className="tab-content active" data-tab-content="meta">
-      <div className="subtabs-container">
-        <div className="subtabs-nav">
+    <div className={styles.tabContent} data-tab-content="meta">
+      <div className={styles.subtabsContainer}>
+        <div className={styles.subtabsNav}>
           <button
-            className={`subtab-button ${activeSubTab === 'tokens' ? 'active' : ''}`}
+            className={`${styles.subtabButton} ${activeSubTab === 'tokens' ? styles.active : ''}`}
             onClick={() => setActiveSubTab('tokens')}
           >
             Tokens
           </button>
           <button
-            className={`subtab-button ${activeSubTab === 'background' ? 'active' : ''}`}
+            className={`${styles.subtabButton} ${activeSubTab === 'background' ? styles.active : ''}`}
             onClick={() => setActiveSubTab('background')}
           >
             Background
           </button>
           <button
-            className={`subtab-button ${activeSubTab === 'font' ? 'active' : ''}`}
+            className={`${styles.subtabButton} ${activeSubTab === 'font' ? styles.active : ''}`}
             onClick={() => setActiveSubTab('font')}
           >
             Font
@@ -38,15 +39,15 @@ export const MetaTab = memo(({ generationOptions, onOptionChange }: MetaTabProps
 
         {/* Tokens Sub-Tab */}
         {activeSubTab === 'tokens' && (
-          <div className="subtab-content">
-            <div className="subsection">
+          <div className={styles.subtabContent}>
+            <div className={styles.subsection}>
               <OptionGroup
                 label="Pandemonium Institute"
                 helpText="Generate official game branding token"
               >
                 <input
                   type="checkbox"
-                  className="toggle-switch"
+                  className={styles.toggleSwitch}
                   checked={generationOptions.pandemoniumToken}
                   onChange={(e) => onOptionChange({ pandemoniumToken: e.target.checked })}
                 />
@@ -58,7 +59,7 @@ export const MetaTab = memo(({ generationOptions, onOptionChange }: MetaTabProps
               >
                 <input
                   type="checkbox"
-                  className="toggle-switch"
+                  className={styles.toggleSwitch}
                   checked={generationOptions.scriptNameToken}
                   onChange={(e) => onOptionChange({ scriptNameToken: e.target.checked })}
                 />
@@ -70,7 +71,7 @@ export const MetaTab = memo(({ generationOptions, onOptionChange }: MetaTabProps
               >
                 <input
                   type="checkbox"
-                  className="toggle-switch"
+                  className={styles.toggleSwitch}
                   checked={generationOptions.almanacToken}
                   onChange={(e) => onOptionChange({ almanacToken: e.target.checked })}
                 />
@@ -81,14 +82,14 @@ export const MetaTab = memo(({ generationOptions, onOptionChange }: MetaTabProps
 
         {/* Background Sub-Tab */}
         {activeSubTab === 'background' && (
-          <div className="subtab-content">
-            <div className="subsection">
+          <div className={styles.subtabContent}>
+            <div className={styles.subsection}>
               <OptionGroup
                 label="Background"
                 helpText="Select meta token background pattern"
               >
                 <select
-                  className="select-input"
+                  className={styles.selectInput}
                   value={generationOptions.metaBackground || 'character_background_1'}
                   onChange={(e) => onOptionChange({ metaBackground: e.target.value })}
                 >
@@ -105,8 +106,8 @@ export const MetaTab = memo(({ generationOptions, onOptionChange }: MetaTabProps
 
         {/* Font Sub-Tab */}
         {activeSubTab === 'font' && (
-          <div className="subtab-content">
-            <div className="subsection">
+          <div className={styles.subtabContent}>
+            <div className={styles.subsection}>
               <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>TBI</p>
             </div>
           </div>

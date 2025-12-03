@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useTokenContext } from '../contexts/TokenContext'
-import { getPreset } from '../ts/presets.js'
+import { getPreset } from '../ts/generation/presets.js'
+import { sanitizeFilename } from '../ts/utils/index.js'
 import type { GenerationOptions, PresetName } from '../ts/types/index.js'
 
 const STORAGE_KEY = 'clocktower_custom_presets'
@@ -233,7 +234,7 @@ export function usePresets() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${preset.name.replace(/[^a-z0-9]/gi, '_')}_preset.json`
+      a.download = `${sanitizeFilename(preset.name)}_preset.json`
       a.click()
       URL.revokeObjectURL(url)
     } catch (err) {

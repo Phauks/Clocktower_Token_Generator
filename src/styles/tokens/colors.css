@@ -7,6 +7,7 @@
   --color-primary: #8b0000;
   --color-primary-dark: #5c0000;
   --color-primary-light: #b30000;
+  --color-primary-subtle: rgba(139, 0, 0, 0.1);
   
   --color-secondary: #2c3e50;
   --color-secondary-dark: #1a252f;
@@ -14,6 +15,7 @@
   --color-accent: #c9a227;
   --color-accent-light: #e6c34a;
   --color-accent-dark: #a88620;
+  --accent-rgb: 201, 162, 39;
 
   /* ---- Semantic Colors ---- */
   --color-success: #27ae60;
@@ -23,26 +25,46 @@
   --color-error: #e74c3c;
   --color-error-light: #ff6b6b;
   --color-info: #3498db;
+  --color-danger: #e74c3c;
+  --color-danger-hover: #c0392b;
+  --color-danger-subtle: rgba(231, 76, 60, 0.1);
+  
+  /* ---- Semantic Color Aliases (for legacy compatibility) ---- */
+  --danger-color: var(--color-danger);
+  --danger-light: var(--color-danger-subtle);
+  --warning-color: var(--color-warning);
+  --warning-light: rgba(243, 156, 18, 0.1);
+  --success-color: var(--color-success);
+  --success-light: rgba(39, 174, 96, 0.1);
 
   /* ---- Background Colors ---- */
   --bg-main: #1a1a1a;
+  --bg-primary: #1a1a1a;
   --bg-panel: #252525;
   --bg-card: #2d2d2d;
   --bg-input: #3a3a3a;
   --bg-hover: #404040;
   --bg-tertiary: #333333;
   --bg-secondary: #2a2a2a;
+  --color-background: #1a1a1a;
 
   /* ---- Text Colors ---- */
   --text-primary: #f5f5f5;
   --text-secondary: #b0b0b0;
   --text-muted: #808080;
   --text-disabled: #666666;
+  --text-on-accent: #ffffff;
 
   /* ---- Border Colors ---- */
   --border-color: #404040;
   --border-color-light: #555555;
   --border-color-focus: var(--color-accent);
+
+  /* ---- Button Colors ---- */
+  --btn-primary-bg: var(--color-primary);
+  --btn-primary-hover-bg: var(--color-primary-light);
+  --btn-secondary-bg: var(--bg-input);
+  --btn-secondary-hover-bg: var(--bg-hover);
 
   /* ---- Team Colors (Game-Specific) ---- */
   --team-townsfolk: #1a5f2a;
@@ -53,4 +75,14 @@
   --team-fabled: #4f1a5f;
   --team-loric: #2a5f5f;
   --team-meta: #808080;
+  
+  /* ---- Team Color Aliases ---- */
+  --color-team-townsfolk: var(--team-townsfolk);
+  --color-team-outsider: var(--team-outsider);
+  --color-team-minion: var(--team-minion);
+  --color-team-demon: var(--team-demon);
+  --color-team-traveller: var(--team-traveller);
+  --color-team-fabled: var(--team-fabled);
+  --color-team-loric: var(--team-loric);
+  --color-team-meta: var(--team-meta);
 }

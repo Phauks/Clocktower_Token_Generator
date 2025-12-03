@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { JsonHighlight } from '../ScriptInput/JsonHighlight'
 import type { Character } from '../../ts/types/index.js'
+import styles from '../../styles/components/tokenDetail/TokenEditor.module.css'
 
 interface TokenEditorProps {
   character: Character
@@ -15,6 +16,18 @@ interface DecorativeOverrides {
   leafProbability?: number
   hideSetupFlower?: boolean
   setupFlowerStyle?: string
+}
+
+// Map team names to CSS Module class names
+const teamSelectClassMap: Record<string, string> = {
+  townsfolk: styles.teamTownsfolk,
+  outsider: styles.teamOutsider,
+  minion: styles.teamMinion,
+  demon: styles.teamDemon,
+  traveller: styles.teamTraveller,
+  traveler: styles.teamTraveller,
+  fabled: styles.teamFabled,
+  loric: styles.teamLoric,
 }
 
 export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
@@ -100,23 +113,23 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
   }
 
   return (
-    <div className="token-detail-editor">
-      <div className="tabs-container">
-        <div className="tabs-nav">
+    <div className={styles.editor}>
+      <div className={styles.tabsContainer}>
+        <div className={styles.tabsNav}>
           <button
-            className={`tab-button ${activeTab === 'info' ? 'active' : ''}`}
+            className={`${styles.tabButton} ${activeTab === 'info' ? styles.active : ''}`}
             onClick={() => setActiveTab('info')}
           >
             Character Information
           </button>
           <button
-            className={`tab-button ${activeTab === 'decoratives' ? 'active' : ''}`}
+            className={`${styles.tabButton} ${activeTab === 'decoratives' ? styles.active : ''}`}
             onClick={() => setActiveTab('decoratives')}
           >
             Decoratives
           </button>
           <button
-            className={`tab-button ${activeTab === 'json' ? 'active' : ''}`}
+            className={`${styles.tabButton} ${activeTab === 'json' ? styles.active : ''}`}
             onClick={() => setActiveTab('json')}
           >
             JSON
@@ -124,8 +137,8 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
         </div>
 
         {activeTab === 'info' && (
-          <div className="tab-content active">
-            <div className="form-group">
+          <div className={styles.tabContent}>
+            <div className={styles.formGroup}>
               <label htmlFor="edit-id">Character ID</label>
               <input
                 id="edit-id"
@@ -133,12 +146,12 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
                 value={character.id}
                 readOnly
                 disabled
-                className="readonly-field"
+                className={styles.readonlyField}
                 title="Unique identifier for this character"
               />
             </div>
 
-            <div className="form-group">
+            <div className={styles.formGroup}>
               <label htmlFor="edit-name">Character Name</label>
               <input
                 id="edit-name"
@@ -149,13 +162,12 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
               />
             </div>
 
-            <div className={`form-group team-select-group team-${character.team}`}>
+            <div className={`${styles.formGroup} ${styles.teamSelectGroup} ${teamSelectClassMap[character.team] || ''}`}>
               <label htmlFor="edit-team">Team</label>
               <select
                 id="edit-team"
                 value={character.team}
                 onChange={(e) => onEditChange('team', e.target.value)}
-                className="team-dropdown"
               >
                 <option value="townsfolk">Townsfolk</option>
                 <option value="outsider">Outsider</option>
@@ -167,7 +179,7 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
               </select>
             </div>
 
-            <div className="form-group setup-checkbox-group">
+            <div className={`${styles.formGroup} ${styles.setupCheckboxGroup}`}>
               <label htmlFor="edit-setup">Setup Character</label>
               <input
                 id="edit-setup"
@@ -177,12 +189,12 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
               />
             </div>
 
-            <div className="form-group">
+            <div className={styles.formGroup}>
               <label>Image URLs</label>
-              <p className="field-hint">Add one or more image URLs. Multiple URLs provide fallback options.</p>
-              <div className="image-urls-list">
+              <p className={styles.fieldHint}>Add one or more image URLs. Multiple URLs provide fallback options.</p>
+              <div className={styles.imageUrlsList}>
                 {(Array.isArray(character.image) ? character.image : [character.image || '']).map((url, index) => (
-                  <div key={index} className="image-url-row">
+                  <div key={index} className={styles.imageUrlRow}>
                     <input
                       type="text"
                       value={url}
@@ -195,7 +207,7 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
                     />
                     <button
                       type="button"
-                      className="btn-icon btn-danger"
+                      className={`${styles.btnIcon} ${styles.btnDanger}`}
                       onClick={() => {
                         const images = Array.isArray(character.image) ? [...character.image] : [character.image || '']
                         if (images.length > 1) {
@@ -213,7 +225,7 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
               </div>
               <button
                 type="button"
-                className="btn-secondary btn-sm"
+                className={`${styles.btnSecondary} ${styles.btnSm}`}
                 onClick={() => {
                   const images = Array.isArray(character.image) ? [...character.image] : [character.image || '']
                   images.push('')
@@ -224,7 +236,7 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
               </button>
             </div>
 
-            <div className="form-group">
+            <div className={styles.formGroup}>
               <label htmlFor="edit-ability">Ability Text</label>
               <textarea
                 id="edit-ability"
@@ -235,23 +247,23 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
               />
             </div>
 
-            <div className="form-group">
+            <div className={styles.formGroup}>
               <label htmlFor="edit-flavor">Flavor Text</label>
               <textarea
                 id="edit-flavor"
-                value={(character as any).flavor || ''}
+                value={character.flavor || ''}
                 onChange={(e) => onEditChange('flavor', e.target.value)}
                 placeholder="Flavor quote or description"
                 rows={2}
               />
             </div>
 
-            <div className="form-group">
+            <div className={styles.formGroup}>
               <label>Reminders</label>
-              <p className="field-hint">Add reminder text that appears on reminder tokens.</p>
-              <div className="reminders-urls-list">
+              <p className={styles.fieldHint}>Add reminder text that appears on reminder tokens.</p>
+              <div className={styles.remindersUrlsList}>
                 {reminders.map((reminder, idx) => (
-                  <div key={idx} className="reminder-url-row">
+                  <div key={idx} className={styles.reminderUrlRow}>
                     <input
                       type="text"
                       value={reminder}
@@ -265,7 +277,7 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
                     />
                     <button
                       type="button"
-                      className="btn-icon btn-danger"
+                      className={`${styles.btnIcon} ${styles.btnDanger}`}
                       onClick={() => handleRemoveReminder(idx)}
                       title="Remove reminder"
                     >
@@ -276,7 +288,7 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
               </div>
               <button
                 type="button"
-                className="btn-secondary btn-sm"
+                className={`${styles.btnSecondary} ${styles.btnSm}`}
                 onClick={() => {
                   const updated = [...reminders, '']
                   setReminders(updated)
@@ -287,7 +299,7 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
               </button>
             </div>
 
-            <div className="form-group">
+            <div className={styles.formGroup}>
               <label htmlFor="edit-firstnight">First Night Reminder</label>
               <textarea
                 id="edit-firstnight"
@@ -298,7 +310,7 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
               />
             </div>
 
-            <div className="form-group">
+            <div className={styles.formGroup}>
               <label htmlFor="edit-othernight">Other Night Reminder</label>
               <textarea
                 id="edit-othernight"
@@ -309,10 +321,10 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
               />
             </div>
 
-            <div className="form-group">
+            <div className={styles.formGroup}>
               <label>Special</label>
-              <p className="field-hint">Add special app integration features for this character.</p>
-              <div className="special-items-list">
+              <p className={styles.fieldHint}>Add special app integration features for this character.</p>
+              <div className={styles.specialItemsList}>
                 {(() => {
                   // Ensure special is always treated as an array
                   const specialArray = Array.isArray((character as any).special) 
@@ -347,12 +359,12 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
                     }
                     
                     return (
-                      <div key={index} className="special-item-card">
-                        <div className="special-item-header">
-                          <span className="special-item-number">#{index + 1}</span>
+                      <div key={index} className={styles.specialItemCard}>
+                        <div className={styles.specialItemHeader}>
+                          <span className={styles.specialItemNumber}>#{index + 1}</span>
                           <button
                             type="button"
-                            className="btn-icon btn-danger"
+                            className={`${styles.btnIcon} ${styles.btnDanger}`}
                             onClick={() => {
                               const special = [...specialArray]
                               special.splice(index, 1)
@@ -363,9 +375,9 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
                             ✕
                           </button>
                         </div>
-                        <div className="special-item-fields">
-                          <div className="special-field">
-                            <label>Type <span className="required">*</span></label>
+                        <div className={styles.specialItemFields}>
+                          <div className={styles.specialField}>
+                            <label>Type <span className={styles.required}>*</span></label>
                             <select
                               value={itemType}
                               onChange={(e) => updateSpecialItem({ type: e.target.value })}
@@ -375,8 +387,8 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
                               ))}
                             </select>
                           </div>
-                          <div className="special-field">
-                            <label>Name <span className="required">*</span></label>
+                          <div className={styles.specialField}>
+                            <label>Name <span className={styles.required}>*</span></label>
                             <select
                               value={itemName}
                               onChange={(e) => updateSpecialItem({ name: e.target.value })}
@@ -387,7 +399,7 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
                               ))}
                             </select>
                           </div>
-                          <div className="special-field">
+                          <div className={styles.specialField}>
                             <label>Value</label>
                             <input
                               type="text"
@@ -401,7 +413,7 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
                               placeholder="Text or number"
                             />
                           </div>
-                          <div className="special-field">
+                          <div className={styles.specialField}>
                             <label>Time</label>
                             <select
                               value={itemTime}
@@ -413,7 +425,7 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
                               ))}
                             </select>
                           </div>
-                          <div className="special-field">
+                          <div className={styles.specialField}>
                             <label>Global</label>
                             <select
                               value={itemGlobal}
@@ -433,7 +445,7 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
               </div>
               <button
                 type="button"
-                className="btn-secondary btn-sm"
+                className={`${styles.btnSecondary} ${styles.btnSm}`}
                 onClick={() => {
                   const specialArray = Array.isArray((character as any).special) 
                     ? (character as any).special 
@@ -451,16 +463,16 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
         )}
 
         {activeTab === 'decoratives' && (
-          <div className="tab-content active">
-            <p className="decoratives-description">
+          <div className={styles.tabContent}>
+            <p className={styles.decorativesDescription}>
               Override global decorative settings for this character only.
             </p>
             
             {/* Leaf Settings */}
-            <div className="decoratives-section">
+            <div className={styles.decorativesSection}>
               <h4>Leaf Decorations</h4>
               
-              <div className="form-group">
+              <div className={styles.formGroup}>
                 <label htmlFor="use-custom-leaves">
                   <input
                     id="use-custom-leaves"
@@ -474,7 +486,7 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
               
               {decoratives.useCustomLeaves && (
                 <>
-                  <div className="form-group">
+                  <div className={styles.formGroup}>
                     <label htmlFor="leaf-style">Leaf Style</label>
                     <select
                       id="leaf-style"
@@ -486,7 +498,7 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
                     </select>
                   </div>
                   
-                  <div className="form-group">
+                  <div className={styles.formGroup}>
                     <label htmlFor="leaf-count">Maximum Leaves</label>
                     <input
                       id="leaf-count"
@@ -496,10 +508,10 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
                       value={decoratives.leafCount ?? 0}
                       onChange={(e) => updateDecoratives({ leafCount: parseInt(e.target.value) })}
                     />
-                    <span className="slider-value">{decoratives.leafCount ?? 0}</span>
+                    <span className={styles.sliderValue}>{decoratives.leafCount ?? 0}</span>
                   </div>
                   
-                  <div className="form-group">
+                  <div className={styles.formGroup}>
                     <label htmlFor="leaf-probability">Leaf Probability</label>
                     <input
                       id="leaf-probability"
@@ -509,7 +521,7 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
                       value={decoratives.leafProbability ?? 30}
                       onChange={(e) => updateDecoratives({ leafProbability: parseInt(e.target.value) })}
                     />
-                    <span className="slider-value">{decoratives.leafProbability ?? 30}%</span>
+                    <span className={styles.sliderValue}>{decoratives.leafProbability ?? 30}%</span>
                   </div>
                 </>
               )}
@@ -517,10 +529,10 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
             
             {/* Setup Flower Settings */}
             {character.setup && (
-              <div className="decoratives-section">
+              <div className={styles.decorativesSection}>
                 <h4>Setup Flower</h4>
                 
-                <div className="form-group">
+                <div className={styles.formGroup}>
                   <label htmlFor="hide-setup-flower">
                     <input
                       id="hide-setup-flower"
@@ -533,7 +545,7 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
                 </div>
                 
                 {!decoratives.hideSetupFlower && (
-                  <div className="form-group">
+                  <div className={styles.formGroup}>
                     <label htmlFor="setup-flower-style">Flower Style</label>
                     <select
                       id="setup-flower-style"
@@ -551,21 +563,21 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
               </div>
             )}
             
-            <div className="decoratives-note">
+            <div className={styles.decorativesNote}>
               <p><strong>Note:</strong> These settings will override global options when regenerating this character's token.</p>
             </div>
           </div>
         )}
 
         {activeTab === 'json' && (
-          <div className="tab-content active">
-            <div className="json-tab-content">
-              <div className="json-header">
-                <p className="json-description">Edit the raw JSON data for this character.</p>
-                <div className="json-buttons">
+          <div className={styles.tabContent}>
+            <div className={styles.jsonTabContent}>
+              <div className={styles.jsonHeader}>
+                <p className={styles.jsonDescription}>Edit the raw JSON data for this character.</p>
+                <div className={styles.jsonButtons}>
                   <button
                     type="button"
-                    className="btn-secondary btn-sm"
+                    className={`${styles.btnSecondary} ${styles.btnSm}`}
                     onClick={handleFormatJson}
                     title="Format JSON"
                   >
@@ -573,7 +585,7 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
                   </button>
                   <button
                     type="button"
-                    className="btn-secondary btn-sm"
+                    className={`${styles.btnSecondary} ${styles.btnSm}`}
                     onClick={() => {
                       navigator.clipboard.writeText(jsonText)
                         .then(() => {
@@ -589,7 +601,7 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
                   </button>
                   <button
                     type="button"
-                    className="btn-secondary btn-sm"
+                    className={`${styles.btnSecondary} ${styles.btnSm}`}
                     onClick={() => {
                       const blob = new Blob([jsonText], { type: 'application/json' })
                       const url = URL.createObjectURL(blob)
@@ -607,13 +619,13 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
                   </button>
                 </div>
               </div>
-              <div className="json-editor-wrapper">
-                <div className="json-highlight" ref={jsonHighlightRef}>
+              <div className={styles.jsonEditorWrapper}>
+                <div className={styles.jsonHighlight} ref={jsonHighlightRef}>
                   <JsonHighlight json={jsonText} />
                 </div>
                 <textarea
                   ref={jsonTextareaRef}
-                  className="json-editor"
+                  className={styles.jsonEditor}
                   value={jsonText}
                   onChange={handleJsonChange}
                   onScroll={handleJsonScroll}
@@ -622,7 +634,7 @@ export function TokenEditor({ character, onEditChange }: TokenEditorProps) {
                 />
               </div>
               {jsonError && (
-                <div className="json-error">
+                <div className={styles.jsonError}>
                   ⚠️ {jsonError}
                 </div>
               )}

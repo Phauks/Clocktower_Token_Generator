@@ -5,6 +5,7 @@ import { useTokenGenerator } from '../../hooks/useTokenGenerator'
 import { useUndoStack } from '../../hooks/useUndoStack'
 import { JsonHighlight } from './JsonHighlight'
 import CONFIG from '../../ts/config.js'
+import styles from '../../styles/components/scriptInput/ScriptInput.module.css'
 
 export function ScriptInput() {
   const { jsonInput, setJsonInput, characters, isLoading, error, setError, warnings, setWarnings, scriptMeta, generationProgress } = useTokenContext()
@@ -263,12 +264,12 @@ export function ScriptInput() {
   }
 
   return (
-    <section className="options-card">
-      <div className="card-header">
+    <section className={styles.section}>
+      <div className={styles.header}>
         <h2>Script Input</h2>
       </div>
       <div
-        className={`card-content ${isDragging ? 'drag-over' : ''}`}
+        className={`${styles.content} ${isDragging ? styles.dragOver : ''}`}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
@@ -276,31 +277,31 @@ export function ScriptInput() {
       >
 
         {/* File Upload Methods */}
-        <div className="input-methods">
-          <div className="input-method">
+        <div className={styles.inputMethods}>
+          <div className={styles.inputMethod}>
             <label
               htmlFor="fileUpload"
-              className="file-upload-label"
+              className={styles.fileUploadLabel}
             >
-              <span className="upload-icon">📁</span>
+              <span className={styles.uploadIcon}>📁</span>
               <span>{isDragging ? 'Drop JSON file here' : 'Upload or drag JSON file'}</span>
               <input
                 id="fileUpload"
                 type="file"
                 accept=".json"
-                className="file-input"
+                className={styles.fileInput}
                 onChange={handleFileUpload}
                 ref={fileInputRef}
               />
             </label>
           </div>
 
-          <div className="input-method">
+          <div className={styles.inputMethod}>
             <label htmlFor="exampleScripts">Or load an example script:</label>
-            <div className="example-select-group">
+            <div className={styles.exampleSelectGroup}>
               <select
                 id="exampleScripts"
-                className="select-input"
+                className={styles.selectInput}
                 onChange={handleExampleSelect}
                 value={selectedExample}
               >
@@ -313,7 +314,7 @@ export function ScriptInput() {
               </select>
               <button
                 type="button"
-                className="btn-secondary"
+                className={styles.secondaryBtn}
                 onClick={handleLoadExample}
                 disabled={!selectedExample}
                 aria-label="Load selected example script"
@@ -325,13 +326,13 @@ export function ScriptInput() {
         </div>
 
         {/* JSON Editor */}
-        <div className="json-editor-container">
-          <div className="editor-header">
+        <div className={styles.editorContainer}>
+          <div className={styles.editorHeader}>
             <span>JSON Editor</span>
-            <div className="editor-actions">
+            <div className={styles.editorActions}>
               <button
                 type="button"
-                className="btn-secondary"
+                className={styles.secondaryBtn}
                 onClick={handleUndo}
                 disabled={!undoStack.canUndo}
                 title="Undo (Ctrl+Z)"
@@ -341,7 +342,7 @@ export function ScriptInput() {
               </button>
               <button
                 type="button"
-                className="btn-secondary"
+                className={styles.secondaryBtn}
                 onClick={handleRedo}
                 disabled={!undoStack.canRedo}
                 title="Redo (Ctrl+Y or Ctrl+Shift+Z)"
@@ -351,7 +352,7 @@ export function ScriptInput() {
               </button>
               <button
                 type="button"
-                className={`btn-secondary ${autoGenerate ? 'active-highlight' : ''}`}
+                className={`${styles.secondaryBtn} ${autoGenerate ? styles.activeHighlight : ''}`}
                 onClick={() => setAutoGenerate(!autoGenerate)}
                 title={autoGenerate ? 'Disable auto-generate' : 'Enable auto-generate'}
                 aria-label={autoGenerate ? 'Disable auto-generate' : 'Enable auto-generate'}
@@ -360,7 +361,7 @@ export function ScriptInput() {
               </button>
               <button
                 type="button"
-                className="btn-secondary"
+                className={styles.secondaryBtn}
                 onClick={handleFormatJson}
                 title="Format/Beautify JSON"
                 aria-label="Format JSON"
@@ -369,7 +370,7 @@ export function ScriptInput() {
               </button>
               <button
                 type="button"
-                className="btn-secondary"
+                className={styles.secondaryBtn}
                 onClick={handleClearJson}
                 title="Clear editor"
                 aria-label="Clear editor"
@@ -378,7 +379,7 @@ export function ScriptInput() {
               </button>
               <button
                 type="button"
-                className="btn-secondary"
+                className={styles.secondaryBtn}
                 onClick={handleDownloadJson}
                 title="Download JSON file"
                 aria-label="Download JSON file"
@@ -387,14 +388,14 @@ export function ScriptInput() {
               </button>
             </div>
           </div>
-          <div className="json-editor-wrapper">
-            <div className="json-highlight" ref={highlightRef}>
+          <div className={styles.editorWrapper}>
+            <div className={styles.jsonHighlight} ref={highlightRef}>
               <JsonHighlight json={jsonInput} />
             </div>
             <textarea
               ref={textareaRef}
               id="jsonEditor"
-              className="json-editor"
+              className={styles.jsonEditor}
               value={jsonInput}
               onChange={handleJsonChange}
               onScroll={handleScroll}
@@ -404,11 +405,11 @@ export function ScriptInput() {
               aria-label="JSON editor"
             />
           </div>
-          {error && <div className="validation-message error">{error}</div>}
+          {error && <div className={`${styles.validationMessage} ${styles.error}`}>{error}</div>}
           {warnings && warnings.length > 0 && (
-            <div className="validation-message warning">
+            <div className={`${styles.validationMessage} ${styles.warning}`}>
               ⚠️ {warnings.length} warning{warnings.length > 1 ? 's' : ''}:
-              <ul className="warning-list">
+              <ul className={styles.warningList}>
                 {warnings.map((warning, index) => (
                   <li key={index}>{warning}</li>
                 ))}
@@ -416,20 +417,20 @@ export function ScriptInput() {
             </div>
           )}
           {characters.length > 0 && (
-            <div className="validation-message success">
+            <div className={`${styles.validationMessage} ${styles.success}`}>
               ✓ Loaded {characters.length} characters
             </div>
           )}
         </div>
 
         {/* Generate Button */}
-        <div className="action-buttons">
+        <div className={styles.actionButtons}>
           <button
-            className="btn-primary"
+            className={styles.primaryBtn}
             onClick={handleGenerateTokens}
             disabled={isLoading || !jsonInput.trim()}
           >
-            <span className="btn-icon">⚙️</span>
+            <span className={styles.btnIcon}>⚙️</span>
             {isLoading ? 'Generating...' : 'Generate Tokens'}
           </button>
         </div>

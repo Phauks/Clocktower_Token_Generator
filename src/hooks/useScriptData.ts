@@ -1,12 +1,8 @@
 import { useCallback } from 'react'
 import { useTokenContext } from '../contexts/TokenContext'
-import {
-  validateAndParseScript,
-  fetchOfficialData,
-  extractScriptMeta,
-  loadExampleScript,
-  validateJson,
-} from '../ts/dataLoader.js'
+import { fetchOfficialData, loadExampleScript } from '../ts/data/dataLoader.js'
+import { validateAndParseScript, extractScriptMeta } from '../ts/data/scriptParser.js'
+import { validateJson } from '../ts/utils/index.js'
 
 export function useScriptData() {
   const {
@@ -29,7 +25,7 @@ export function useScriptData() {
 
         // Validate JSON syntax
         const validation = validateJson(jsonString)
-        if (!validation.isValid) {
+        if (!validation.valid) {
           setError(validation.error || 'Invalid JSON')
           return
         }
@@ -104,7 +100,7 @@ export function useScriptData() {
 
       // Validate JSON syntax
       const validation = validateJson(jsonString)
-      if (!validation.isValid) {
+      if (!validation.valid) {
         setError(validation.error || 'Invalid JSON')
         return
       }
@@ -134,11 +130,12 @@ export function useScriptData() {
    * Clear all script data
    */
   const clearScript = useCallback(() => {
+    setJsonInput('')
     setCharacters([])
     setScriptMeta(null)
     setWarnings([])
     setError(null)
-  }, [setCharacters, setScriptMeta, setWarnings, setError])
+  }, [setJsonInput, setCharacters, setScriptMeta, setWarnings, setError])
 
   return {
     loadScript,

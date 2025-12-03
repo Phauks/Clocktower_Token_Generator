@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import styles from '../../styles/components/options/OptionsTabNavigation.module.css'
 
 type TabType = 'character' | 'reminder' | 'meta' | 'export'
 
@@ -20,11 +21,11 @@ export const OptionsTabNavigation = memo(
     const visibleTabs = tabs.filter(tab => !hideTabs.includes(tab.id))
     
     return (
-      <div className="tabs-nav">
+      <div className={styles.tabsNav}>
         {visibleTabs.map((tab) => (
           <button
             key={tab.id}
-            className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
+            className={`${styles.tabButton} ${activeTab === tab.id ? styles.active : ''}`}
             onClick={() => onTabChange(tab.id)}
           >
             {tab.label}

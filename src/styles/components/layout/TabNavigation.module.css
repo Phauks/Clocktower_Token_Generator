@@ -1,0 +1,101 @@
+/* ============================================
+   Component: TabNavigation
+   Main navigation tabs for the app
+   ============================================ */
+
+.tabNavigation {
+  background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-main) 100%);
+  border-bottom: 3px solid var(--color-primary-dark);
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md) 0;
+}
+
+.tabButton {
+  flex: 1;
+  min-width: 100px;
+  max-width: 140px;
+  background: transparent;
+  border: none;
+  padding: var(--spacing-md) var(--spacing-sm);
+  color: var(--text-secondary);
+  font-family: 'TradeGothicBold', sans-serif;
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  position: relative;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  border-radius: var(--border-radius-sm) var(--border-radius-sm) 0 0;
+  margin-bottom: -3px;
+}
+
+.tabLabel {
+  position: relative;
+}
+
+.tabButton::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: transparent;
+  transition: background-color var(--transition-fast);
+}
+
+.tabButton:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tabButton.active {
+  color: var(--color-accent);
+  background: rgba(201, 162, 39, 0.1);
+}
+
+.tabButton.active::after {
+  background: var(--color-accent);
+}
+
+.tabButton:disabled {
+  color: var(--text-muted);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tabButton:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.tabBadge {
+  font-size: 0.55rem;
+  padding: 2px 4px;
+  background: var(--color-primary);
+  color: var(--text-primary);
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: bold;
+  margin-left: 2px;
+}
+
+/* Responsive - stack tabs on smaller screens */
+@media (max-width: 640px) {
+  .tabNavigation {
+    flex-wrap: wrap;
+  }
+  
+  .tabButton {
+    min-width: 80px;
+  }
+}
+
+

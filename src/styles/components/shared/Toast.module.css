@@ -48,14 +48,14 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  font-size: var(--font-size-sm);
+  font-size: 0.875rem;
   font-weight: var(--font-weight-bold);
 }
 
 /* ---- Toast Message ---- */
 .message {
   flex: 1;
-  font-size: var(--font-size-sm);
+  font-size: 0.875rem;
   color: var(--text-primary);
 }
 
@@ -112,3 +112,5 @@
   background-color: rgba(59, 130, 246, 0.2);
   color: var(--color-info);
 }
+
+

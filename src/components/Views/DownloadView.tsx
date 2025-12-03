@@ -4,6 +4,7 @@ import { useExport } from '../../hooks/useExport'
 import { useToast } from '../../contexts/ToastContext'
 import { OptionGroup } from '../Shared/OptionGroup'
 import { SliderWithValue } from '../Shared/SliderWithValue'
+import styles from '../../styles/components/views/Views.module.css'
 import type { CompressionLevel, ZipExportOptions } from '../../ts/types/index'
 
 const DEFAULT_ZIP_SETTINGS: ZipExportOptions = {
@@ -16,7 +17,7 @@ const DEFAULT_ZIP_SETTINGS: ZipExportOptions = {
 
 export function DownloadView() {
   const { tokens, generationOptions, updateGenerationOptions } = useTokenContext()
-  const { downloadZip, downloadPdf, downloadJson, downloadStyleFormat, downloadAll, isExporting, exportProgress } = useExport()
+  const { downloadZip, downloadPdf, downloadJson, downloadStyleFormat, downloadAll, cancelExport, isExporting, exportProgress, exportStep } = useExport()
   const { addToast } = useToast()
   const [activeSubTab, setActiveSubTab] = useState<'png' | 'zip' | 'pdf'>('zip')
 
@@ -86,40 +87,31 @@ export function DownloadView() {
     return 'Exporting...'
   }
 
-  if (tokens.length === 0) {
-    return (
-      <div className="export-view export-view-empty">
-        <div className="empty-state">
-          <h2>No Tokens to Export</h2>
-          <p>Generate tokens in the Editor or Gallery tab first, then come back here to download them.</p>
-        </div>
-      </div>
-    )
-  }
+  const hasTokens = tokens.length > 0
 
   return (
-    <div className="export-view">
-      <div className="export-two-column">
+    <div className={styles.exportView}>
+      <div className={styles.exportTwoColumn}>
         {/* Left Column: Export Settings */}
-        <div className="export-options-column">
+        <div className={styles.exportOptionsColumn}>
           <h2>Export Settings</h2>
           
-          <div className="subtabs-container">
-            <div className="subtabs-nav">
+          <div className={styles.subtabsContainer}>
+            <div className={styles.subtabsNav}>
               <button
-                className={`subtab-button ${activeSubTab === 'png' ? 'active' : ''}`}
+                className={`${styles.subtabButton} ${activeSubTab === 'png' ? styles.active : ''}`}
                 onClick={() => setActiveSubTab('png')}
               >
                 PNG
               </button>
               <button
-                className={`subtab-button ${activeSubTab === 'zip' ? 'active' : ''}`}
+                className={`${styles.subtabButton} ${activeSubTab === 'zip' ? styles.active : ''}`}
                 onClick={() => setActiveSubTab('zip')}
               >
                 ZIP
               </button>
               <button
-                className={`subtab-button ${activeSubTab === 'pdf' ? 'active' : ''}`}
+                className={`${styles.subtabButton} ${activeSubTab === 'pdf' ? styles.active : ''}`}
                 onClick={() => setActiveSubTab('pdf')}
               >
                 PDF
@@ -128,15 +120,15 @@ export function DownloadView() {
 
             {/* PNG Settings */}
             {activeSubTab === 'png' && (
-              <div className="subtab-content">
-                <div className="subsection">
+              <div className={styles.subtabContent}>
+                <div className={styles.subsection}>
                   <OptionGroup
                     label="Embed Metadata"
                     helpText="Include character info (name, team, ability) in PNG file metadata"
                   >
                     <input
                       type="checkbox"
-                      className="toggle-switch"
+                      className={styles.toggleSwitch}
                       checked={generationOptions.pngSettings?.embedMetadata ?? false}
                       onChange={(e) => updateGenerationOptions({
                         pngSettings: {
@@ -154,7 +146,7 @@ export function DownloadView() {
                   >
                     <input
                       type="checkbox"
-                      className="toggle-switch"
+                      className={styles.toggleSwitch}
                       checked={generationOptions.pngSettings?.transparentBackground ?? false}
                       onChange={(e) => updateGenerationOptions({
                         pngSettings: {
@@ -171,15 +163,15 @@ export function DownloadView() {
 
             {/* ZIP Settings */}
             {activeSubTab === 'zip' && (
-              <div className="subtab-content">
-                <div className="subsection">
+              <div className={styles.subtabContent}>
+                <div className={styles.subsection}>
                   <OptionGroup
                     label="Save in Team Folders"
                     helpText="Organize exported tokens by team (Townsfolk, Outsider, etc.)"
                   >
                     <input
                       type="checkbox"
-                      className="toggle-switch"
+                      className={styles.toggleSwitch}
                       checked={zipSettings.saveInTeamFolders}
                       onChange={(e) => updateGenerationOptions({
                         zipSettings: {
@@ -196,7 +188,7 @@ export function DownloadView() {
                   >
                     <input
                       type="checkbox"
-                      className="toggle-switch"
+                      className={styles.toggleSwitch}
                       checked={zipSettings.saveRemindersSeparately}
                       onChange={(e) => updateGenerationOptions({
                         zipSettings: {
@@ -213,7 +205,7 @@ export function DownloadView() {
                   >
                     <input
                       type="checkbox"
-                      className="toggle-switch"
+                      className={styles.toggleSwitch}
                       checked={zipSettings.metaTokenFolder}
                       onChange={(e) => updateGenerationOptions({
                         zipSettings: {
@@ -230,7 +222,7 @@ export function DownloadView() {
                   >
                     <input
                       type="checkbox"
-                      className="toggle-switch"
+                      className={styles.toggleSwitch}
                       checked={zipSettings.includeScriptJson}
                       onChange={(e) => updateGenerationOptions({
                         zipSettings: {
@@ -246,7 +238,7 @@ export function DownloadView() {
                     helpText="Higher compression = smaller file but slower export"
                   >
                     <select
-                      className="select-input"
+                      className={styles.selectInput}
                       value={zipSettings.compressionLevel}
                       onChange={(e) => updateGenerationOptions({
                         zipSettings: {
@@ -266,19 +258,19 @@ export function DownloadView() {
 
             {/* PDF Settings */}
             {activeSubTab === 'pdf' && (
-              <div className="subtab-content">
-                <div className="subsection">
+              <div className={styles.subtabContent}>
+                <div className={styles.subsection}>
                   <OptionGroup label="Padding" helpText="Padding around PDF content">
-                    <div className="input-with-unit">
+                    <div className={styles.inputWithUnit}>
                       <input
                         type="number"
-                        className="number-input"
+                        className={styles.numberInput}
                         value={generationOptions.pdfPadding || 75}
                         onChange={(e) => updateGenerationOptions({ pdfPadding: parseInt(e.target.value) || 0 })}
                         min={0}
                         max={100}
                       />
-                      <span className="input-unit">px</span>
+                      <span className={styles.inputUnit}>px</span>
                     </div>
                   </OptionGroup>
 
@@ -320,67 +312,116 @@ export function DownloadView() {
         </div>
 
         {/* Right Column: Download Actions */}
-        <div className="export-actions-column">
+        <div className={styles.exportActionsColumn}>
           <h2>Download</h2>
-          <p className="export-summary">
-            {tokens.length} token{tokens.length !== 1 ? 's' : ''} ready for export
-          </p>
-          <div className="export-buttons">
+          {hasTokens ? (
+            <p className={styles.exportSummary}>
+              {tokens.length} token{tokens.length !== 1 ? 's' : ''} ready for export
+            </p>
+          ) : (
+            <div className={styles.noTokensMessage}>
+              <p>No tokens generated yet.</p>
+              <p className={styles.noTokensHint}>Generate tokens in the Editor or Gallery tab first, then come back here to download them.</p>
+            </div>
+          )}
+          
+          {/* Progress bar - shown during export */}
+          {isExporting && (
+            <div className={styles.exportProgressContainer}>
+              <div className={styles.exportProgressBar}>
+                <div 
+                  className={`${styles.exportProgressFill} ${!exportProgress ? styles.indeterminate : ''}`}
+                  style={exportProgress ? { width: `${Math.round((exportProgress.current / exportProgress.total) * 100)}%` } : undefined}
+                />
+              </div>
+              <span className={styles.exportProgressText}>
+                {exportProgress 
+                  ? `${exportProgress.current}/${exportProgress.total} (${Math.round((exportProgress.current / exportProgress.total) * 100)}%)`
+                  : 'Processing...'
+                }
+              </span>
+              {exportStep && (
+                <div className={styles.exportStepIndicator}>
+                  <span className={`${styles.exportStepItem} ${exportStep === 'json' ? styles.active : styles.completed}`}>
+                    {exportStep === 'json' ? '⏳' : '✓'} JSON
+                  </span>
+                  <span className={`${styles.exportStepItem} ${exportStep === 'style' ? styles.active : exportStep === 'json' ? '' : styles.completed}`}>
+                    {exportStep === 'style' ? '⏳' : exportStep === 'json' ? '○' : '✓'} Style
+                  </span>
+                  <span className={`${styles.exportStepItem} ${exportStep === 'zip' ? styles.active : exportStep === 'pdf' ? styles.completed : ''}`}>
+                    {exportStep === 'zip' ? '⏳' : (exportStep === 'json' || exportStep === 'style') ? '○' : '✓'} Tokens
+                  </span>
+                  <span className={`${styles.exportStepItem} ${exportStep === 'pdf' ? styles.active : ''}`}>
+                    {exportStep === 'pdf' ? '⏳' : '○'} PDF
+                  </span>
+                </div>
+              )}
+              <button
+                className={`btn-secondary ${styles.cancelExportBtn}`}
+                onClick={cancelExport}
+                title="Cancel export"
+              >
+                ✕ Cancel
+              </button>
+            </div>
+          )}
+          
+          <div className={styles.exportButtons}>
             <button
-              className="btn-primary btn-export btn-export-all"
+              className={`btn-primary ${styles.btnExport} ${styles.btnExportAll}`}
               onClick={handleDownloadAll}
-              disabled={isExporting}
+              disabled={isExporting || !hasTokens}
             >
-              <span className="btn-icon">📥</span>
-              <span className="btn-text">{isExporting ? 'Downloading...' : 'Download All'}</span>
-              <span className="btn-hint">ZIP + PDF + JSON + Style</span>
+              <span className={styles.btnIcon}>📥</span>
+              <span className={styles.btnText}>{isExporting ? 'Downloading...' : 'Download All'}</span>
+              <span className={styles.btnHint}>ZIP + PDF + JSON + Style</span>
             </button>
             
-            <div className="export-buttons-grid">
+            <div className={styles.exportButtonsGrid}>
               <button
-                className="btn-secondary btn-export-small"
+                className={`btn-secondary ${styles.btnExportSmall}`}
                 onClick={handleDownloadZip}
-                disabled={isExporting}
+                disabled={isExporting || !hasTokens}
               >
-                <span className="btn-icon">📦</span>
-                <span className="btn-text">Download Token Images</span>
+                <span className={styles.btnIcon}>📦</span>
+                <span className={styles.btnText}>Download Token Images</span>
               </button>
               
               <button
-                className="btn-secondary btn-export-small"
+                className={`btn-secondary ${styles.btnExportSmall}`}
                 onClick={handleDownloadPdf}
-                disabled={isExporting}
+                disabled={isExporting || !hasTokens}
               >
-                <span className="btn-icon">🖨️</span>
-                <span className="btn-text">Download Token Print Sheet</span>
+                <span className={styles.btnIcon}>🖨️</span>
+                <span className={styles.btnText}>Download Token Print Sheet</span>
               </button>
               
               <button
-                className="btn-secondary btn-export-small"
+                className={`btn-secondary ${styles.btnExportSmall}`}
                 onClick={handleDownloadJson}
-                disabled={isExporting}
+                disabled={isExporting || !hasTokens}
               >
-                <span className="btn-icon">📋</span>
-                <span className="btn-text">Download JSON</span>
+                <span className={styles.btnIcon}>📋</span>
+                <span className={styles.btnText}>Download JSON</span>
               </button>
               
               <button
-                className="btn-secondary btn-export-small"
+                className={`btn-secondary ${styles.btnExportSmall}`}
                 onClick={handleDownloadStyleFormat}
-                disabled={isExporting}
+                disabled={isExporting || !hasTokens}
               >
-                <span className="btn-icon">🎨</span>
-                <span className="btn-text">Download Style Format</span>
+                <span className={styles.btnIcon}>🎨</span>
+                <span className={styles.btnText}>Download Style Format</span>
               </button>
               
               <button
-                className="btn-secondary btn-export-small"
+                className={`btn-secondary ${styles.btnExportSmall}`}
                 disabled={true}
                 title="Coming soon"
               >
-                <span className="btn-icon">📜</span>
-                <span className="btn-text">Download Script</span>
-                <span className="btn-badge">Soon</span>
+                <span className={styles.btnIcon}>📜</span>
+                <span className={styles.btnText}>Download Script</span>
+                <span className={styles.btnBadge}>Soon</span>
               </button>
             </div>
           </div>

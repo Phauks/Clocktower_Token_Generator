@@ -5,8 +5,8 @@ import {
   updateCharacterInJson,
   downloadCharacterTokensAsZip,
   getCharacterChanges,
-} from '../ts/detailViewUtils.js'
-import { debounce } from '../ts/utils.js'
+} from '../ts/ui/detailViewUtils.js'
+import { debounce } from '../ts/utils/index.js'
 import type { Character, Token } from '../ts/types/index.js'
 
 interface UseTokenDetailEditorProps {
@@ -48,7 +48,7 @@ export function useTokenDetailEditor({
   )
 
   const handleEditChange = useCallback(
-    (field: keyof Character, value: any) => {
+    (field: keyof Character, value: Character[keyof Character]) => {
       const updated = { ...editedCharacter, [field]: value }
       setEditedCharacter(updated)
       setIsDirty(true)

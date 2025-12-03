@@ -7,7 +7,7 @@
   background-color: var(--bg-panel);
   padding: var(--spacing-md);
   text-align: center;
-  font-size: var(--font-size-sm);
+  font-size: 0.875rem;
   color: var(--text-muted);
   border-top: 1px solid var(--border-color);
   flex-shrink: 0;
@@ -16,3 +16,5 @@
 .footer p {
   margin: 0;
 }
+
+

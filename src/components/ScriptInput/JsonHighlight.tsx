@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { tokenizeJSON, TOKEN_CLASS_MAP } from '../../ts/jsonHighlighter'
+import { tokenizeJSON, TOKEN_CLASS_MAP } from '../../ts/ui/jsonHighlighter'
 
 interface JsonHighlightProps {
   json: string

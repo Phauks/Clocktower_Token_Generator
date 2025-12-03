@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import type { CustomPreset } from '../../hooks/usePresets'
 import type { PresetName } from '../../ts/types/index'
+import styles from '../../styles/components/presets/PresetCard.module.css'
 
 interface PresetCardProps {
   icon: string
@@ -12,6 +13,7 @@ interface PresetCardProps {
   menuIsOpen?: boolean
   menuItems?: MenuItemConfig[]
   defaultStar?: boolean
+  isAddButton?: boolean
 }
 
 interface MenuItemConfig {
@@ -32,10 +34,11 @@ export const PresetCard = memo(
     menuIsOpen = false,
     menuItems = [],
     defaultStar = false,
+    isAddButton = false,
   }: PresetCardProps) => {
     return (
       <div
-        className={`btn-preset ${isActive ? 'active' : ''}`}
+        className={`${styles.card} ${isActive ? styles.active : ''} ${isAddButton ? styles.cardAdd : ''}`}
         onClick={onApply}
         title={title}
         role="button"
@@ -47,12 +50,12 @@ export const PresetCard = memo(
           }
         }}
       >
-        {defaultStar && <span className="preset-default-star">⭐</span>}
-        <span className="preset-icon">{icon}</span>
-        <span className="preset-name">{name}</span>
+        {defaultStar && <span className={styles.defaultStar}>⭐</span>}
+        <span className={styles.icon}>{icon}</span>
+        <span className={styles.name}>{name}</span>
         {menuItems.length > 0 && (
           <button
-            className="preset-menu-trigger"
+            className={styles.menuTrigger}
             title="Preset options"
             onClick={(e) => {
               e.stopPropagation()
@@ -63,18 +66,18 @@ export const PresetCard = memo(
           </button>
         )}
         {menuItems.length > 0 && (
-          <div className={`preset-menu-dropdown ${menuIsOpen ? 'active' : ''}`}>
+          <div className={`${styles.menuDropdown} ${menuIsOpen ? styles.active : ''}`}>
             {menuItems.map((item) => (
               <button
                 key={item.label}
-                className="menu-item"
+                className={styles.menuItem}
                 data-tooltip={item.description}
                 onClick={(e) => {
                   e.stopPropagation()
                   item.onClick()
                 }}
               >
-                <span className="menu-icon">{item.icon}</span>
+                <span className={styles.menuIcon}>{item.icon}</span>
                 {item.label}
               </button>
             ))}

@@ -2,6 +2,7 @@ import { memo, useState } from 'react'
 import type { GenerationOptions } from '../../ts/types/index'
 import { OptionGroup } from '../Shared/OptionGroup'
 import { SliderWithValue } from '../Shared/SliderWithValue'
+import styles from '../../styles/components/options/OptionsTab.module.css'
 
 interface ReminderTabProps {
   generationOptions: GenerationOptions
@@ -42,17 +43,17 @@ export const ReminderTab = memo(({ generationOptions, onOptionChange }: Reminder
   }
 
   return (
-    <div className="tab-content active" data-tab-content="reminder">
-      <div className="subtabs-container">
-        <div className="subtabs-nav">
+    <div className={styles.tabContent} data-tab-content="reminder">
+      <div className={styles.subtabsContainer}>
+        <div className={styles.subtabsNav}>
           <button
-            className={`subtab-button ${activeSubTab === 'background' ? 'active' : ''}`}
+            className={`${styles.subtabButton} ${activeSubTab === 'background' ? styles.active : ''}`}
             onClick={() => setActiveSubTab('background')}
           >
             Background
           </button>
           <button
-            className={`subtab-button ${activeSubTab === 'text' ? 'active' : ''}`}
+            className={`${styles.subtabButton} ${activeSubTab === 'text' ? styles.active : ''}`}
             onClick={() => setActiveSubTab('text')}
           >
             Font
@@ -61,12 +62,12 @@ export const ReminderTab = memo(({ generationOptions, onOptionChange }: Reminder
 
         {/* Background Sub-Tab */}
         {activeSubTab === 'background' && (
-          <div className="subtab-content">
-            <div className="subsection">
+          <div className={styles.subtabContent}>
+            <div className={styles.subsection}>
               <OptionGroup label="Background Color" helpText="Background color for reminder tokens">
                 <input
                   type="color"
-                  className="color-input"
+                  className={styles.colorInput}
                   value={generationOptions.reminderBackground}
                   onChange={(e) => onOptionChange({ reminderBackground: e.target.value })}
                 />
@@ -77,7 +78,7 @@ export const ReminderTab = memo(({ generationOptions, onOptionChange }: Reminder
                 helpText="Select reminder background pattern"
               >
                 <select
-                  className="select-input"
+                  className={styles.selectInput}
                   value={generationOptions.reminderBackgroundImage || 'character_background_1'}
                   onChange={(e) => onOptionChange({ reminderBackgroundImage: e.target.value })}
                 >
@@ -94,11 +95,11 @@ export const ReminderTab = memo(({ generationOptions, onOptionChange }: Reminder
 
         {/* Text Sub-Tab */}
         {activeSubTab === 'text' && (
-          <div className="subtab-content">
-            <div className="subsection">
+          <div className={styles.subtabContent}>
+            <div className={styles.subsection}>
               <OptionGroup label="Font" helpText="Font for reminder text">
                 <select
-                  className="select-input"
+                  className={styles.selectInput}
                   value={generationOptions.characterReminderFont}
                   onChange={(e) => onOptionChange({ characterReminderFont: e.target.value })}
                 >
@@ -110,7 +111,7 @@ export const ReminderTab = memo(({ generationOptions, onOptionChange }: Reminder
               <OptionGroup label="Color" helpText="Text color for reminder text">
                 <input
                   type="color"
-                  className="color-input"
+                  className={styles.colorInput}
                   value={generationOptions.reminderTextColor}
                   onChange={(e) => onOptionChange({ reminderTextColor: e.target.value })}
                 />

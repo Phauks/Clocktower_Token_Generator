@@ -27,7 +27,7 @@
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-sm);
   color: var(--text-primary);
-  font-size: var(--font-size-sm);
+  font-size: 0.875rem;
   font-family: var(--font-mono);
   transition: border-color var(--transition-fast);
 }
@@ -42,7 +42,7 @@
 }
 
 .unit {
-  font-size: var(--font-size-xs);
+  font-size: 0.75rem;
   color: var(--text-muted);
   min-width: 20px;
 }
@@ -118,3 +118,5 @@
   height: 4px;
   background-color: var(--border-color);
 }
+
+

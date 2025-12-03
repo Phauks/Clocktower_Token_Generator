@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
+import styles from '../../styles/components/tokenDetail/ActionButtons.module.css'
 
 interface ActionButtonsProps {
   isDirty: boolean
   isLoading: boolean
   liveUpdateEnabled: boolean
   autoSaveEnabled: boolean
+  downloadProgress?: { current: number; total: number } | null
   onReset: () => void
   onDownloadAll: () => void
   onDownloadCharacter: () => void
@@ -16,9 +18,15 @@ interface ActionButtonsProps {
   onDelete: () => void
 }
 
-export function ActionButtons({ isDirty, isLoading, liveUpdateEnabled, autoSaveEnabled, onReset, onDownloadAll, onDownloadCharacter, onDownloadReminders, onDownloadJson, onApply, onToggleLiveUpdate, onToggleAutoSave, onDelete }: ActionButtonsProps) {
+export function ActionButtons({ isDirty, isLoading, liveUpdateEnabled, autoSaveEnabled, downloadProgress, onReset, onDownloadAll, onDownloadCharacter, onDownloadReminders, onDownloadJson, onApply, onToggleLiveUpdate, onToggleAutoSave, onDelete }: ActionButtonsProps) {
   const [showDownloadMenu, setShowDownloadMenu] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  
+  // Calculate progress percentage from downloadProgress prop
+  const progressPercent = downloadProgress && downloadProgress.total > 0 
+    ? Math.round((downloadProgress.current / downloadProgress.total) * 100) 
+    : 0
+  const isDownloading = downloadProgress !== null && downloadProgress !== undefined
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -38,55 +46,57 @@ export function ActionButtons({ isDirty, isLoading, liveUpdateEnabled, autoSaveE
   }, [showDownloadMenu])
 
   return (
-    <div className="token-detail-actions">
-      <div className="action-spacer"></div>
+    <div className={styles.actions}>
+      <div className={styles.spacer}></div>
       <button
         type="button"
-        className={`btn-icon-toggle ${liveUpdateEnabled ? 'active' : ''}`}
+        className={`${styles.toggleBtn} ${liveUpdateEnabled ? styles.active : ''}`}
         onClick={onToggleLiveUpdate}
         title={liveUpdateEnabled ? 'Live preview enabled - Click to disable' : 'Live preview disabled - Click to enable'}
         aria-label={liveUpdateEnabled ? 'Disable live preview' : 'Enable live preview'}
       >
-        <span className="btn-icon">⚡</span>
+        <span className={styles.icon}>⚡</span>
       </button>
       <button
         type="button"
-        className="btn-secondary"
+        className={styles.secondaryBtn}
         onClick={onReset}
         disabled={!isDirty || isLoading}
         title="Reset all changes to the original values"
       >
         Reset
       </button>
-      <div className="download-dropdown" ref={dropdownRef}>
-        <div className="download-button-group">
+      <div className={styles.downloadDropdown} ref={dropdownRef}>
+        <div className={styles.downloadButtonGroup}>
           <button
             type="button"
-            className="btn-secondary download-main-btn"
+            className={`${styles.downloadMainBtn} ${isDownloading ? styles.downloading : ''}`}
             onClick={onDownloadAll}
             disabled={isLoading}
             title="Download character token, reminder tokens, and JSON as ZIP"
+            style={isDownloading ? { '--progress': `${progressPercent}%` } as React.CSSProperties : undefined}
           >
-            <span className="btn-icon">📥</span>
-            Download All
+            <span className={styles.downloadProgress} />
+            <span className={styles.icon}>📥</span>
+            {isDownloading ? `${progressPercent}%` : 'Download All'}
           </button>
           <button
             type="button"
-            className="btn-secondary download-caret-btn"
+            className={`${styles.downloadCaretBtn} ${isDownloading ? styles.downloading : ''}`}
             onClick={() => setShowDownloadMenu(!showDownloadMenu)}
             disabled={isLoading}
             title="More download options"
             aria-label="More download options"
             aria-expanded={showDownloadMenu}
           >
-            <span className="caret-icon">▼</span>
+            <span className={styles.caretIcon}>▼</span>
           </button>
         </div>
         {showDownloadMenu && (
-          <div className="download-menu">
+          <div className={styles.downloadMenu}>
             <button
               type="button"
-              className="download-menu-item"
+              className={styles.downloadMenuItem}
               onClick={() => {
                 onDownloadCharacter()
                 setShowDownloadMenu(false)
@@ -96,7 +106,7 @@ export function ActionButtons({ isDirty, isLoading, liveUpdateEnabled, autoSaveE
             </button>
             <button
               type="button"
-              className="download-menu-item"
+              className={styles.downloadMenuItem}
               onClick={() => {
                 onDownloadReminders()
                 setShowDownloadMenu(false)
@@ -106,7 +116,7 @@ export function ActionButtons({ isDirty, isLoading, liveUpdateEnabled, autoSaveE
             </button>
             <button
               type="button"
-              className="download-menu-item"
+              className={styles.downloadMenuItem}
               onClick={() => {
                 onDownloadJson()
                 setShowDownloadMenu(false)
@@ -117,19 +127,19 @@ export function ActionButtons({ isDirty, isLoading, liveUpdateEnabled, autoSaveE
           </div>
         )}
       </div>
-      <div className="save-group">
+      <div className={styles.saveGroup}>
         <button
           type="button"
-          className={`btn-icon-toggle ${autoSaveEnabled ? 'active' : ''}`}
+          className={`${styles.toggleBtn} ${autoSaveEnabled ? styles.active : ''}`}
           onClick={onToggleAutoSave}
           title={autoSaveEnabled ? 'Auto-save enabled - Click to disable' : 'Auto-save disabled - Click to enable'}
           aria-label={autoSaveEnabled ? 'Disable auto-save' : 'Enable auto-save'}
         >
-          <span className="btn-icon">💾</span>
+          <span className={styles.icon}>💾</span>
         </button>
         <button
           type="button"
-          className={`btn-primary ${autoSaveEnabled ? 'btn-disabled' : ''}`}
+          className={`${styles.primaryBtn} ${autoSaveEnabled ? styles.disabled : ''}`}
           onClick={onApply}
           disabled={autoSaveEnabled || isLoading}
           title={autoSaveEnabled ? 'Auto-save is enabled' : 'Save changes to the script JSON'}
@@ -139,13 +149,13 @@ export function ActionButtons({ isDirty, isLoading, liveUpdateEnabled, autoSaveE
       </div>
       <button
         type="button"
-        className="btn-icon-toggle btn-delete"
+        className={`${styles.toggleBtn} ${styles.deleteBtn}`}
         onClick={onDelete}
         disabled={isLoading}
         title="Delete this character"
         aria-label="Delete character"
       >
-        <span className="btn-icon">🗑️</span>
+        <span className={styles.icon}>🗑️</span>
       </button>
     </div>
   )

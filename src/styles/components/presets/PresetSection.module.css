@@ -1,0 +1,25 @@
+/**
+ * PresetSection Component Styles
+ * Preset grid and section container
+ */
+
+.presetButtons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+/* Preset Action Buttons (Save & Import) */
+.presetActions {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+}
+
+.presetActions .btnSecondary {
+  flex: 1;
+  justify-content: center;
+}
+
+

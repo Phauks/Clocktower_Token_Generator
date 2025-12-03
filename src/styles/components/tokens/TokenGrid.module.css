@@ -1,0 +1,145 @@
+/* ============================================
+   Component: TokenGrid
+   Token display grid layout
+   ============================================ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+/* ---- Grid ---- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-md);
+  align-content: start;
+  padding: var(--spacing-md);
+  padding-top: var(--spacing-lg);
+}
+
+/* Reminder Token Grid - 6 per row */
+.gridReminders {
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--spacing-sm);
+}
+
+/* ---- Section ---- */
+.section {
+  background-color: var(--bg-panel);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+/* ---- Collapsible Details ---- */
+.collapsible {
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+}
+
+.sectionHeader {
+  padding: var(--spacing-md);
+  background-color: var(--bg-card);
+  color: var(--color-accent);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  transition: background-color var(--transition-fast);
+  list-style: none;
+}
+
+.sectionHeader::-webkit-details-marker {
+  display: none;
+}
+
+.sectionHeader::before {
+  content: '▶';
+  font-size: 0.75rem;
+  transition: transform var(--transition-fast);
+}
+
+.collapsible[open] > .sectionHeader::before {
+  transform: rotate(90deg);
+}
+
+.sectionHeader:hover {
+  background-color: var(--bg-hover);
+}
+
+.sectionContent {
+  padding: var(--spacing-md);
+}
+
+/* ---- States ---- */
+.loadingState {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--border-color);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: var(--spacing-md);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.emptyState {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--text-muted);
+}
+
+.errorState {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--color-error);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 1200px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .gridReminders {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .gridReminders {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .gridReminders {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+

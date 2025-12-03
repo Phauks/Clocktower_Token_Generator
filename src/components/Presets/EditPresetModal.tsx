@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { CustomPreset } from '../../hooks/usePresets'
+import styles from '../../styles/components/presets/PresetModal.module.css'
+import modalStyles from '../../styles/components/layout/Modal.module.css'
 
 interface EditPresetModalProps {
   isOpen: boolean
@@ -30,18 +32,18 @@ export function EditPresetModal({ isOpen, preset, onClose, onSave }: EditPresetM
   if (!isOpen) return null
 
   return (
-    <div className="settings-modal">
-      <div className="modal-backdrop" onClick={onClose} />
-      <div className="modal-container">
-        <div className="modal-header">
+    <div className={modalStyles.overlay}>
+      <div className={modalStyles.backdrop} onClick={onClose} />
+      <div className={modalStyles.container}>
+        <div className={modalStyles.header}>
           <h2>Edit Preset</h2>
-          <button className="modal-close" onClick={onClose}>
+          <button className={modalStyles.closeBtn} onClick={onClose}>
             ×
           </button>
         </div>
-        <div className="modal-body">
-          <form className="preset-modal-form">
-            <div className="form-group">
+        <div className={modalStyles.body}>
+          <form className={styles.form}>
+            <div className={styles.formGroup}>
               <label htmlFor="editPresetName">Preset Name *</label>
               <input
                 id="editPresetName"
@@ -57,7 +59,7 @@ export function EditPresetModal({ isOpen, preset, onClose, onSave }: EditPresetM
                 }}
               />
             </div>
-            <div className="form-group">
+            <div className={styles.formGroup}>
               <label htmlFor="editPresetDescription">Description</label>
               <input
                 id="editPresetDescription"
@@ -67,13 +69,13 @@ export function EditPresetModal({ isOpen, preset, onClose, onSave }: EditPresetM
                 placeholder="Optional description of this preset"
               />
             </div>
-            <div className="form-group">
+            <div className={styles.formGroup}>
               <label htmlFor="editPresetIcon">Icon</label>
-              <div className="emoji-picker">
+              <div className={styles.emojiPicker}>
                 {['⭐', '🌸', '⬜', '🎨', '✨', '🎭', '🎪', '🎯', '🌙', '🔥', '💎', '🍀'].map((emoji) => (
                   <button
                     key={emoji}
-                    className={`emoji-option ${presetIcon === emoji ? 'selected' : ''}`}
+                    className={`${styles.emojiOption} ${presetIcon === emoji ? styles.selected : ''}`}
                     onClick={(e) => {
                       e.preventDefault()
                       setPresetIcon(emoji)
@@ -86,11 +88,11 @@ export function EditPresetModal({ isOpen, preset, onClose, onSave }: EditPresetM
             </div>
           </form>
         </div>
-        <div className="modal-actions">
-          <button className="btn-secondary" onClick={onClose}>
+        <div className={modalStyles.actions}>
+          <button className={modalStyles.secondaryBtn} onClick={onClose}>
             Cancel
           </button>
-          <button className="btn-primary" onClick={handleSave} disabled={!presetName.trim()}>
+          <button className={modalStyles.primaryBtn} onClick={handleSave} disabled={!presetName.trim()}>
             Save Changes
           </button>
         </div>

@@ -12,6 +12,11 @@
   --radius-2xl: 24px;
   --radius-full: 9999px;
 
+  /* Aliases for backward compatibility */
+  --border-radius: 8px;
+  --border-radius-sm: 4px;
+  --border-radius-lg: 12px;
+
   /* ---- Shadows ---- */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);

@@ -5,8 +5,9 @@ import { CharacterNavigation } from './CharacterNavigation'
 import { TokenPreview } from './TokenPreview'
 import { TokenEditor } from './TokenEditor'
 import { ActionButtons } from './ActionButtons'
-import { updateCharacterInJson, downloadCharacterTokensAsZip, downloadCharacterTokenOnly, downloadReminderTokensOnly, regenerateCharacterAndReminders } from '../../ts/detailViewUtils'
+import { updateCharacterInJson, downloadCharacterTokensAsZip, downloadCharacterTokenOnly, downloadReminderTokensOnly, regenerateCharacterAndReminders } from '../../ts/ui/detailViewUtils'
 import type { Token, Character } from '../../ts/types/index.js'
+import styles from '../../styles/components/tokenDetail/TokenDetailModal.module.css'
 
 interface TokenDetailModalProps {
   isOpen: boolean
@@ -48,9 +49,9 @@ export function TokenDetailModal({ isOpen, onClose, initialToken }: TokenDetailM
   const [previewReminderTokens, setPreviewReminderTokens] = useState<Token[]>([])
   
   // Debounce timer for live updates
-  const liveUpdateTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const liveUpdateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Debounce timer for auto-save
-  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Track previous character ID for unsaved changes detection
   const previousCharacterIdRef = useRef<string>(selectedCharacterId)
   // Track if we just auto-saved to prevent effect loops
@@ -168,12 +169,14 @@ export function TokenDetailModal({ isOpen, onClose, initialToken }: TokenDetailM
       
       // Update the JSON input with the edited character
       try {
-        setJsonInput(prevJson => updateCharacterInJson(prevJson, selectedCharacterId, editedCharacter))
+        const updatedJson = updateCharacterInJson(jsonInput, selectedCharacterId, editedCharacter)
+        setJsonInput(updatedJson)
         
-        // Update the characters array in context using functional update
-        setCharacters(prevChars => prevChars.map(c => 
+        // Update the characters array in context
+        const updatedCharacters = characters.map((c: Character) => 
           c.id === selectedCharacterId ? editedCharacter : c
-        ))
+        )
+        setCharacters(updatedCharacters)
         
         // Mark as clean since we auto-saved
         setIsDirty(false)
@@ -270,6 +273,7 @@ export function TokenDetailModal({ isOpen, onClose, initialToken }: TokenDetailM
       name: 'New Character',
       team: 'townsfolk',
       ability: '',
+      image: '',
       reminders: [],
     }
     
@@ -381,7 +385,7 @@ export function TokenDetailModal({ isOpen, onClose, initialToken }: TokenDetailM
     regenerateCharacterAndReminders(newCharacter, generationOptions)
       .then(({ characterToken, reminderTokens: newReminderTokens }) => {
         // Add the new tokens to the tokens array
-        setTokens(prevTokens => [...prevTokens, characterToken, ...newReminderTokens])
+        setTokens([...tokens, characterToken, ...newReminderTokens])
       })
       .catch((error) => {
         console.error('Failed to generate tokens for duplicated character:', error)
@@ -522,14 +526,14 @@ export function TokenDetailModal({ isOpen, onClose, initialToken }: TokenDetailM
 
   return (
     <div
-      className="token-detail-modal"
+      className={styles.modal}
       role="dialog"
       aria-modal="true"
       aria-labelledby="tokenDetailTitle"
       onKeyDown={handleEscapeKey}
     >
-      <div className="modal-backdrop" onClick={handleBackdropClick} />
-      <div className="token-detail-wrapper">
+      <div className={styles.backdrop} onClick={handleBackdropClick} />
+      <div className={styles.wrapper}>
         <CharacterNavigation
           characters={characters}
           tokens={tokens}
@@ -541,8 +545,8 @@ export function TokenDetailModal({ isOpen, onClose, initialToken }: TokenDetailM
           onSelectMetaToken={handleSelectMetaToken}
         />
 
-        <div className="token-detail-main">
-          <header className="token-detail-header">
+        <div className={styles.main}>
+          <header className={styles.header}>
             <h2 id="tokenDetailTitle">{selectedCharacter?.name || 'Token Details'}</h2>
             <ActionButtons
               isDirty={isDirty}
@@ -561,7 +565,7 @@ export function TokenDetailModal({ isOpen, onClose, initialToken }: TokenDetailM
             />
             <button
               type="button"
-              className="modal-close"
+              className={styles.closeBtn}
               onClick={onClose}
               aria-label="Close detail view"
             >
@@ -570,9 +574,9 @@ export function TokenDetailModal({ isOpen, onClose, initialToken }: TokenDetailM
           </header>
 
           {selectedCharacter && displayCharacterToken && (
-            <div className="token-detail-content">
+            <div className={styles.content}>
               {/* Left column: Token preview + reminders */}
-              <div className="token-detail-left">
+              <div className={styles.left}>
                 <TokenPreview
                   characterToken={displayCharacterToken}
                   reminderTokens={displayReminderTokens}
@@ -588,7 +592,7 @@ export function TokenDetailModal({ isOpen, onClose, initialToken }: TokenDetailM
               </div>
 
               {/* Right column: Editor */}
-              <div className="token-detail-right">
+              <div className={styles.right}>
                 <TokenEditor character={selectedCharacter} onEditChange={handleEditChange} />
               </div>
             </div>

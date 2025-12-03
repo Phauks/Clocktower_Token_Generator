@@ -1,0 +1,22 @@
+/* ============================================
+   Component: AppLayout
+   Main application layout container
+   ============================================ */
+
+.appContainer {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.mainContent {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.tabViewContent {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}

@@ -5,13 +5,16 @@ import { useTokenGenerator } from '../../hooks/useTokenGenerator'
 import { useUndoStack } from '../../hooks/useUndoStack'
 import { JsonHighlight } from '../ScriptInput/JsonHighlight'
 import CONFIG from '../../ts/config.js'
+import styles from '../../styles/components/views/Views.module.css'
+import scriptStyles from '../../styles/components/scriptInput/ScriptInput.module.css'
 
 interface EditorViewProps {
   onGenerate?: () => void
+  onNavigateToCustomize?: () => void
 }
 
-export function EditorView({ onGenerate }: EditorViewProps) {
-  const { jsonInput, setJsonInput, characters, isLoading, error, setError, warnings, setWarnings, scriptMeta, generationProgress } = useTokenContext()
+export function EditorView({ onGenerate, onNavigateToCustomize }: EditorViewProps) {
+  const { jsonInput, setJsonInput, characters, isLoading, error, setError, warnings, setWarnings, scriptMeta } = useTokenContext()
   const { loadScript, loadExampleScriptByName, parseJson, clearScript } = useScriptData()
   const { generateTokens } = useTokenGenerator()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -20,6 +23,7 @@ export function EditorView({ onGenerate }: EditorViewProps) {
   const [autoGenerate, setAutoGenerate] = useState(true)
   const [isDragging, setIsDragging] = useState(false)
   const [selectedExample, setSelectedExample] = useState<string>('')
+  const [showMessages, setShowMessages] = useState(false)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const parseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const previousJsonRef = useRef<string>('')
@@ -117,11 +121,14 @@ export function EditorView({ onGenerate }: EditorViewProps) {
   }, [loadExampleScriptByName])
 
   const handleClear = useCallback(() => {
+    // Push current value to undo stack before clearing
+    if (jsonInput.trim()) {
+      undoStack.push(jsonInput)
+    }
     clearScript()
     setSelectedExample('')
     previousJsonRef.current = ''
-    undoStack.clear('')
-  }, [clearScript, undoStack])
+  }, [jsonInput, clearScript, undoStack])
 
   const handleFormat = useCallback(() => {
     try {
@@ -209,51 +216,28 @@ export function EditorView({ onGenerate }: EditorViewProps) {
   }, [handleUndo, handleRedo])
 
   return (
-    <div className="editor-view">
-      <div className="editor-container">
-        {/* Top Action Bar with Generate Button */}
-        <div className="editor-action-bar">
-          <button
-            className="btn-primary btn-generate"
-            onClick={handleManualGenerate}
-            disabled={isLoading || !characters.length}
-          >
-            {isLoading ? (
-              generationProgress
-                ? `⚡ Generating... (${generationProgress.current}/${generationProgress.total})`
-                : '⚡ Generating...'
-            ) : (
-              '⚡ Generate Tokens'
-            )}
-          </button>
-          <button
-            className={`btn-toggle ${autoGenerate ? 'active' : ''}`}
-            onClick={() => setAutoGenerate(!autoGenerate)}
-            title={autoGenerate ? 'Auto-generate is ON' : 'Auto-generate is OFF'}
-          >
-            {autoGenerate ? '🔄' : '🔄'}
-          </button>
-          <button
-            className="btn-secondary btn-icon-only"
-            onClick={handleUndo}
-            disabled={!undoStack.canUndo}
-            title="Undo (Ctrl+Z)"
-          >
-            ↩️
-          </button>
-          <button
-            className="btn-secondary btn-icon-only"
-            onClick={handleRedo}
-            disabled={!undoStack.canRedo}
-            title="Redo (Ctrl+Y)"
-          >
-            ↪️
-          </button>
-        </div>
+    <div className={styles.editorView}>
+      <div className={styles.editorSplitLayout}>
+        {/* Left Panel - Create New Character & Load Scripts */}
+        <div className={styles.editorLeftPanel}>
+          <div className={styles.leftPanelSection}>
+            <h3 className={styles.leftPanelTitle}>Create Custom Character</h3>
+            <p className={styles.leftPanelDesc}>
+              Design your own custom character token from scratch.
+            </p>
+            <button
+              className={`btn-primary ${styles.btnLeftPanelAction}`}
+              onClick={onNavigateToCustomize}
+            >
+              ✨ Create New Character
+            </button>
+          </div>
 
-        {/* Toolbar */}
-        <div className="editor-toolbar">
-          <div className="toolbar-left">
+          <div className={styles.leftPanelSection}>
+            <h3 className={styles.leftPanelTitle}>Upload Script</h3>
+            <p className={styles.leftPanelDesc}>
+              Import a script JSON file from your computer.
+            </p>
             <input
               type="file"
               ref={fileInputRef}
@@ -262,91 +246,166 @@ export function EditorView({ onGenerate }: EditorViewProps) {
               style={{ display: 'none' }}
             />
             <button
-              className="btn-secondary btn-icon-only"
+              className={`btn-secondary ${styles.btnLeftPanelAction}`}
               onClick={() => fileInputRef.current?.click()}
-              title="Upload JSON file"
             >
-              📁
-            </button>
-            <select
-              className="example-select"
-              value={selectedExample}
-              onChange={handleExampleChange}
-            >
-              <option value="">Load Example...</option>
-              {exampleScripts.map((name: string) => (
-                <option key={name} value={name}>{name}</option>
-              ))}
-            </select>
-            <button
-              className="btn-secondary btn-icon-only"
-              onClick={handleFormat}
-              title="Format JSON"
-            >
-              🎨
-            </button>
-            <button
-              className="btn-secondary btn-icon-only"
-              onClick={handleClear}
-              title="Clear editor"
-            >
-              🗑️
+              📁 Upload JSON File
             </button>
           </div>
-        </div>
 
-        {/* Script Meta Info */}
-        {scriptMeta && (
-          <div className="script-meta-bar">
-            <span className="meta-item">
-              <strong>{scriptMeta.name || 'Unnamed Script'}</strong>
-              {scriptMeta.author && <span className="meta-author"> by {scriptMeta.author}</span>}
-            </span>
-            <span className="meta-item meta-count">
-              {characters.length} characters
-            </span>
-          </div>
-        )}
-
-        {/* Editor Area */}
-        <div
-          className={`editor-wrapper ${isDragging ? 'dragging' : ''}`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
-          <div className="json-highlight" ref={highlightRef}>
-            <JsonHighlight json={jsonInput} />
-          </div>
-          <textarea
-            ref={textareaRef}
-            className="json-editor"
-            value={jsonInput}
-            onChange={handleTextareaChange}
-            onScroll={handleScroll}
-            placeholder="Paste your Blood on the Clocktower script JSON here, or drag and drop a .json file..."
-            spellCheck={false}
-          />
-          {isDragging && (
-            <div className="drop-overlay">
-              <span>Drop JSON file here</span>
+          <div className={styles.leftPanelSection}>
+            <h3 className={styles.leftPanelTitle}>Load Example Script</h3>
+            <p className={styles.leftPanelDesc}>
+              Try an example script to explore the generator.
+            </p>
+            <div className={styles.leftPanelRow}>
+              <select
+                className={styles.leftPanelSelect}
+                value={selectedExample}
+                onChange={(e) => setSelectedExample(e.target.value)}
+              >
+                <option value="">Select an example...</option>
+                {exampleScripts.map((name: string) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+              <button
+                className={`btn-secondary ${styles.btnLeftPanelSmall}`}
+                onClick={() => selectedExample && loadExampleScriptByName(selectedExample)}
+                disabled={!selectedExample}
+                title="Load selected example"
+              >
+                Load
+              </button>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Error/Warning Display */}
-        {error && (
-          <div className="editor-error">
-            ⚠️ {error}
+        {/* Right Panel - JSON Editor */}
+        <div className={styles.editorRightPanel}>
+          <div className={styles.editorContainer}>
+            {/* Unified Toolbar */}
+            <div className={styles.editorUnifiedToolbar}>
+              <div className={styles.toolbarLeft}>
+                <button
+                  className={`btn-primary ${styles.btnGenerateSmall}`}
+                  onClick={handleManualGenerate}
+                  disabled={isLoading || !characters.length}
+                >
+                  {isLoading ? '⚡ Generating...' : '⚡ Generate'}
+                </button>
+                <button
+                  className={`${styles.btnToggleSmall} ${autoGenerate ? styles.active : ''}`}
+                  onClick={() => setAutoGenerate(!autoGenerate)}
+                  title={autoGenerate ? 'Auto-generate is ON' : 'Auto-generate is OFF'}
+                >
+                  {autoGenerate ? '🔄 Auto' : '🔄 Auto'}
+                </button>
+              </div>
+              <div className={styles.toolbarRight}>
+                <button
+                  className={`btn-secondary ${styles.btnIconOnly}`}
+                  onClick={handleFormat}
+                  title="Format JSON"
+                >
+                  🎨
+                </button>
+                <button
+                  className={`btn-secondary ${styles.btnIconOnly}`}
+                  onClick={handleUndo}
+                  disabled={!undoStack.canUndo}
+                  title="Undo (Ctrl+Z)"
+                >
+                  ↩️
+                </button>
+                <button
+                  className={`btn-secondary ${styles.btnIconOnly}`}
+                  onClick={handleRedo}
+                  disabled={!undoStack.canRedo}
+                  title="Redo (Ctrl+Y)"
+                >
+                  ↪️
+                </button>
+                <button
+                  className={`btn-secondary ${styles.btnIconOnly}`}
+                  onClick={handleClear}
+                  title="Clear editor"
+                >
+                  🗑️
+                </button>
+              </div>
+            </div>
+
+            {/* Script Meta Info */}
+            {scriptMeta && (
+              <div className={styles.scriptMetaBar}>
+                <span className={styles.metaItem}>
+                  <strong>{scriptMeta.name || 'Unnamed Script'}</strong>
+                  {scriptMeta.author && <span className={styles.metaAuthor}> by {scriptMeta.author}</span>}
+                </span>
+                <span className={`${styles.metaItem} ${styles.metaCount}`}>
+                  {characters.length} characters
+                </span>
+              </div>
+            )}
+
+            {/* Editor Area */}
+            <div
+              className={`${styles.editorWrapper} ${isDragging ? styles.dragging : ''}`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <div className={scriptStyles.jsonHighlight} ref={highlightRef}>
+                <JsonHighlight json={jsonInput} />
+              </div>
+              <textarea
+                ref={textareaRef}
+                className={scriptStyles.jsonEditor}
+                value={jsonInput}
+                onChange={handleTextareaChange}
+                onScroll={handleScroll}
+                placeholder="Paste your Blood on the Clocktower script JSON here, or drag and drop a .json file..."
+                spellCheck={false}
+              />
+              {isDragging && (
+                <div className={styles.dropOverlay}>
+                  <span>Drop JSON file here</span>
+                </div>
+              )}
+            </div>
+
+            {/* Messages indicator (errors/warnings) - below editor */}
+            {(error || warnings.length > 0) && (
+              <div className={styles.messagesBar}>
+                <button 
+                  className={`${styles.messagesToggle} ${error ? styles.hasError : styles.hasWarning}`}
+                  onClick={() => setShowMessages(!showMessages)}
+                >
+                  <span className={styles.messagesIcon}>{error ? '⚠️' : 'ℹ️'}</span>
+                  <span className={styles.messagesCount}>
+                    {error ? '1 error' : `${warnings.length} warning${warnings.length !== 1 ? 's' : ''}`}
+                  </span>
+                  <span className={styles.messagesChevron}>{showMessages ? '▲' : '▼'}</span>
+                </button>
+                {showMessages && (
+                  <div className={styles.messagesDropdownUp}>
+                    {error && (
+                      <div className={styles.messageItem + ' ' + styles.errorItem}>
+                        ⚠️ {error}
+                      </div>
+                    )}
+                    {warnings.map((warning, i) => (
+                      <div key={i} className={styles.messageItem + ' ' + styles.warningItem}>
+                        ℹ️ {warning}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-        )}
-        {warnings.length > 0 && (
-          <div className="editor-warnings">
-            {warnings.map((warning, i) => (
-              <div key={i} className="warning-item">⚠️ {warning}</div>
-            ))}
-          </div>
-        )}
+        </div>
       </div>
     </div>
   )

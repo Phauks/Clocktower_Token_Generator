@@ -1,0 +1,170 @@
+/**
+ * Options Tab Content Styles
+ * Shared styles for Character, Reminder, Meta, Export tabs
+ */
+
+/* Tab content area */
+.tabContent {
+  display: block;
+}
+
+/* Subtabs container */
+.subtabsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.subtabsNav {
+  display: flex;
+  gap: var(--spacing-xs);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: var(--spacing-sm);
+}
+
+.subtabButton {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--border-radius);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: var(--transition);
+}
+
+.subtabButton:hover {
+  color: var(--text-primary);
+  background-color: var(--card-hover-bg);
+}
+
+.subtabButton.active {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  background-color: var(--color-accent-light);
+}
+
+/* Subtab content */
+.subtabContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+/* Subsection grouping */
+.subsection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+/* Form controls */
+.selectInput {
+  padding: var(--spacing-sm);
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  color: var(--text-primary);
+  font-size: 1rem;
+  min-width: 150px;
+}
+
+.selectInput:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.colorInput {
+  width: 50px;
+  height: 36px;
+  padding: 2px;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+}
+
+.colorInput::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.colorInput::-webkit-color-swatch {
+  border-radius: var(--border-radius-sm);
+  border: none;
+}
+
+.textInput {
+  padding: var(--spacing-sm);
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.textInput:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.numberInput {
+  width: 80px;
+  padding: var(--spacing-sm);
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  color: var(--text-primary);
+  font-size: 1rem;
+  text-align: center;
+}
+
+.numberInput:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+/* Toggle switch */
+.toggleSwitch {
+  width: 44px;
+  height: 24px;
+  appearance: none;
+  background-color: var(--border-color);
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.toggleSwitch::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  background-color: var(--bg-card);
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  transition: var(--transition);
+}
+
+.toggleSwitch:checked {
+  background-color: var(--color-accent);
+}
+
+.toggleSwitch:checked::before {
+  transform: translateX(20px);
+}
+
+/* Input with unit (e.g., number + px) */
+.inputWithUnit {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.inputUnit {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+

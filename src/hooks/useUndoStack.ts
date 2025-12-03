@@ -94,10 +94,10 @@ export interface UseUndoStackReturn<T> {
   redoCount: number
   /** Push a new value onto the stack */
   push: (value: T) => void
-  /** Undo to previous value */
-  undo: () => void
-  /** Redo to next value */
-  redo: () => void
+  /** Undo to previous value, returns the value or undefined if nothing to undo */
+  undo: () => T | undefined
+  /** Redo to next value, returns the value or undefined if nothing to redo */
+  redo: () => T | undefined
   /** Clear all history and set to new value */
   clear: (value: T) => void
   /** Set value without adding to history */
@@ -120,13 +120,19 @@ export function useUndoStack<T>(initialValue: T): UseUndoStackReturn<T> {
     dispatch({ type: 'PUSH', payload: value })
   }, [])
 
-  const undo = useCallback(() => {
+  const undo = useCallback((): T | undefined => {
+    if (state.past.length === 0) return undefined
+    const previous = state.past[state.past.length - 1]
     dispatch({ type: 'UNDO' })
-  }, [])
+    return previous
+  }, [state.past])
 
-  const redo = useCallback(() => {
+  const redo = useCallback((): T | undefined => {
+    if (state.future.length === 0) return undefined
+    const next = state.future[0]
     dispatch({ type: 'REDO' })
-  }, [])
+    return next
+  }, [state.future])
 
   const clear = useCallback((value: T) => {
     dispatch({ type: 'CLEAR', payload: value })

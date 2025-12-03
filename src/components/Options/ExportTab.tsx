@@ -2,6 +2,7 @@ import { memo, useState } from 'react'
 import type { GenerationOptions, CompressionLevel } from '../../ts/types/index'
 import { OptionGroup } from '../Shared/OptionGroup'
 import { SliderWithValue } from '../Shared/SliderWithValue'
+import styles from '../../styles/components/options/OptionsTab.module.css'
 
 interface ExportTabProps {
   generationOptions: GenerationOptions
@@ -14,23 +15,23 @@ export const ExportTab = memo(({ generationOptions, onOptionChange }: ExportTabP
   const [activeSubTab, setActiveSubTab] = useState<ExportSubTabType>('png')
 
   return (
-    <div className="tab-content active" data-tab-content="export">
-      <div className="subtabs-container">
-        <div className="subtabs-nav">
+    <div className={styles.tabContent} data-tab-content="export">
+      <div className={styles.subtabsContainer}>
+        <div className={styles.subtabsNav}>
           <button
-            className={`subtab-button ${activeSubTab === 'png' ? 'active' : ''}`}
+            className={`${styles.subtabButton} ${activeSubTab === 'png' ? styles.active : ''}`}
             onClick={() => setActiveSubTab('png')}
           >
             PNG
           </button>
           <button
-            className={`subtab-button ${activeSubTab === 'zip' ? 'active' : ''}`}
+            className={`${styles.subtabButton} ${activeSubTab === 'zip' ? styles.active : ''}`}
             onClick={() => setActiveSubTab('zip')}
           >
             ZIP
           </button>
           <button
-            className={`subtab-button ${activeSubTab === 'pdf' ? 'active' : ''}`}
+            className={`${styles.subtabButton} ${activeSubTab === 'pdf' ? styles.active : ''}`}
             onClick={() => setActiveSubTab('pdf')}
           >
             PDF
@@ -39,15 +40,15 @@ export const ExportTab = memo(({ generationOptions, onOptionChange }: ExportTabP
 
         {/* PNG Sub-Tab */}
         {activeSubTab === 'png' && (
-          <div className="subtab-content">
-            <div className="subsection">
+          <div className={styles.subtabContent}>
+            <div className={styles.subsection}>
               <OptionGroup
                 label="Embed Metadata"
                 helpText="Include character info (name, team, ability) in PNG file metadata"
               >
                 <input
                   type="checkbox"
-                  className="toggle-switch"
+                  className={styles.toggleSwitch}
                   checked={generationOptions.pngSettings?.embedMetadata ?? false}
                   onChange={(e) => onOptionChange({
                     pngSettings: {
@@ -65,7 +66,7 @@ export const ExportTab = memo(({ generationOptions, onOptionChange }: ExportTabP
               >
                 <input
                   type="checkbox"
-                  className="toggle-switch"
+                  className={styles.toggleSwitch}
                   checked={generationOptions.pngSettings?.transparentBackground ?? false}
                   onChange={(e) => onOptionChange({
                     pngSettings: {
@@ -82,15 +83,15 @@ export const ExportTab = memo(({ generationOptions, onOptionChange }: ExportTabP
 
         {/* ZIP Sub-Tab */}
         {activeSubTab === 'zip' && (
-          <div className="subtab-content">
-            <div className="subsection">
+          <div className={styles.subtabContent}>
+            <div className={styles.subsection}>
               <OptionGroup
                 label="Save in Team Folders"
                 helpText="Organize exported tokens by team (Townsfolk, Outsider, etc.)"
               >
                 <input
                   type="checkbox"
-                  className="toggle-switch"
+                  className={styles.toggleSwitch}
                   checked={generationOptions.zipSettings?.saveInTeamFolders ?? true}
                   onChange={(e) => onOptionChange({
                     zipSettings: {
@@ -110,7 +111,7 @@ export const ExportTab = memo(({ generationOptions, onOptionChange }: ExportTabP
               >
                 <input
                   type="checkbox"
-                  className="toggle-switch"
+                  className={styles.toggleSwitch}
                   checked={generationOptions.zipSettings?.saveRemindersSeparately ?? true}
                   onChange={(e) => onOptionChange({
                     zipSettings: {
@@ -130,7 +131,7 @@ export const ExportTab = memo(({ generationOptions, onOptionChange }: ExportTabP
               >
                 <input
                   type="checkbox"
-                  className="toggle-switch"
+                  className={styles.toggleSwitch}
                   checked={generationOptions.zipSettings?.metaTokenFolder ?? true}
                   onChange={(e) => onOptionChange({
                     zipSettings: {
@@ -150,7 +151,7 @@ export const ExportTab = memo(({ generationOptions, onOptionChange }: ExportTabP
               >
                 <input
                   type="checkbox"
-                  className="toggle-switch"
+                  className={styles.toggleSwitch}
                   checked={generationOptions.zipSettings?.includeScriptJson ?? false}
                   onChange={(e) => onOptionChange({
                     zipSettings: {
@@ -169,7 +170,7 @@ export const ExportTab = memo(({ generationOptions, onOptionChange }: ExportTabP
                 helpText="Higher compression = smaller file but slower export"
               >
                 <select
-                  className="select-input"
+                  className={styles.selectInput}
                   value={generationOptions.zipSettings?.compressionLevel ?? 'normal'}
                   onChange={(e) => onOptionChange({
                     zipSettings: {
@@ -192,19 +193,19 @@ export const ExportTab = memo(({ generationOptions, onOptionChange }: ExportTabP
 
         {/* PDF Sub-Tab */}
         {activeSubTab === 'pdf' && (
-          <div className="subtab-content">
-            <div className="subsection">
+          <div className={styles.subtabContent}>
+            <div className={styles.subsection}>
               <OptionGroup label="Padding" helpText="Padding around PDF content">
-                <div className="input-with-unit">
+                <div className={styles.inputWithUnit}>
                   <input
                     type="number"
-                    className="number-input"
+                    className={styles.numberInput}
                     value={generationOptions.pdfPadding || 75}
                     onChange={(e) => onOptionChange({ pdfPadding: parseInt(e.target.value) || 0 })}
                     min={0}
                     max={100}
                   />
-                  <span className="input-unit">px</span>
+                  <span className={styles.inputUnit}>px</span>
                 </div>
               </OptionGroup>
 

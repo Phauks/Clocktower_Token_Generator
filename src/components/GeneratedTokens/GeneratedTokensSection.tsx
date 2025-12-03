@@ -2,6 +2,7 @@ import { TokenGrid } from '../TokenGrid/TokenGrid'
 import { ExportBar } from './ExportBar'
 import { useTokenContext } from '../../contexts/TokenContext'
 import type { Token } from '../../ts/types/index'
+import styles from '../../styles/components/generatedTokens/GeneratedTokensSection.module.css'
 
 interface GeneratedTokensSectionProps {
   onTokenClick: (token: Token) => void
@@ -11,16 +12,16 @@ export function GeneratedTokensSection({ onTokenClick }: GeneratedTokensSectionP
   const { generationProgress, isLoading } = useTokenContext()
 
   return (
-    <section className="options-card">
-      <div className="card-header">
+    <section className={styles.section}>
+      <div className={styles.header}>
         <h2>Generated Tokens</h2>
         {isLoading && generationProgress && (
-          <div className="generation-progress">
+          <div className={styles.progress}>
             Generating {generationProgress.current}/{generationProgress.total}...
           </div>
         )}
       </div>
-      <div className="card-content">
+      <div className={styles.content}>
         <ExportBar />
         <TokenGrid onTokenClick={onTokenClick} />
       </div>

@@ -13,26 +13,39 @@ import { CustomizeView } from './components/Views/CustomizeView'
 import { ScriptView } from './components/Views/ScriptView'
 import { DownloadView } from './components/Views/DownloadView'
 import type { Token } from './ts/types/index.js'
+import layoutStyles from './styles/components/layout/AppLayout.module.css'
 
 function AppContent() {
   const [showSettings, setShowSettings] = useState(false)
   const [showInfo, setShowInfo] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>('editor')
   const [selectedTokenForCustomize, setSelectedTokenForCustomize] = useState<Token | undefined>(undefined)
+  const [createNewCharacter, setCreateNewCharacter] = useState(false)
 
   const handleTokenClick = useCallback((token: Token) => {
     setSelectedTokenForCustomize(token)
+    setCreateNewCharacter(false)
     setActiveTab('customize')
   }, [])
 
   const handleTabChange = useCallback((tab: TabType) => {
+    // Reset createNewCharacter when manually changing tabs
+    if (tab !== 'customize') {
+      setCreateNewCharacter(false)
+    }
     setActiveTab(tab)
+  }, [])
+
+  const handleNavigateToCustomize = useCallback(() => {
+    setSelectedTokenForCustomize(undefined)
+    setCreateNewCharacter(true) // Signal to create new character
+    setActiveTab('customize')
   }, [])
 
   const renderActiveView = () => {
     switch (activeTab) {
       case 'editor':
-        return <EditorView />
+        return <EditorView onNavigateToCustomize={handleNavigateToCustomize} />
       case 'gallery':
         return <GalleryView onTokenClick={handleTokenClick} />
       case 'customize':
@@ -40,6 +53,7 @@ function AppContent() {
           <CustomizeView 
             initialToken={selectedTokenForCustomize}
             onGoToGallery={() => setActiveTab('gallery')}
+            createNewCharacter={createNewCharacter}
           />
         )
       case 'script':
@@ -47,18 +61,18 @@ function AppContent() {
       case 'download':
         return <DownloadView />
       default:
-        return <EditorView />
+        return <EditorView onNavigateToCustomize={handleNavigateToCustomize} />
     }
   }
 
   return (
-    <div className="app-container">
+    <div className={layoutStyles.appContainer}>
       <AppHeader
         onSettingsClick={() => setShowSettings(true)}
         onInfoClick={() => setShowInfo(true)}
       />
       <TabNavigation activeTab={activeTab} onTabChange={handleTabChange} />
-      <main className="main-content tab-view-content">
+      <main className={`${layoutStyles.mainContent} ${layoutStyles.tabViewContent}`}>
         {renderActiveView()}
       </main>
       <AppFooter />

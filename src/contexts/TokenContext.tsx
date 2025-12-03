@@ -1,10 +1,11 @@
-import { createContext, useContext, ReactNode, useState, useCallback } from 'react'
+import { createContext, useContext, ReactNode, useState, useCallback, useEffect } from 'react'
 import type {
   Token,
   Character,
   GenerationOptions,
   ScriptMeta,
 } from '../ts/types/index.js'
+import { setCorsProxySetting } from '../ts/utils/imageUtils.js'
 
 interface TokenContextType {
   // Token state
@@ -35,10 +36,10 @@ interface TokenContextType {
 
   // Filter state
   filters: {
-    team: string
-    tokenType: string
-    display: string
-    reminders: string
+    teams: string[]
+    tokenTypes: string[]
+    display: string[]
+    reminders: string[]
   }
   updateFilters: (filters: Partial<TokenContextType['filters']>) => void
 
@@ -121,13 +122,21 @@ export function TokenProvider({ children }: TokenProviderProps) {
       includeScriptJson: false,
       compressionLevel: 'normal',
     },
+    corsProxy: 'allorigins',
   })
 
+  // Sync CORS proxy setting to global singleton for non-React code
+  useEffect(() => {
+    if (generationOptions.corsProxy) {
+      setCorsProxySetting(generationOptions.corsProxy)
+    }
+  }, [generationOptions.corsProxy])
+
   const [filters, setFilters] = useState({
-    team: 'all',
-    tokenType: 'all',
-    display: 'all',
-    reminders: 'all',
+    teams: [] as string[],
+    tokenTypes: [] as string[],
+    display: [] as string[],
+    reminders: [] as string[],
   })
 
   const updateGenerationOptions = useCallback((options: Partial<GenerationOptions>) => {

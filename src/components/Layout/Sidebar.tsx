@@ -31,7 +31,7 @@ export function Sidebar() {
         <div className={styles.card}>
           <h2 className={styles.cardHeader}>Options</h2>
           <div className={styles.cardBody}>
-            <div className="tabs-container">
+            <div className={styles.tabsContainer}>
               <OptionsTabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
 
               {activeTab === 'character' && (

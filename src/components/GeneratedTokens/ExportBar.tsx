@@ -1,10 +1,11 @@
 import { useTokenContext } from '../../contexts/TokenContext'
 import { useExport } from '../../hooks/useExport'
 import { useToast } from '../../contexts/ToastContext'
+import styles from '../../styles/components/generatedTokens/ExportBar.module.css'
 
 export function ExportBar() {
   const { tokens } = useTokenContext()
-  const { downloadZip, downloadPdf, isExporting, exportProgress } = useExport()
+  const { downloadZip, downloadPdf, cancelExport, isExporting, exportProgress, exportStep } = useExport()
   const { addToast } = useToast()
 
   // Don't show if no tokens generated
@@ -42,26 +43,67 @@ export function ExportBar() {
     return 'Exporting...'
   }
 
+  // Calculate progress percentage
+  const progressPercentage = exportProgress 
+    ? Math.round((exportProgress.current / exportProgress.total) * 100) 
+    : 0
+
   return (
-    <div className="sticky-export-bar">
-      <div className="export-token-count">
+    <div className={styles.bar}>
+      <div className={styles.tokenCount}>
         {tokens.length} token{tokens.length !== 1 ? 's' : ''} generated
       </div>
-      <div className="sticky-export-bar-content">
+      
+      {/* Progress bar - always visible */}
+      <div className={styles.progressContainer}>
+        <div className={styles.progressBar}>
+          <div 
+            className={`${styles.progressFill} ${isExporting && !exportProgress ? styles.indeterminate : ''}`}
+            style={{ width: isExporting && exportProgress ? `${progressPercentage}%` : '0%' }}
+          />
+        </div>
+        <span className={styles.progressText}>
+          {isExporting
+            ? (exportProgress 
+                ? `${exportProgress.current}/${exportProgress.total} (${progressPercentage}%)`
+                : 'Processing...')
+            : 'Ready'
+          }
+        </span>
+        {isExporting && exportStep && (
+          <span className={styles.stepLabel}>
+            {exportStep === 'zip' && 'Creating ZIP...'}
+            {exportStep === 'pdf' && 'Generating PDF...'}
+            {exportStep === 'json' && 'Saving JSON...'}
+            {exportStep === 'style' && 'Saving Style...'}
+          </span>
+        )}
+        {isExporting && (
+          <button
+            className={styles.cancelBtn}
+            onClick={cancelExport}
+            title="Cancel export"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+      
+      <div className={styles.content}>
         <button
-          className="btn-primary"
+          className={styles.primaryBtn}
           onClick={handleDownloadZip}
           disabled={isExporting}
         >
-          <span className="btn-icon">📦</span>
+          <span className={styles.icon}>📦</span>
           {getButtonText('zip')}
         </button>
         <button
-          className="btn-secondary"
+          className={styles.secondaryBtn}
           onClick={handleDownloadPdf}
           disabled={isExporting}
         >
-          <span className="btn-icon">📄</span>
+          <span className={styles.icon}>📄</span>
           {getButtonText('pdf')}
         </button>
       </div>

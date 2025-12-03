@@ -1,0 +1,121 @@
+/* ============================================
+   Global Button Styles
+   These are used across many components via className strings
+   ============================================ */
+
+/* Base button styles */
+.btn-primary,
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color var(--transition-fast), transform var(--transition-fast);
+    border: none;
+}
+
+.btn-primary {
+    background-color: var(--color-primary);
+    color: var(--text-primary);
+}
+
+.btn-primary:hover {
+    background-color: var(--color-primary-light);
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-secondary {
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+    background-color: var(--bg-hover);
+}
+
+.btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Active/pressed state for toggle buttons */
+.btn-secondary[aria-pressed="true"],
+.btn-secondary.active,
+.btn-secondary.active-highlight {
+    background-color: var(--color-accent);
+    color: #ffffff;
+    border-color: var(--color-accent);
+}
+
+.btn-secondary[aria-pressed="true"]:hover,
+.btn-secondary.active:hover,
+.btn-secondary.active-highlight:hover {
+    background-color: var(--color-accent-dark);
+    border-color: var(--color-accent-dark);
+}
+
+/* Danger button - for destructive actions */
+.btn-danger {
+    width: 100%;
+    padding: var(--spacing-md) var(--spacing-lg);
+    background-color: #8b2020;
+    color: #fff;
+    border: 2px solid #a52a2a;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+}
+
+.btn-danger:hover {
+    background-color: #8b2020;
+    border-color: #c04040;
+    box-shadow: 0 0 12px rgba(165, 42, 42, 0.5);
+}
+
+.btn-danger:active {
+    transform: scale(0.98);
+}
+
+/* Icon-only button */
+.btn-icon {
+    padding: var(--spacing-xs);
+    min-width: 32px;
+    min-height: 32px;
+    justify-content: center;
+}
+
+/* Small button */
+.btn-sm {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.75rem;
+}
+
+/* Action buttons container */
+.action-buttons {
+    display: flex;
+    justify-content: center;
+}
+
+.action-buttons .btn-primary {
+    padding: var(--spacing-md) var(--spacing-xl);
+    font-size: 1rem;
+}

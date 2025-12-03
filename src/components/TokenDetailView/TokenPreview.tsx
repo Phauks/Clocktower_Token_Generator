@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from 'react'
 import type { Token } from '../../ts/types/index.js'
+import styles from '../../styles/components/tokenDetail/TokenPreview.module.css'
 
 interface TokenPreviewProps {
   characterToken: Token
@@ -12,9 +13,9 @@ export function TokenPreview({ characterToken, reminderTokens, onReminderClick }
   const reminderCanvasRef = useRef<HTMLCanvasElement>(null)
   const [selectedReminder, setSelectedReminder] = useState<Token | null>(null)
 
-  // Draw character token
+  // Draw character token when visible (not when reminder is selected)
   useEffect(() => {
-    if (charCanvasRef.current && characterToken.canvas) {
+    if (charCanvasRef.current && characterToken.canvas && !selectedReminder) {
       const ctx = charCanvasRef.current.getContext('2d')
       if (ctx) {
         charCanvasRef.current.width = 300
@@ -22,7 +23,7 @@ export function TokenPreview({ characterToken, reminderTokens, onReminderClick }
         ctx.drawImage(characterToken.canvas, 0, 0, 300, 300)
       }
     }
-  }, [characterToken])
+  }, [characterToken, selectedReminder])
   
   // Draw selected reminder token (same size as character token - 300x300)
   useEffect(() => {
@@ -55,21 +56,21 @@ export function TokenPreview({ characterToken, reminderTokens, onReminderClick }
   }
 
   return (
-    <div className="token-detail-preview-area">
+    <div className={styles.previewArea}>
       {/* Character token or selected reminder - in same location */}
-      <div className="token-detail-preview">
+      <div className={styles.preview}>
         {selectedReminder ? (
           <>
             <canvas
               ref={reminderCanvasRef}
-              className="token-canvas-large"
+              className={styles.canvasLarge}
               width={300}
               height={300}
               title={selectedReminder.reminderText || selectedReminder.filename}
             />
             <button
               type="button"
-              className="token-preview-close"
+              className={styles.closeBtn}
               onClick={handleCloseReminder}
               aria-label="Close reminder preview"
             >
@@ -79,7 +80,7 @@ export function TokenPreview({ characterToken, reminderTokens, onReminderClick }
         ) : (
           <canvas
             ref={charCanvasRef}
-            className="token-canvas-large"
+            className={styles.canvasLarge}
             width={300}
             height={300}
             title={characterToken.filename}
@@ -88,14 +89,14 @@ export function TokenPreview({ characterToken, reminderTokens, onReminderClick }
       </div>
 
       {/* Reminder tokens gallery below - always show */}
-      <div className="token-detail-reminders">
+      <div className={styles.reminders}>
         <h4>Reminder Tokens</h4>
-        <div className="reminders-gallery-container">
+        <div className={styles.galleryContainer}>
           <button
             type="button"
-            className="gallery-arrow gallery-arrow-left"
+            className={styles.galleryArrow}
             onClick={() => {
-              const gallery = document.querySelector('.reminders-gallery')
+              const gallery = document.querySelector(`.${styles.gallery}`)
               if (gallery) gallery.scrollBy({ left: -120, behavior: 'smooth' })
             }}
             disabled={reminderTokens.length === 0}
@@ -103,12 +104,12 @@ export function TokenPreview({ characterToken, reminderTokens, onReminderClick }
           >
             ‹
           </button>
-          <div className={`reminders-gallery ${reminderTokens.length > 3 ? 'scrollable' : ''}`}>
+          <div className={`${styles.gallery} ${reminderTokens.length > 3 ? styles.scrollable : ''}`}>
             {reminderTokens.length > 0 ? (
               reminderTokens.map((reminder) => (
                 <div
                   key={reminder.filename}
-                  className={`reminder-token-item ${selectedReminder?.filename === reminder.filename ? 'selected' : ''}`}
+                  className={`${styles.reminderItem} ${selectedReminder?.filename === reminder.filename ? styles.selected : ''}`}
                   onClick={() => handleReminderClick(reminder)}
                   role="button"
                   tabIndex={0}
@@ -131,20 +132,20 @@ export function TokenPreview({ characterToken, reminderTokens, onReminderClick }
                       }
                     }}
                   />
-                  <span className="reminder-text">{reminder.reminderText || reminder.filename}</span>
+                  <span className={styles.reminderText}>{reminder.reminderText || reminder.filename}</span>
                 </div>
               ))
             ) : (
-              <div className="reminders-empty">
-                <span className="empty-text">No reminder tokens</span>
+              <div className={styles.empty}>
+                <span className={styles.emptyText}>No reminder tokens</span>
               </div>
             )}
           </div>
           <button
             type="button"
-            className="gallery-arrow gallery-arrow-right"
+            className={styles.galleryArrow}
             onClick={() => {
-              const gallery = document.querySelector('.reminders-gallery')
+              const gallery = document.querySelector(`.${styles.gallery}`)
               if (gallery) gallery.scrollBy({ left: 120, behavior: 'smooth' })
             }}
             disabled={reminderTokens.length === 0}

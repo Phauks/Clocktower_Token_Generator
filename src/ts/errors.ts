@@ -6,15 +6,20 @@
 /**
  * Base error class for all token generator errors
  */
+// V8-specific interface for captureStackTrace
+interface ErrorConstructorWithStackTrace extends ErrorConstructor {
+    captureStackTrace?(targetObject: object, constructorOpt?: Function): void;
+}
+
 export class TokenGeneratorError extends Error {
     constructor(message: string, public cause?: Error) {
         super(message);
         this.name = 'TokenGeneratorError';
 
         // Maintains proper stack trace for where our error was thrown (only available on V8)
-        const ErrorConstructor = Error as any;
-        if (ErrorConstructor.captureStackTrace) {
-            ErrorConstructor.captureStackTrace(this, this.constructor);
+        const ErrorWithStackTrace = Error as ErrorConstructorWithStackTrace;
+        if (ErrorWithStackTrace.captureStackTrace) {
+            ErrorWithStackTrace.captureStackTrace(this, this.constructor);
         }
     }
 }

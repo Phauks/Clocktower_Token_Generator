@@ -1,0 +1,184 @@
+/* TokenPreview.module.css - Token preview area with reminders gallery */
+
+.previewArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-lg);
+  background: var(--bg-card);
+  /* Ensure overflow is visible for close button */
+  overflow: visible;
+}
+
+/* Main preview canvas */
+.preview {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  /* Add padding to accommodate the close button positioned outside */
+  padding: 10px;
+  box-sizing: content-box;
+}
+
+.canvasLarge {
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  box-shadow: var(--shadow-lg);
+}
+
+.closeBtn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  font-size: 1.125rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.closeBtn:hover {
+  background: var(--color-danger-subtle);
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+/* Reminders section */
+.reminders {
+  width: 100%;
+}
+
+.reminders h4 {
+  margin: 0 0 var(--spacing-sm) 0;
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.galleryContainer {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.galleryArrow {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  font-size: 1.125rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.galleryArrow:hover:not(:disabled) {
+  background: var(--bg-card);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.galleryArrow:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.gallery {
+  display: flex;
+  gap: var(--spacing-sm);
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  flex: 1;
+  padding: var(--spacing-xs) 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+
+.gallery::-webkit-scrollbar {
+  height: 4px;
+}
+
+.gallery::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.gallery::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 9999px;
+}
+
+.gallery.scrollable {
+  max-width: 100%;
+}
+
+/* Reminder token item */
+.reminderItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: 2px solid transparent;
+  flex-shrink: 0;
+}
+
+.reminderItem:hover {
+  background: var(--bg-hover);
+}
+
+.reminderItem.selected {
+  background: var(--color-primary-subtle);
+  border-color: var(--color-primary);
+}
+
+.reminderItem canvas {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+}
+
+.reminderText {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+  max-width: 70px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Empty state */
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  flex: 1;
+}
+
+.emptyText {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+

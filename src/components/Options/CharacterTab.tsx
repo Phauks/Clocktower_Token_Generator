@@ -2,6 +2,7 @@ import { memo, useState } from 'react'
 import type { GenerationOptions } from '../../ts/types/index'
 import { OptionGroup } from '../Shared/OptionGroup'
 import { SliderWithValue } from '../Shared/SliderWithValue'
+import styles from '../../styles/components/options/OptionsTab.module.css'
 
 interface CharacterTabProps {
   generationOptions: GenerationOptions
@@ -42,35 +43,35 @@ export const CharacterTab = memo(({ generationOptions, onOptionChange }: Charact
   }
 
   return (
-    <div className="tab-content active" data-tab-content="character">
-      <div className="subtabs-container">
-        <div className="subtabs-nav">
+    <div className={styles.tabContent} data-tab-content="character">
+      <div className={styles.subtabsContainer}>
+        <div className={styles.subtabsNav}>
           <button
-            className={`subtab-button ${activeSubTab === 'background' ? 'active' : ''}`}
+            className={`${styles.subtabButton} ${activeSubTab === 'background' ? styles.active : ''}`}
             onClick={() => setActiveSubTab('background')}
           >
             Background
           </button>
           <button
-            className={`subtab-button ${activeSubTab === 'name' ? 'active' : ''}`}
+            className={`${styles.subtabButton} ${activeSubTab === 'name' ? styles.active : ''}`}
             onClick={() => setActiveSubTab('name')}
           >
             Font
           </button>
           <button
-            className={`subtab-button ${activeSubTab === 'ability' ? 'active' : ''}`}
+            className={`${styles.subtabButton} ${activeSubTab === 'ability' ? styles.active : ''}`}
             onClick={() => setActiveSubTab('ability')}
           >
             Ability
           </button>
           <button
-            className={`subtab-button ${activeSubTab === 'decoratives' ? 'active' : ''}`}
+            className={`${styles.subtabButton} ${activeSubTab === 'decoratives' ? styles.active : ''}`}
             onClick={() => setActiveSubTab('decoratives')}
           >
             Decoratives
           </button>
           <button
-            className={`subtab-button ${activeSubTab === 'qol' ? 'active' : ''}`}
+            className={`${styles.subtabButton} ${activeSubTab === 'qol' ? styles.active : ''}`}
             onClick={() => setActiveSubTab('qol')}
           >
             QoL
@@ -79,14 +80,14 @@ export const CharacterTab = memo(({ generationOptions, onOptionChange }: Charact
 
         {/* Background Sub-Tab */}
         {activeSubTab === 'background' && (
-          <div className="subtab-content">
-            <div className="subsection">
+          <div className={styles.subtabContent}>
+            <div className={styles.subsection}>
               <OptionGroup
                 label="Background Image"
                 description="Choose the decorative pattern that appears behind the character icon. Each background offers a unique visual style."
               >
                 <select
-                  className="select-input"
+                  className={styles.selectInput}
                   value={generationOptions.characterBackground}
                   onChange={(e) => onOptionChange({ characterBackground: e.target.value })}
                 >
@@ -104,7 +105,7 @@ export const CharacterTab = memo(({ generationOptions, onOptionChange }: Charact
               >
                 <input
                   type="color"
-                  className="color-input"
+                  className={styles.colorInput}
                   value={generationOptions.characterBackgroundColor || '#FFFFFF'}
                   onChange={(e) => onOptionChange({ characterBackgroundColor: e.target.value })}
                 />
@@ -115,11 +116,11 @@ export const CharacterTab = memo(({ generationOptions, onOptionChange }: Charact
 
         {/* Name Sub-Tab */}
         {activeSubTab === 'name' && (
-          <div className="subtab-content">
-            <div className="subsection">
+          <div className={styles.subtabContent}>
+            <div className={styles.subsection}>
               <OptionGroup label="Font" description="Select the typeface used to display character names on tokens.">
                 <select
-                  className="select-input"
+                  className={styles.selectInput}
                   value={generationOptions.characterNameFont}
                   onChange={(e) => onOptionChange({ characterNameFont: e.target.value })}
                 >
@@ -132,7 +133,7 @@ export const CharacterTab = memo(({ generationOptions, onOptionChange }: Charact
               <OptionGroup label="Color" description="Choose the text color for character names.">
                 <input
                   type="color"
-                  className="color-input"
+                  className={styles.colorInput}
                   value={generationOptions.characterNameColor}
                   onChange={(e) => onOptionChange({ characterNameColor: e.target.value })}
                 />
@@ -175,15 +176,15 @@ export const CharacterTab = memo(({ generationOptions, onOptionChange }: Charact
 
         {/* Ability Sub-Tab */}
         {activeSubTab === 'ability' && (
-          <div className="subtab-content">
-            <div className="subsection">
+          <div className={styles.subtabContent}>
+            <div className={styles.subsection}>
               <OptionGroup
                 label="Display Ability Text"
                 helpText="Display ability text on character tokens"
               >
                 <input
                   type="checkbox"
-                  className="toggle-switch"
+                  className={styles.toggleSwitch}
                   checked={generationOptions.displayAbilityText}
                   onChange={(e) => onOptionChange({ displayAbilityText: e.target.checked })}
                 />
@@ -191,7 +192,7 @@ export const CharacterTab = memo(({ generationOptions, onOptionChange }: Charact
 
               <OptionGroup label="Font" helpText="Font for ability text display">
                 <select
-                  className="select-input"
+                  className={styles.selectInput}
                   value={generationOptions.abilityTextFont}
                   onChange={(e) => onOptionChange({ abilityTextFont: e.target.value })}
                 >
@@ -203,7 +204,7 @@ export const CharacterTab = memo(({ generationOptions, onOptionChange }: Charact
               <OptionGroup label="Color" helpText="Color for ability text">
                 <input
                   type="color"
-                  className="color-input"
+                  className={styles.colorInput}
                   value={generationOptions.abilityTextColor}
                   onChange={(e) => onOptionChange({ abilityTextColor: e.target.value })}
                 />
@@ -242,14 +243,14 @@ export const CharacterTab = memo(({ generationOptions, onOptionChange }: Charact
 
         {/* Decoratives Sub-Tab */}
         {activeSubTab === 'decoratives' && (
-          <div className="subtab-content">
-            <div className="subsection">
+          <div className={styles.subtabContent}>
+            <div className={styles.subsection}>
               <OptionGroup
                 label="Setup Flower Style"
                 helpText="Select setup flower overlay style"
               >
                 <select
-                  className="select-input"
+                  className={styles.selectInput}
                   value={generationOptions.setupFlowerStyle}
                   onChange={(e) => onOptionChange({ setupFlowerStyle: e.target.value })}
                 >
@@ -284,7 +285,7 @@ export const CharacterTab = memo(({ generationOptions, onOptionChange }: Charact
                   >
                     <input
                       type="text"
-                      className="text-input"
+                      className={styles.textInput}
                       value={generationOptions.leafGeneration || 'classic'}
                       onChange={(e) => onOptionChange({ leafGeneration: e.target.value })}
                       placeholder="classic"
@@ -345,15 +346,15 @@ export const CharacterTab = memo(({ generationOptions, onOptionChange }: Charact
 
         {/* QoL Sub-Tab */}
         {activeSubTab === 'qol' && (
-          <div className="subtab-content">
-            <div className="subsection">
+          <div className={styles.subtabContent}>
+            <div className={styles.subsection}>
               <OptionGroup
                 label="Show Reminder Count"
                 helpText="Show reminder count on character tokens"
               >
                 <input
                   type="checkbox"
-                  className="toggle-switch"
+                  className={styles.toggleSwitch}
                   checked={generationOptions.tokenCount}
                   onChange={(e) => onOptionChange({ tokenCount: e.target.checked })}
                 />

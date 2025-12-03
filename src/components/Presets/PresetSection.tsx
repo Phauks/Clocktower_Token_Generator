@@ -1,12 +1,13 @@
 import { useState, useCallback, useEffect } from 'react'
 import { usePresets, type CustomPreset } from '../../hooks/usePresets'
 import { useToast } from '../../contexts/ToastContext'
-import { getPreset } from '../../ts/presets'
+import { getPreset } from '../../ts/generation/presets'
 import type { PresetName } from '../../ts/types/index'
 import { PresetCard } from './PresetCard'
 import { SavePresetModal } from './SavePresetModal'
 import { EditPresetModal } from './EditPresetModal'
 import { ConfirmModal } from './ConfirmModal'
+import styles from '../../styles/components/presets/PresetSection.module.css'
 
 interface PresetSectionProps {
   customPresets: CustomPreset[]
@@ -238,7 +239,7 @@ export function PresetSection({
   return (
     <>
       {/* Built-in Presets */}
-      <div className="preset-buttons">
+      <div className={styles.presetButtons}>
           {BUILT_IN_PRESETS.map(({ name, icon }) => {
             const preset = getPreset(name)
             const isDefault = defaultPresetId === name
@@ -275,7 +276,7 @@ export function PresetSection({
         </div>
 
         {/* Custom Presets + Add button */}
-        <div className="preset-buttons">
+        <div className={styles.presetButtons}>
             {customPresets.map((preset) => {
                 const isDefault = defaultPresetId === preset.id
                 return (
@@ -336,22 +337,14 @@ export function PresetSection({
                 )
               })}
               {/* Add new preset button */}
-              <div
-                className="btn-preset btn-preset-add"
-                onClick={() => setShowSavePresetModal(true)}
+              <PresetCard
+                icon="➕"
+                name="New"
                 title="Create new preset from current settings"
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    setShowSavePresetModal(true)
-                  }
-                }}
-              >
-                <span className="preset-icon">➕</span>
-                <span className="preset-name">New</span>
-              </div>
+                onApply={() => setShowSavePresetModal(true)}
+                onMenuToggle={() => {}}
+                isAddButton
+              />
             </div>
 
       <SavePresetModal

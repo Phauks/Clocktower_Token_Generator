@@ -1,80 +1,92 @@
 import { useTokenContext } from '../../contexts/TokenContext'
 import { useFilters } from '../../hooks/useFilters'
+import styles from '../../styles/components/tokens/FilterBar.module.css'
+
+const TEAMS = [
+  { value: 'townsfolk', label: 'Townsfolk', color: '#1e90ff' },
+  { value: 'outsider', label: 'Outsiders', color: '#46b3e6' },
+  { value: 'minion', label: 'Minions', color: '#ff6b35' },
+  { value: 'demon', label: 'Demons', color: '#dc143c' },
+  { value: 'traveller', label: 'Travellers', color: '#9370db' },
+  { value: 'fabled', label: 'Fabled', color: '#ffd700' },
+  { value: 'loric', label: 'Loric', color: '#2e8b57' },
+]
+
+const TOKEN_TYPES = [
+  { value: 'character', label: 'Characters' },
+  { value: 'reminder', label: 'Reminders' },
+  { value: 'meta', label: 'Meta' },
+]
+
+const REMINDERS_OPTIONS = [
+  { value: 'has', label: 'Has Reminders' },
+  { value: 'none', label: 'No Reminders' },
+]
 
 export function FilterBar() {
-  const { filters } = useTokenContext()
-  const { setTeamFilter, setTokenTypeFilter, setDisplayFilter, setRemindersFilter, resetFilters } =
-    useFilters()
+  const { filters, updateFilters } = useTokenContext()
+  const { toggleTeam, toggleTokenType, toggleReminders } = useFilters()
+
+  const clearTeams = () => updateFilters({ teams: [] })
+  const clearTokenTypes = () => updateFilters({ tokenTypes: [] })
+  const clearReminders = () => updateFilters({ reminders: [] })
 
   return (
-    <div className="filters-container">
-      <div className="filters-row">
-        <div className="filter-group">
-          <label htmlFor="teamFilter">Filter by Team:</label>
-          <select
-            id="teamFilter"
-            className="select-input"
-            value={filters.team}
-            onChange={(e) => setTeamFilter(e.target.value)}
-          >
-            <option value="all">All Teams</option>
-            <option value="townsfolk">Townsfolk</option>
-            <option value="outsider">Outsiders</option>
-            <option value="minion">Minions</option>
-            <option value="demon">Demons</option>
-            <option value="traveller">Travellers</option>
-            <option value="fabled">Fabled</option>
-            <option value="loric">Loric</option>
-          </select>
+    <div className={styles.container}>
+      <div className={styles.filterSection}>
+        <span className={styles.filterLabel}>Team:</span>
+        <div className={styles.chipGroup}>
+          {TEAMS.map(({ value, label, color }) => (
+            <button
+              key={value}
+              className={`${styles.chip} ${filters.teams.includes(value) ? styles.chipActive : ''}`}
+              onClick={() => toggleTeam(value)}
+              style={filters.teams.includes(value) ? { backgroundColor: color, borderColor: color } : undefined}
+            >
+              {label}
+            </button>
+          ))}
         </div>
-
-        <div className="filter-group">
-          <label htmlFor="tokenTypeFilter">Token Type:</label>
-          <select
-            id="tokenTypeFilter"
-            className="select-input"
-            value={filters.tokenType}
-            onChange={(e) => setTokenTypeFilter(e.target.value)}
-          >
-            <option value="all">All Tokens</option>
-            <option value="character">Characters Only</option>
-            <option value="reminder">Reminders Only</option>
-            <option value="meta">Meta Only</option>
-          </select>
-        </div>
-
-        <div className="filter-group">
-          <label htmlFor="displayFilter">Display:</label>
-          <select
-            id="displayFilter"
-            className="select-input"
-            value={filters.display}
-            onChange={(e) => setDisplayFilter(e.target.value)}
-          >
-            <option value="all">All</option>
-            <option value="official">Official</option>
-            <option value="custom">Custom</option>
-          </select>
-        </div>
-
-        <div className="filter-group">
-          <label htmlFor="reminderFilter">Reminders:</label>
-          <select
-            id="reminderFilter"
-            className="select-input"
-            value={filters.reminders}
-            onChange={(e) => setRemindersFilter(e.target.value)}
-          >
-            <option value="all">All</option>
-            <option value="has">Has Reminders</option>
-            <option value="none">No Reminders</option>
-          </select>
-        </div>
+        {filters.teams.length > 0 && (
+          <button className={styles.clearBtn} onClick={clearTeams} title="Clear team filter">✕</button>
+        )}
       </div>
 
-      <button className="btn-secondary filter-reset" onClick={resetFilters} title="Reset all filters">
-        Reset Filters
-      </button>
+      <div className={styles.filterSection}>
+        <span className={styles.filterLabel}>Type:</span>
+        <div className={styles.chipGroup}>
+          {TOKEN_TYPES.map(({ value, label }) => (
+            <button
+              key={value}
+              className={`${styles.chip} ${filters.tokenTypes.includes(value) ? styles.chipActive : ''}`}
+              onClick={() => toggleTokenType(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {filters.tokenTypes.length > 0 && (
+          <button className={styles.clearBtn} onClick={clearTokenTypes} title="Clear type filter">✕</button>
+        )}
+      </div>
+
+      <div className={styles.filterSection}>
+        <span className={styles.filterLabel}>Reminders:</span>
+        <div className={styles.chipGroup}>
+          {REMINDERS_OPTIONS.map(({ value, label }) => (
+            <button
+              key={value}
+              className={`${styles.chip} ${filters.reminders.includes(value) ? styles.chipActive : ''}`}
+              onClick={() => toggleReminders(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {filters.reminders.length > 0 && (
+          <button className={styles.clearBtn} onClick={clearReminders} title="Clear reminders filter">✕</button>
+        )}
+      </div>
     </div>
   )
 }

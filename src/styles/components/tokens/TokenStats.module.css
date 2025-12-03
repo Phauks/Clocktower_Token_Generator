@@ -1,0 +1,61 @@
+/* ============================================
+   Component: TokenStats
+   Token count statistics display
+   ============================================ */
+
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-md);
+  background-color: var(--bg-input);
+  border-radius: var(--border-radius-sm);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: 0.875rem;
+}
+
+.label {
+  color: var(--text-secondary);
+}
+
+.value {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ---- Total Variant ---- */
+.total {
+  margin-left: auto;
+  padding-left: var(--spacing-md);
+  border-left: 1px solid var(--border-color);
+}
+
+.total .label,
+.total .value {
+  color: var(--color-accent);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+  .container {
+    justify-content: space-between;
+  }
+
+  .total {
+    width: 100%;
+    margin-left: 0;
+    padding-left: 0;
+    padding-top: var(--spacing-sm);
+    border-left: none;
+    border-top: 1px solid var(--border-color);
+    justify-content: center;
+  }
+}
+
+

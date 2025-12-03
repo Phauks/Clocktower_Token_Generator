@@ -1,4 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
+import styles from '../../styles/components/presets/PresetModal.module.css'
+import modalStyles from '../../styles/components/layout/Modal.module.css'
 
 interface SavePresetModalProps {
   isOpen: boolean
@@ -101,29 +103,29 @@ export function SavePresetModal({ isOpen, onClose, onSave, onImport, importError
   if (!isOpen) return null
 
   return (
-    <div className="settings-modal">
-      <div className="modal-backdrop" onClick={onClose} />
+    <div className={modalStyles.overlay}>
+      <div className={modalStyles.backdrop} onClick={onClose} />
       <div 
-        className={`modal-container ${isDragging ? 'drag-over' : ''}`}
+        className={`${modalStyles.container} ${isDragging ? styles.dragOver : ''}`}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
-        <div className="modal-header">
+        <div className={modalStyles.header}>
           <h2>Save Current Settings as Preset</h2>
-          <button className="modal-close" onClick={onClose}>
+          <button className={modalStyles.closeBtn} onClick={onClose}>
             ×
           </button>
         </div>
-        <div className="modal-body">
+        <div className={modalStyles.body}>
           {displayError && (
-            <div className="error-message" style={{ marginBottom: 'var(--spacing-md)' }}>
+            <div className={styles.errorMessage} style={{ marginBottom: 'var(--spacing-md)' }}>
               ⚠️ {displayError}
             </div>
           )}
-          <form className="preset-modal-form">
-            <div className="form-group">
+          <form className={styles.form}>
+            <div className={styles.formGroup}>
               <label htmlFor="presetName">Preset Name *</label>
               <input
                 id="presetName"
@@ -139,7 +141,7 @@ export function SavePresetModal({ isOpen, onClose, onSave, onImport, importError
                 }}
               />
             </div>
-            <div className="form-group">
+            <div className={styles.formGroup}>
               <label htmlFor="presetDescription">Description</label>
               <input
                 id="presetDescription"
@@ -149,13 +151,13 @@ export function SavePresetModal({ isOpen, onClose, onSave, onImport, importError
                 placeholder="Optional description of this preset"
               />
             </div>
-            <div className="form-group">
+            <div className={styles.formGroup}>
               <label htmlFor="presetIcon">Icon</label>
-              <div className="emoji-picker">
+              <div className={styles.emojiPicker}>
                 {['⭐', '🌸', '⬜', '🎨', '✨', '🎭', '🎪', '🎯', '🌙', '🔥', '💎', '🍀'].map((emoji) => (
                   <button
                     key={emoji}
-                    className={`emoji-option ${presetIcon === emoji ? 'selected' : ''}`}
+                    className={`${styles.emojiOption} ${presetIcon === emoji ? styles.selected : ''}`}
                     onClick={(e) => {
                       e.preventDefault()
                       setPresetIcon(emoji)
@@ -168,7 +170,7 @@ export function SavePresetModal({ isOpen, onClose, onSave, onImport, importError
             </div>
           </form>
         </div>
-        <div className="modal-actions">
+        <div className={modalStyles.actions}>
           {onImport && (
             <>
               <input
@@ -178,15 +180,15 @@ export function SavePresetModal({ isOpen, onClose, onSave, onImport, importError
                 style={{ display: 'none' }}
                 onChange={handleImportFile}
               />
-              <button className="btn-secondary" onClick={handleImportClick}>
+              <button className={modalStyles.secondaryBtn} onClick={handleImportClick}>
                 📥 Import
               </button>
             </>
           )}
-          <button className="btn-secondary" onClick={onClose}>
+          <button className={modalStyles.secondaryBtn} onClick={onClose}>
             Cancel
           </button>
-          <button className="btn-primary" onClick={handleSave} disabled={!presetName.trim()}>
+          <button className={modalStyles.primaryBtn} onClick={handleSave} disabled={!presetName.trim()}>
             Save Preset
           </button>
         </div>

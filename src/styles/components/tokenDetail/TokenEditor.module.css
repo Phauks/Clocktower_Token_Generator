@@ -267,17 +267,16 @@
 }
 
 /* Disabled overlay for official characters */
-.tabContent.disabled::after {
+.tabContent.disabled::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
+  height: 200vh;
   background: rgba(128, 128, 128, 0.30);
   pointer-events: none;
-  border-radius: var(--border-radius);
-  z-index: 1;
+  z-index: 10;
 }
 
 /* Form groups */
@@ -316,6 +315,13 @@
 
 .formGroup textarea {
   resize: vertical;
+  min-height: 60px;
+}
+
+/* Auto-expanding textarea - grows to fit content */
+.formGroup textarea.autoExpand {
+  resize: none;
+  overflow: hidden;
   min-height: 60px;
 }
 
@@ -987,4 +993,76 @@
   border-radius: var(--border-radius-sm);
 }
 
+/* Format warning for night reminder fields */
+.formatWarning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-warning-subtle, rgba(255, 193, 7, 0.15));
+  border: 1px solid var(--color-warning, #ffc107);
+  border-radius: var(--border-radius);
+  font-size: 0.8125rem;
+}
 
+.warningIcon {
+  flex-shrink: 0;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.warningContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.warningTitle {
+  display: block;
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.warningList {
+  margin: 0;
+  padding-left: var(--spacing-md);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.warningList li {
+  margin-bottom: 2px;
+}
+
+.warningList li:last-child {
+  margin-bottom: 0;
+}
+
+.fixButton {
+  flex-shrink: 0;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: 0.75rem;
+  font-weight: var(--font-weight-medium);
+  background: var(--color-warning, #ffc107);
+  color: var(--color-warning-text, #000);
+  border: none;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+  white-space: nowrap;
+}
+
+.fixButton:hover:not(:disabled) {
+  background: var(--color-warning-hover, #e0a800);
+  transform: translateY(-1px);
+}
+
+.fixButton:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.fixButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

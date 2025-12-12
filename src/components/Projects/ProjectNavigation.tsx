@@ -1,14 +1,17 @@
 /**
  * Project Navigation Component
  *
- * Left sidebar for project browsing and selection.
- * Follows CharacterNavigation pattern with search, sort, and action buttons.
+ * Left sidebar content for project browsing and selection.
+ * Renders as content inside ViewLayout.Panel (no wrapper element).
  */
 
 import { useState, useEffect, useRef } from 'react'
-import type { Project } from '../../ts/types/project.js'
+import type { Project, ProjectVersion } from '../../ts/types/project.js'
+import { projectDb } from '../../ts/db/projectDb'
 import { useContextMenu } from '../../hooks/useContextMenu'
+import { Button } from '../Shared/Button'
 import styles from '../../styles/components/projects/ProjectNavigation.module.css'
+import layoutStyles from '../../styles/components/layout/ViewLayout.module.css'
 import contextMenuStyles from '../../styles/components/shared/ContextMenu.module.css'
 
 interface ProjectNavigationProps {
@@ -36,11 +39,38 @@ export function ProjectNavigation({
 }: ProjectNavigationProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<'recent' | 'alphabetical'>('recent')
-  const [showArchived, setShowArchived] = useState(false)
   const selectedRef = useRef<HTMLDivElement>(null)
+
+  // Latest version for each project
+  const [latestVersions, setLatestVersions] = useState<Map<string, ProjectVersion>>(new Map())
 
   // Context menu for project actions
   const contextMenu = useContextMenu<Project>()
+
+  // Load latest versions for all projects
+  useEffect(() => {
+    const loadLatestVersions = async () => {
+      const versionMap = new Map<string, ProjectVersion>()
+
+      for (const project of projects) {
+        try {
+          const latestVersion = await projectDb.getLatestProjectVersion(project.id)
+          if (latestVersion) {
+            versionMap.set(project.id, latestVersion)
+          }
+        } catch (error) {
+          // Silently skip errors - version badges are optional
+          console.debug(`Failed to load version for project ${project.id}:`, error)
+        }
+      }
+
+      setLatestVersions(versionMap)
+    }
+
+    if (projects.length > 0) {
+      loadLatestVersions()
+    }
+  }, [projects])
 
   // Scroll to selected project
   useEffect(() => {
@@ -90,7 +120,7 @@ export function ProjectNavigation({
   const renderProjectItem = (project: Project) => {
     const isSelected = project.id === selectedProjectId
     const isActive = project.id === currentProjectId
-    const { stats } = project
+    const latestVersion = latestVersions.get(project.id)
 
     return (
       <div
@@ -108,11 +138,17 @@ export function ProjectNavigation({
           }
         }}
       >
-        {isActive && <div className={styles.activeIndicator} />}
         <div className={styles.info}>
-          <div className={styles.name}>{project.name}</div>
+          <div className={styles.nameRow}>
+            <div className={styles.name}>{project.name}</div>
+            {latestVersion && (
+              <span className={styles.versionBadge} title={`Latest version: ${latestVersion.versionNumber}`}>
+                v{latestVersion.versionNumber}
+              </span>
+            )}
+          </div>
           <div className={styles.meta}>
-            {stats.characterCount} chars • {formatRelativeTime(project.lastModifiedAt)}
+            {project.stats.characterCount} chars • {formatRelativeTime(project.lastModifiedAt)}
           </div>
         </div>
       </div>
@@ -127,69 +163,74 @@ export function ProjectNavigation({
   }
 
   return (
-    <aside className={styles.nav}>
-      {/* Header */}
-      <div className={styles.header}>
-        <div className={styles.headerTop}>
-          <h3>MY PROJECTS</h3>
+    <div className={layoutStyles.panelContent}>
+      {/* Header with Actions */}
+      <details className={layoutStyles.sidebarCard} open>
+        <summary className={layoutStyles.sectionHeader}>My Projects</summary>
+        <div className={layoutStyles.optionSection}>
+          <div className={styles.actionButtons}>
+            <Button
+              variant="secondary"
+              size="small"
+              onClick={onCreateProject}
+              title="Create New Project"
+            >
+              + Create
+            </Button>
+            <Button
+              variant="secondary"
+              size="small"
+              onClick={onImportProject}
+              title="Import Project"
+            >
+              Import
+            </Button>
+          </div>
         </div>
-        <div className={styles.headerActions}>
-          <button
-            type="button"
-            className={styles.actionBtn}
-            onClick={onCreateProject}
-            title="Create New Project"
-          >
-            + Create
-          </button>
-          <button
-            type="button"
-            className={styles.actionBtn}
-            onClick={onImportProject}
-            title="Import Project"
-          >
-            Import
-          </button>
-        </div>
-      </div>
+      </details>
 
       {/* Search and Sort */}
-      <div className={styles.controls}>
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search projects..."
-          className={styles.searchInput}
-        />
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as 'recent' | 'alphabetical')}
-          className={styles.sortSelect}
-        >
-          <option value="recent">Most Recent</option>
-          <option value="alphabetical">Alphabetical</option>
-        </select>
-      </div>
+      <details className={layoutStyles.sidebarCard} open>
+        <summary className={layoutStyles.sectionHeader}>Filter</summary>
+        <div className={layoutStyles.optionSection}>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search projects..."
+            className={styles.searchInput}
+          />
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'recent' | 'alphabetical')}
+            className={styles.sortSelect}
+          >
+            <option value="recent">Most Recent</option>
+            <option value="alphabetical">Alphabetical</option>
+          </select>
+        </div>
+      </details>
 
       {/* Projects List */}
-      <div className={styles.list}>
-        {filteredProjects.length === 0 && !searchQuery && (
-          <div className={styles.emptyState}>
-            <p>No projects yet</p>
-            <button onClick={onCreateProject} className={styles.emptyStateBtn}>
-              Create First Project
-            </button>
-          </div>
-        )}
+      <div className={styles.listContainer}>
+        <div className={`${styles.list} ${layoutStyles.hiddenScrollbar}`}>
+          {filteredProjects.length === 0 && !searchQuery && (
+            <div className={styles.emptyState}>
+              <p>No projects yet</p>
+              <Button variant="primary" size="small" onClick={onCreateProject}>
+                Create First Project
+              </Button>
+            </div>
+          )}
 
-        {filteredProjects.length === 0 && searchQuery && (
-          <div className={styles.emptyState}>
-            <p>No projects found matching "{searchQuery}"</p>
-          </div>
-        )}
+          {filteredProjects.length === 0 && searchQuery && (
+            <div className={styles.emptyState}>
+              <p>No projects found matching "{searchQuery}"</p>
+            </div>
+          )}
 
-        {filteredProjects.map((project) => renderProjectItem(project))}
+          {filteredProjects.map((project) => renderProjectItem(project))}
+        </div>
       </div>
 
       {/* Context Menu */}
@@ -213,6 +254,6 @@ export function ProjectNavigation({
           </button>
         </div>
       )}
-    </aside>
+    </div>
   )
 }

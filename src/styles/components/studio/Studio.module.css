@@ -1,0 +1,270 @@
+/**
+ * Studio View Styles
+ *
+ * Component styles for the Studio image editor.
+ * Layout is handled by ViewLayout.
+ */
+
+/* Sidebar Sections (content styling, not layout) */
+.sidebarSection {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.sectionTitle {
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--spacing-sm);
+}
+
+/* Center Canvas Area */
+.canvasArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-main);
+  overflow: hidden;
+  position: relative;
+  height: 100%;
+}
+
+.canvasContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden; /* No scrollbars - use pan for navigation */
+}
+
+.canvasWrapper {
+  /* Position set via inline style for transform-based zoom/pan */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--color-primary);
+  will-change: transform; /* Optimize transforms */
+}
+
+.canvas {
+  display: block;
+  background: #ffffff;
+  image-rendering: crisp-edges;
+  image-rendering: -webkit-crisp-edges;
+  image-rendering: -moz-crisp-edges;
+}
+
+/* Canvas Overlay for Grid/Guides */
+.canvasOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Zoom Controls */
+.zoomControls {
+  position: absolute;
+  bottom: var(--spacing-md);
+  right: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  background: var(--bg-panel);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-xs);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.zoomButton {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: var(--border-radius-sm);
+  color: var(--text-primary);
+  transition: background var(--transition-fast);
+}
+
+.zoomButton:hover {
+  background: var(--bg-hover);
+}
+
+.zoomLevel {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  min-width: 60px;
+  text-align: center;
+  user-select: none;
+}
+
+/* Empty State */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-xl);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.emptyStateIcon {
+  font-size: 4rem;
+  opacity: 0.3;
+}
+
+.emptyStateTitle {
+  font-size: 1.25rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.emptyStateText {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  max-width: 400px;
+  margin: 0;
+}
+
+.emptyStateActions {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
+}
+
+/* Processing Overlay */
+.processingOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.processingContent {
+  background: var(--bg-panel);
+  padding: var(--spacing-xl);
+  border-radius: var(--border-radius);
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.processingSpinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--color-primary);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto var(--spacing-md);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.processingText {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Toolbar button styles */
+.toolbarButton {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: transparent;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.toolbarButton:hover {
+  background: var(--bg-hover);
+  border-color: var(--color-accent);
+}
+
+.toolbarButton:active {
+  transform: scale(0.98);
+}
+
+.toolbarButton.active {
+  background: var(--color-accent);
+  color: #ffffff;
+  border-color: var(--color-accent);
+}
+
+.toolbarButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toolbarButton:disabled:hover {
+  background: transparent;
+  border-color: var(--color-primary);
+}
+
+/* Icon button variant */
+.iconButton {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Unsaved changes indicator */
+.unsavedIndicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  margin-left: var(--spacing-xs);
+}
+
+/* Context Menu */
+.contextMenuItem {
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.contextMenuItem:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.contextMenuItem:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

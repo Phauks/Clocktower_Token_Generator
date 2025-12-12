@@ -1,7 +1,7 @@
 /**
  * Blood on the Clocktower Token Generator
  * Utility Functions - Barrel Export
- * 
+ *
  * This module re-exports all utility functions for convenient importing.
  * Functions are organized into domain-specific modules:
  * - stringUtils: filename sanitization, capitalize, unique names
@@ -9,6 +9,7 @@
  * - jsonUtils: JSON formatting, validation, deep cloning
  * - colorUtils: hex to RGB conversion, contrast colors
  * - asyncUtils: debounce, sleep, array shuffling
+ * - compressionUtils: gzip compression/decompression for storage optimization
  */
 
 // String utilities
@@ -34,7 +35,9 @@ export {
     validateJson,
     deepClone,
     stripInternalFields,
-    getCleanJsonForExport
+    getCleanJsonForExport,
+    condenseScript,
+    hasCondensableReferences
 } from './jsonUtils.js';
 
 // Storage utilities
@@ -95,7 +98,71 @@ export {
     SAO_ABILITY_PREFIXES
 } from './scriptSorting.js';
 
+// Compression utilities
+export {
+    isCompressionSupported,
+    compressString,
+    decompressBlob,
+    compressJSON,
+    decompressJSON,
+    getCompressionRatio,
+    getCompressionStats
+} from './compressionUtils.js';
+
+// Logger utilities
+export {
+    logger,
+    Logger,
+    ContextLogger,
+    LogLevel,
+    enableDebugLogging,
+    enableTimestamps
+} from './logger.js';
+
+// Error handling utilities
+export {
+    handleHookError,
+    clearHookError,
+    handleAsyncOperation,
+    retryOperation,
+    guardAgainstUndefined,
+    validateRequiredFields
+} from './errorUtils.js';
+
+// Text format analyzer utilities
+export {
+    analyzeReminderText,
+    normalizeReminderText,
+    hasFormatIssues,
+    getIssueSummary,
+    FORMAT_PATTERNS
+} from './textFormatAnalyzer.js';
+
+// Character image resolution utilities (SSOT for all character icon resolution)
+export {
+    resolveCharacterImageUrl,
+    resolveCharacterImages,
+    isExternalUrl,
+    extractCharacterIdFromPath,
+    getFirstImageUrl
+} from './characterImageResolver.js';
+
 // Re-export types
 export type { DebouncedFunction } from './asyncUtils.js';
 export type { ProgressCallback, ProgressState } from './progressUtils.js';
 export type { SortOrder, ScriptSortOptions } from './scriptSorting.js';
+export type { LoggerConfig } from './logger.js';
+export type {
+    ErrorHandlingOptions,
+    AsyncOperationOptions,
+    RetryOptions
+} from './errorUtils.js';
+export type {
+    FormatPattern,
+    FormatIssue
+} from './textFormatAnalyzer.js';
+export type {
+    ResolveOptions,
+    ResolvedImage,
+    BatchResolveResult
+} from './characterImageResolver.js';

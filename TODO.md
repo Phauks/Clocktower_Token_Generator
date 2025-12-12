@@ -1,5 +1,7 @@
 # TODO - Blood on the Clocktower Token Generator
 
+Also look at ESLINT
+
 This document tracks planned features, enhancements, and deferred work items.
 
 ---

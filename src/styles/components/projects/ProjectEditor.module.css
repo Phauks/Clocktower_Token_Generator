@@ -4,37 +4,51 @@
  * Reorganized layout with actions box, separate logo settings, independent scrolling
  */
 
-.container {
+/* Note: Container layout now handled by ViewLayout.contentPanel class
+ * This file contains only ProjectEditor-specific styles */
+
+/* Tab Navigation */
+.tabNavigation {
+  display: flex;
+  gap: 8px;
+  padding: 16px 24px 0;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--surface-background);
+}
+
+.tabButton {
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.tabButton:hover {
+  color: var(--text-primary);
+  background: var(--hover-background);
+}
+
+.tabActive {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+.tabActive:hover {
+  background: transparent;
+}
+
+/* Versions Container */
+.versionsContainer {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  background: var(--color-background);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
-  padding: var(--spacing-lg);
-  min-height: 0;
-  /* Fixed height to enable independent scrolling from sidebar */
-  height: calc(100vh - 120px);
-  max-height: calc(100vh - 120px);
-}
-
-.container::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.container::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
-}
-
-.container::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 4px;
-}
-
-.container::-webkit-scrollbar-thumb:hover {
-  background: var(--border-hover);
 }
 
 /* Empty State */
@@ -56,9 +70,26 @@
 }
 
 .emptyState p {
-  margin: 0;
+  margin: 0 0 var(--spacing-lg) 0;
   font-size: 1rem;
   color: var(--text-secondary);
+}
+
+.emptyStateContent {
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.emptyStateButtons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  width: 100%;
+  max-width: 300px;
+  align-items: stretch;
 }
 
 /* Loading State - Token preview generation */
@@ -97,6 +128,8 @@
   display: flex;
   gap: var(--spacing-lg);
   align-items: flex-start;
+  overflow: visible; /* Allow dropdowns to overflow */
+  position: relative; /* Establish positioning context */
 }
 
 /* Left Column - Contains Project Info and Meta Box */
@@ -126,6 +159,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
+  overflow: visible; /* Allow dropdown to overflow */
+  position: relative; /* Establish positioning context */
 }
 
 /* Logo Display Container */
@@ -472,6 +507,67 @@
   /* CharacterGridView handles its own styling */
 }
 
+/* Compare Section - For version comparison view */
+.compareSection {
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius);
+}
+
+/* ============================================
+   View Toggle - Tokens/List Display Mode
+   ============================================ */
+
+.viewToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) 0;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: var(--spacing-md);
+}
+
+.viewToggleLabel {
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+}
+
+.viewToggleButton {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.viewToggleButton:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.viewToggleActive {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: white;
+}
+
+.viewToggleActive:hover {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: white;
+  opacity: 0.9;
+}
+
 /* Action Buttons - for Actions Box */
 .activateButton,
 .deactivateButton,
@@ -677,6 +773,109 @@
   color: #b71c1c;
 }
 
+/* ============================================
+   Settings Tab Styles
+   ============================================ */
+
+.settingsContainer {
+  padding: var(--spacing-lg) var(--spacing-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+  max-width: 600px;
+}
+
+.settingsSection {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg);
+}
+
+.settingsSectionTitle {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: 1rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 2px solid var(--border-color);
+}
+
+.settingsDescription {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.settingsActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.settingsButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.settingsButton:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.deleteButtonLarge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+  padding: var(--spacing-md);
+  background: rgba(211, 47, 47, 0.1);
+  border: 1px solid #d32f2f;
+  border-radius: var(--border-radius);
+  color: #d32f2f;
+  font-size: 0.9rem;
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.deleteButtonLarge:hover:not(:disabled) {
+  background: #d32f2f;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(211, 47, 47, 0.3);
+}
+
+.deleteButtonLarge:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settingsWarning {
+  margin: var(--spacing-sm) 0 0 0;
+  padding: var(--spacing-sm);
+  background: rgba(255, 152, 0, 0.1);
+  border: 1px solid rgba(255, 152, 0, 0.3);
+  border-radius: var(--border-radius-sm);
+  color: #e65100;
+  font-size: 0.8rem;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
   .topSection {
@@ -707,5 +906,10 @@
   .deleteButton {
     flex: 1;
     min-width: 100px;
+  }
+
+  .settingsContainer {
+    padding: var(--spacing-md);
+    max-width: 100%;
   }
 }

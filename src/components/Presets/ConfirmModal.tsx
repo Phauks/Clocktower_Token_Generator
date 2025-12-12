@@ -1,5 +1,11 @@
-import styles from '../../styles/components/presets/PresetModal.module.css'
-import modalStyles from '../../styles/components/layout/Modal.module.css'
+/**
+ * Confirm Modal (Presets)
+ *
+ * Generic confirmation dialog for preset operations.
+ * Migrated to use the unified ConfirmDialog component.
+ */
+
+import { ConfirmDialog } from '../Shared/Modal/ConfirmDialog'
 
 interface ConfirmModalProps {
   isOpen: boolean
@@ -20,30 +26,15 @@ export function ConfirmModal({
   confirmText = 'Confirm',
   cancelText = 'Cancel',
 }: ConfirmModalProps) {
-  if (!isOpen) return null
-
   return (
-    <div className={modalStyles.overlay}>
-      <div className={modalStyles.backdrop} onClick={onCancel} />
-      <div className={`${modalStyles.container} ${styles.modalConfirm}`}>
-        <div className={modalStyles.header}>
-          <h2>{title}</h2>
-          <button className={modalStyles.closeBtn} onClick={onCancel}>
-            ×
-          </button>
-        </div>
-        <div className={modalStyles.body}>
-          <p>{message}</p>
-        </div>
-        <div className={modalStyles.actions}>
-          <button className={modalStyles.primaryBtn} onClick={onConfirm}>
-            {confirmText}
-          </button>
-          <button className={modalStyles.secondaryBtn} onClick={onCancel}>
-            {cancelText}
-          </button>
-        </div>
-      </div>
-    </div>
+    <ConfirmDialog
+      isOpen={isOpen}
+      onClose={onCancel}
+      onConfirm={onConfirm}
+      title={title}
+      message={message}
+      confirmText={confirmText}
+      cancelText={cancelText}
+    />
   )
 }

@@ -1,0 +1,201 @@
+/**
+ * Character List View Styles
+ *
+ * Compact table-style display for characters:
+ * [Icon | Name | Ability]
+ * Grouped by team with collapsible colored headers.
+ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 0;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Team Section */
+.teamSection {
+  background: var(--surface-elevated);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+/* Team Header - Clickable for collapse */
+.teamHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.6rem 1rem;
+  color: white;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  border: none;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+  text-align: left;
+}
+
+.teamHeader:hover {
+  filter: brightness(1.1);
+}
+
+.teamHeader:focus {
+  outline: 2px solid white;
+  outline-offset: -2px;
+}
+
+.collapseIcon {
+  font-size: 0.7rem;
+  width: 1rem;
+  text-align: center;
+  opacity: 0.9;
+}
+
+.teamName {
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  flex: 1;
+}
+
+.teamCount {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+}
+
+/* Character List */
+.characterList {
+  display: flex;
+  flex-direction: column;
+}
+
+.characterRow {
+  display: grid;
+  grid-template-columns: 64px 140px 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.15s ease;
+}
+
+.characterRow:last-child {
+  border-bottom: none;
+}
+
+.characterRow:hover {
+  background: var(--surface-hover);
+}
+
+/* Character Icon - Shows the raw character icon (no background) */
+.characterIcon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  /* No background - icons display directly */
+}
+
+.iconImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.iconPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Character Name */
+.characterName {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Character Ability - Full text shown */
+.characterAbility {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.noAbility {
+  font-style: italic;
+  opacity: 0.6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .characterRow {
+    grid-template-columns: 50px 1fr;
+    grid-template-rows: auto auto;
+    gap: 0.4rem 0.6rem;
+  }
+
+  .characterIcon {
+    grid-row: span 2;
+    width: 46px;
+    height: 46px;
+  }
+
+  .characterName {
+    grid-column: 2;
+    white-space: normal;
+    font-size: 0.85rem;
+  }
+
+  .characterAbility {
+    grid-column: 2;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    gap: 0.5rem;
+  }
+
+  .teamHeader {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .teamName {
+    font-size: 0.8rem;
+  }
+
+  .characterRow {
+    padding: 0.4rem 0.75rem;
+    grid-template-columns: 44px 1fr;
+  }
+
+  .characterIcon {
+    width: 40px;
+    height: 40px;
+  }
+}

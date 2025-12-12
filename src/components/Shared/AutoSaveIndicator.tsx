@@ -11,24 +11,22 @@
 
 import { useState, useCallback } from 'react';
 import { useProjectContext } from '../../contexts/ProjectContext';
-import { useProjectAutoSave } from '../../hooks/useProjectAutoSave';
 import type { AutoSaveStatus } from '../../ts/types/project.js';
+import { ProjectHistoryModal } from '../Modals/ProjectHistoryModal';
 import styles from '../../styles/components/shared/AutoSaveIndicator.module.css';
 
-interface AutoSaveIndicatorProps {
-  showSaveButton?: boolean; // Show manual save button
-}
-
-export function AutoSaveIndicator({ showSaveButton = true }: AutoSaveIndicatorProps) {
+export function AutoSaveIndicator() {
   const { currentProject, autoSaveStatus, lastSavedAt } = useProjectContext();
-  const { saveNow, isAutoSaveEnabled } = useProjectAutoSave();
   const [showTooltip, setShowTooltip] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+  // Determine if auto-save is enabled (has active project)
+  const isAutoSaveEnabled = !!currentProject;
 
   const getStatusInfo = useCallback(
     (status: AutoSaveStatus): { label: string; icon: string; color: string } => {
       if (!isAutoSaveEnabled) {
-        return { label: 'No Project', icon: '○', color: 'idle' };
+        return { label: 'No Project', icon: '⚠', color: 'warning' };
       }
 
       switch (status.state) {
@@ -51,16 +49,25 @@ export function AutoSaveIndicator({ showSaveButton = true }: AutoSaveIndicatorPr
 
   const statusInfo = getStatusInfo(autoSaveStatus);
 
-  const getTooltipText = useCallback(() => {
+  const getTooltipText = () => {
     const lines: string[] = [];
 
     // Project name
     if (currentProject) {
       lines.push(`Project: ${currentProject.name}`);
+    } else {
+      lines.push('No active project');
     }
 
     // Status
     lines.push(`Status: ${statusInfo.label}`);
+
+    // Helpful message when no project is active
+    if (!isAutoSaveEnabled) {
+      lines.push('Create or load a project to enable auto-save');
+    } else {
+      lines.push('Auto-save: Enabled (saves every 2 seconds)');
+    }
 
     // Last saved
     if (lastSavedAt) {
@@ -79,26 +86,7 @@ export function AutoSaveIndicator({ showSaveButton = true }: AutoSaveIndicatorPr
     }
 
     return lines.join('\n');
-  }, [currentProject, autoSaveStatus, lastSavedAt, statusInfo.label]);
-
-  const handleSaveNow = useCallback(async () => {
-    if (!isAutoSaveEnabled || isSaving) {
-      return;
-    }
-
-    try {
-      setIsSaving(true);
-      await saveNow();
-    } catch (error) {
-      console.error('Manual save failed:', error);
-    } finally {
-      setIsSaving(false);
-    }
-  }, [isAutoSaveEnabled, isSaving, saveNow]);
-
-  if (!isAutoSaveEnabled) {
-    return null; // Don't show when no project is active
-  }
+  };
 
   return (
     <div className={styles.container}>
@@ -130,17 +118,26 @@ export function AutoSaveIndicator({ showSaveButton = true }: AutoSaveIndicatorPr
         )}
       </div>
 
-      {/* Manual Save Button */}
-      {showSaveButton && autoSaveStatus.isDirty && (
+      {/* View History Button */}
+      {isAutoSaveEnabled && (
         <button
           type="button"
-          className={styles.saveButton}
-          onClick={handleSaveNow}
-          disabled={isSaving || autoSaveStatus.state === 'saving'}
-          aria-label="Save now"
+          className={styles.historyButton}
+          onClick={() => setShowHistoryModal(true)}
+          aria-label="View version history"
+          title="View version history"
         >
-          {isSaving ? 'Saving...' : 'Save Now'}
+          🕒
         </button>
+      )}
+
+      {/* Project History Modal (unified timeline with versions + snapshots) */}
+      {currentProject && (
+        <ProjectHistoryModal
+          isOpen={showHistoryModal}
+          onClose={() => setShowHistoryModal(false)}
+          project={currentProject}
+        />
       )}
     </div>
   );

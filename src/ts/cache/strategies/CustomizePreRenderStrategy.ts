@@ -11,6 +11,7 @@ import type {
 } from '../core/index.js'
 import type { Token, Character, GenerationOptions } from '../../types/index.js'
 import { regenerateCharacterAndReminders } from '../../ui/detailViewUtils.js'
+import { globalImageCache } from '../../utils/imageCache.js'
 
 /**
  * Cache entry for pre-rendered character tokens.
@@ -138,6 +139,71 @@ export class CustomizePreRenderStrategy implements IPreRenderStrategy {
     const cacheKey = this.getCacheKey(character, options)
     const entry = await this.cache.get(cacheKey)
     return entry?.value ?? null
+  }
+
+  /**
+   * Preload images for character and variants during idle time.
+   * Uses requestIdleCallback to avoid blocking user interactions.
+   *
+   * @param context - Pre-render context with characters
+   * @param onProgress - Optional progress callback (loaded, total)
+   * @returns Promise that resolves when preloading completes
+   */
+  async preloadImages(
+    context: PreRenderContext,
+    onProgress?: (loaded: number, total: number) => void
+  ): Promise<void> {
+    const { characters, generationOptions } = context
+
+    if (!characters || characters.length === 0) {
+      onProgress?.(0, 0)
+      return
+    }
+
+    // Extract image URLs from first character (customize view focuses on one character)
+    const imageUrls = new Set<string>()
+    const character = characters[0]
+
+    // Add character images (including variants)
+    if (character.image) {
+      if (Array.isArray(character.image)) {
+        character.image.forEach(url => imageUrls.add(url))
+      } else {
+        imageUrls.add(character.image)
+      }
+    }
+
+    // Add background images from generation options
+    if (generationOptions) {
+      const { characterBackground, reminderBackground, logoUrl } = generationOptions
+      if (characterBackground) imageUrls.add(characterBackground)
+      if (reminderBackground) imageUrls.add(reminderBackground)
+      if (logoUrl) imageUrls.add(logoUrl)
+    }
+
+    // Filter out already cached images
+    const urlsToLoad = Array.from(imageUrls).filter(url => !globalImageCache.has(url))
+
+    if (urlsToLoad.length === 0) {
+      // All images already cached
+      onProgress?.(0, 0)
+      return
+    }
+
+    // Preload images using idle callback for non-blocking behavior
+    return new Promise((resolve) => {
+      const preload = async () => {
+        await globalImageCache.preloadMany(urlsToLoad, false, onProgress)
+        resolve()
+      }
+
+      if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(preload, { timeout: 2000 })
+      } else {
+        // Fallback: use setTimeout for non-blocking behavior
+        setTimeout(preload, 0)
+      }
+    })
   }
 
   /**

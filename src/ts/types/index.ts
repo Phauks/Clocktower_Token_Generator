@@ -13,6 +13,82 @@ export * from './project.js';
 export type { UITheme, ThemeId } from '../themes.js';
 export { UI_THEMES, DEFAULT_THEME_ID, getTheme, isValidThemeId, getThemeIds } from '../themes.js';
 
+// ============================================================================
+// Asset Reference Types - Type-safe references to IndexedDB assets
+// ============================================================================
+
+/**
+ * Branded type for asset references stored in IndexedDB.
+ * Provides compile-time safety to distinguish asset IDs from URLs.
+ *
+ * Format: "asset:<uuid>"
+ * Example: "asset:a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ */
+export type AssetReference = string & { readonly __brand: 'AssetReference' };
+
+/**
+ * Create a type-safe asset reference from an asset ID.
+ *
+ * @param assetId - The asset UUID from IndexedDB
+ * @returns Branded AssetReference string
+ *
+ * @example
+ * ```typescript
+ * const assetId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+ * const ref = createAssetReference(assetId);
+ * // ref: "asset:a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ * ```
+ */
+export function createAssetReference(assetId: string): AssetReference {
+  return `asset:${assetId}` as AssetReference;
+}
+
+/**
+ * Type guard to check if a value is an AssetReference.
+ *
+ * @param value - String to check
+ * @returns True if value is an AssetReference
+ *
+ * @example
+ * ```typescript
+ * if (isAssetReference(character.image)) {
+ *   // TypeScript knows image is AssetReference here
+ *   const assetId = extractAssetId(character.image);
+ * }
+ * ```
+ */
+export function isAssetReference(value: string): value is AssetReference {
+  return value.startsWith('asset:');
+}
+
+/**
+ * Extract the asset ID from an AssetReference.
+ *
+ * @param ref - AssetReference string
+ * @returns The underlying asset UUID
+ *
+ * @example
+ * ```typescript
+ * const ref = createAssetReference("abc-123");
+ * const id = extractAssetId(ref);
+ * // id: "abc-123"
+ * ```
+ */
+export function extractAssetId(ref: AssetReference): string {
+  return ref.replace(/^asset:/, '');
+}
+
+/**
+ * Check if a value is a URL (http/https/data/blob).
+ * Used to distinguish URLs from AssetReferences.
+ *
+ * @param value - String to check
+ * @returns True if value is a URL
+ */
+export function isUrl(value: string): boolean {
+  return /^(https?:\/\/|data:|blob:)/.test(value);
+}
+
 // Image source types for visual selectors
 export type ImageSource = 'builtin' | 'user' | 'global';
 
@@ -56,7 +132,14 @@ export interface Character {
     examples?: string;
     howToRun?: string;
     tips?: string;
-    image: string | string[];
+    /**
+     * Character icon image.
+     * Can be:
+     * - URL string (http/https/data/blob)
+     * - AssetReference (asset:<uuid> for IndexedDB assets)
+     * - Array of URLs or AssetReferences (multiple images)
+     */
+    image: string | string[] | AssetReference | AssetReference[];
     setup?: boolean;
     reminders?: string[];
     remindersGlobal?: string[];
@@ -241,6 +324,9 @@ export interface Token {
     variantIndex?: number;     // 0-based index of this variant (undefined = not a variant)
     totalVariants?: number;    // Total number of variants for this character
     order?: number;            // Original order index from JSON for preserving script order
+    // Character data tracking (for accessing original icon)
+    characterData?: Character; // Original character data (for icon editing)
+    imageUrl?: string;         // URL of the icon used for this specific token variant
 }
 
 // Avery label template type
@@ -731,9 +817,258 @@ export interface JSZipFolder {
 export interface JSZipInstance {
     folder(name: string): JSZipFolder;
     file(name: string, data: Blob | string): void;
-    generateAsync(options: { 
+    generateAsync(options: {
         type: 'blob';
         compression?: string;
         compressionOptions?: { level: number };
     }): Promise<Blob>;
+}
+
+// ============================================================================
+// Studio Image Editor Types
+// ============================================================================
+
+// Layer types for Studio editor
+export type LayerType = 'image' | 'text' | 'shape' | 'drawing';
+
+// Blend modes for layer composition
+export type BlendMode = 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten';
+
+// Tool types for Studio
+export type StudioTool = 'select' | 'brush' | 'eraser' | 'shape' | 'text' | 'move';
+
+// Shape types for drawing
+export type ShapeType = 'circle' | 'rectangle' | 'line';
+
+// Text alignment options
+export type TextAlignment = 'left' | 'center' | 'right';
+
+// Image filter types
+export type ImageFilterType = 'brightness' | 'contrast' | 'saturation' | 'hue' | 'blur' | 'sharpen' | 'invert';
+
+// Point interface for coordinates
+export interface Point {
+    x: number;
+    y: number;
+}
+
+// Layer interface - represents a single layer in the Studio
+export interface Layer {
+    id: string;
+    type: LayerType;
+    name: string;
+    visible: boolean;
+    opacity: number;  // 0-1
+    blendMode: BlendMode;
+    zIndex: number;
+
+    // Canvas data for this layer
+    canvas: HTMLCanvasElement;
+
+    // Version tracking for canvas content changes
+    // Incremented whenever canvas pixels are modified to force React re-renders
+    version: number;
+
+    // Transform properties
+    position: Point;
+    rotation: number;  // degrees
+    scale: Point;      // x and y scale factors
+
+    // Lock state
+    locked?: boolean;
+
+    // Type-specific data
+    data?: ImageLayerData | TextLayerData | ShapeLayerData;
+}
+
+// Image layer specific data
+export interface ImageLayerData {
+    originalUrl?: string;
+    originalBlob?: Blob;
+    filters: ImageFilter[];
+}
+
+// Text layer specific data
+export interface TextLayerData {
+    text: string;
+    font: string;
+    fontSize: number;
+    color: string;
+    alignment: TextAlignment;
+    letterSpacing?: number;
+    lineHeight?: number;
+}
+
+// Shape layer specific data
+export interface ShapeLayerData {
+    shapeType: ShapeType;
+    fill: string;
+    stroke: string;
+    strokeWidth: number;
+    cornerRadius?: number;  // For rectangles
+}
+
+// Image filter configuration
+export interface ImageFilter {
+    type: ImageFilterType;
+    value: number;
+}
+
+// Tool settings for Studio tools
+export interface ToolSettings {
+    brush: {
+        size: number;
+        opacity: number;
+        color: string;
+        hardness: number;
+    };
+    eraser: {
+        size: number;
+        hardness: number;
+    };
+    shape: {
+        fill: string;
+        stroke: string;
+        strokeWidth: number;
+        cornerRadius?: number;
+    };
+    text: {
+        font: string;
+        size: number;
+        color: string;
+        letterSpacing: number;
+        alignment: 'left' | 'center' | 'right';
+    };
+}
+
+// History entry for undo/redo
+export interface HistoryEntry {
+    timestamp: number;
+    action: string;
+    layersSnapshot: SerializedLayer[];
+}
+
+// Serialized layer for history/storage
+export interface SerializedLayer extends Omit<Layer, 'canvas'> {
+    canvasData: string;  // Base64 data URL
+}
+
+// Character preset for recoloring
+export interface CharacterPreset {
+    id: string;
+    name: string;
+    displayName: string;
+    colors: {
+        primary: string;
+        secondary?: string;
+    };
+}
+
+// Studio preset for saving/loading editor states
+export interface StudioPreset {
+    id: string;
+    name: string;
+    thumbnail: string;  // Data URL
+    layers: SerializedLayer[];
+    settings: {
+        canvasSize: { width: number; height: number };
+        toolSettings: ToolSettings;
+    };
+    createdAt?: number;
+    tags?: string[];
+}
+
+// Canvas size configuration
+export interface CanvasSize {
+    width: number;
+    height: number;
+}
+
+// Background removal options
+export interface BackgroundRemovalOptions {
+    threshold?: number;         // 0-1, segmentation threshold (default: 0.5)
+    featherEdges?: boolean;     // Enable edge feathering (default: true)
+    edgeRadius?: number;        // Edge feathering radius in pixels (default: 2)
+    invertMask?: boolean;       // Invert the segmentation mask (default: false)
+}
+
+// Border configuration
+export interface BorderConfig {
+    enabled: boolean;
+    width: number;
+    color: string;
+    style: 'solid' | 'dashed' | 'dotted';
+}
+
+// Logo template for script logo generation
+export interface LogoTemplate {
+    id: string;
+    name: string;
+    description?: string;
+    layers: Partial<Layer>[];
+    canvasSize: CanvasSize;
+    thumbnail?: string;
+}
+
+// Guide line for canvas overlay
+export interface Guide {
+    id: string;
+    type: 'horizontal' | 'vertical';
+    position: number;  // pixels from top/left
+    color?: string;
+}
+
+// Grid configuration
+export interface GridConfig {
+    enabled: boolean;
+    spacing: number;      // pixels
+    color?: string;
+    snapEnabled?: boolean;
+}
+
+// Studio editor state (for StudioContext)
+export interface StudioState {
+    // Canvas state
+    canvasSize: CanvasSize;
+    zoom: number;
+    pan: Point;
+    backgroundColor: string;
+
+    // Layer system
+    layers: Layer[];
+    activeLayerId: string | null;
+
+    // Tool state
+    activeTool: StudioTool;
+    toolSettings: ToolSettings;
+
+    // History (undo/redo)
+    history: HistoryEntry[];
+    historyIndex: number;
+    maxHistorySize: number;
+
+    // Border configuration
+    border: BorderConfig;
+
+    // Grid and guides
+    grid: GridConfig;
+    guides: Guide[];
+
+    // Editor state flags
+    isDirty: boolean;
+    isProcessing: boolean;
+    currentAssetId?: string;  // If editing an existing asset
+}
+
+// Asset scope for saving
+export type AssetScope = 'project' | 'global';
+
+// Studio asset save options
+export interface StudioAssetSaveOptions {
+    name: string;
+    type: 'studio-icon' | 'studio-logo' | 'studio-template';
+    scope: AssetScope;
+    projectId?: string;  // Required if scope is 'project'
+    tags?: string[];
+    description?: string;
 }

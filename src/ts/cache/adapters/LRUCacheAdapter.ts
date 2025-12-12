@@ -13,6 +13,18 @@ import type {
 import { estimateSize } from '../utils/memoryEstimator.js'
 
 /**
+ * Eviction event data
+ */
+export interface EvictionEvent<V = any> {
+  key: string
+  reason: 'lru' | 'ttl' | 'manual'
+  size: number
+  lastAccessed: number
+  accessCount: number
+  value?: V
+}
+
+/**
  * Configuration options for LRU cache adapter.
  */
 export interface LRUCacheAdapterOptions {
@@ -22,6 +34,8 @@ export interface LRUCacheAdapterOptions {
   maxMemory?: number
   /** Eviction policy to use */
   evictionPolicy: IEvictionPolicy
+  /** Callback fired when entries are evicted */
+  onEvict?: (event: EvictionEvent) => void
 }
 
 /**
@@ -58,6 +72,17 @@ export class LRUCacheAdapter<K = string, V = any> implements ICacheStrategy<K, V
 
     // Check if expired
     if (entry.ttl && Date.now() - entry.createdAt > entry.ttl) {
+      // Emit TTL eviction event
+      if (this.options.onEvict) {
+        this.options.onEvict({
+          key: String(key),
+          reason: 'ttl',
+          size: entry.size,
+          lastAccessed: entry.lastAccessed,
+          accessCount: entry.accessCount,
+        })
+      }
+
       await this.delete(key)
       this.stats.missCount++
       this.updateHitRate()
@@ -167,6 +192,20 @@ export class LRUCacheAdapter<K = string, V = any> implements ICacheStrategy<K, V
     const victims = this.options.evictionPolicy.selectVictims(stringKeyedCache)
 
     for (const key of victims) {
+      // Get entry before deletion to emit event
+      const entry = this.cache.get(key as K)
+
+      // Emit eviction event before deletion
+      if (entry && this.options.onEvict) {
+        this.options.onEvict({
+          key: String(key),
+          reason: 'lru',
+          size: entry.size,
+          lastAccessed: entry.lastAccessed,
+          accessCount: entry.accessCount,
+        })
+      }
+
       await this.delete(key as K)
     }
 

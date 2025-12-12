@@ -5,15 +5,16 @@ import { preRenderFirstCharacter } from '../../utils/customizePreRenderCache'
 import { preRenderGalleryTokens } from '../TokenGrid/TokenCard'
 import styles from '../../styles/components/layout/TabNavigation.module.css'
 
-export type EditorTab = 'projects' | 'editor' | 'gallery' | 'customize' | 'script' | 'download' | 'town-square'
+export type EditorTab = 'projects' | 'editor' | 'gallery' | 'customize' | 'script' | 'studio' | 'download' | 'town-square'
 export type TabType = EditorTab // Legacy alias for backwards compatibility
 
 interface TabNavigationProps {
   activeTab: EditorTab
   onTabChange: (tab: EditorTab) => void
+  lastSelectedCharacterUuid?: string
 }
 
-export function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
+export function TabNavigation({ activeTab, onTabChange, lastSelectedCharacterUuid }: TabNavigationProps) {
   const { tokens, jsonInput, characters, generationOptions } = useTokenContext()
   const hasTokens = tokens.length > 0
   const hasScript = jsonInput.trim() !== ''
@@ -21,20 +22,30 @@ export function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
   // Pre-render tokens when hovering over tabs
   const handleTabHover = useCallback((tabId: EditorTab) => {
     if (tabId === 'customize' && characters.length > 0) {
-      // Pre-render the first character's token
-      preRenderFirstCharacter(characters[0], generationOptions)
+      // Pre-render the last selected character (or first if none selected)
+      let characterToPreRender = characters[0]  // Default fallback
+
+      if (lastSelectedCharacterUuid) {
+        const lastSelected = characters.find(c => c.uuid === lastSelectedCharacterUuid)
+        if (lastSelected) {
+          characterToPreRender = lastSelected
+        }
+      }
+
+      preRenderFirstCharacter(characterToPreRender, generationOptions)
     } else if (tabId === 'gallery' && tokens.length > 0) {
       // Pre-render data URLs for gallery tokens (first 20)
       preRenderGalleryTokens(tokens, 20)
     }
-  }, [characters, generationOptions, tokens])
+  }, [characters, generationOptions, tokens, lastSelectedCharacterUuid])
 
   const tabs: { id: EditorTab; label: string; disabled?: boolean }[] = [
     { id: 'projects', label: 'Projects' },
-    { id: 'editor', label: 'Editor' },
-    { id: 'gallery', label: 'Gallery' },
-    { id: 'customize', label: 'Customize' },
+    { id: 'editor', label: 'JSON' },
+    { id: 'gallery', label: 'Tokens' },
+    { id: 'customize', label: 'Characters' },
     { id: 'script', label: 'Script' },
+    { id: 'studio', label: 'Studio' },
     { id: 'download', label: 'Export' },
     { id: 'town-square', label: 'Town Square' },
   ]

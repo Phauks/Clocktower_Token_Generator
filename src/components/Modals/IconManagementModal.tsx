@@ -3,9 +3,12 @@
  *
  * Allows users to upload, manage, and remove custom character icons
  * for their projects.
+ * Migrated to use unified Modal and Button components.
  */
 
 import { useState, useCallback, useMemo } from 'react';
+import { Modal } from '../Shared/Modal/Modal';
+import { Button } from '../Shared/Button';
 import { IconUploader } from '../Shared/IconUploader';
 import type { Character } from '../../ts/types/index.js';
 import type { CustomIconMetadata } from '../../ts/types/project.js';
@@ -107,116 +110,109 @@ export function IconManagementModal({
     };
   }, [customIcons, characters]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className={styles.header}>
-          <h2 className={styles.title}>Manage Custom Icons</h2>
-          <button onClick={onClose} className={styles.closeButton} aria-label="Close">
-            ×
-          </button>
-        </div>
-
-        {/* Stats */}
-        <div className={styles.stats}>
-          <div className={styles.statItem}>
-            <span className={styles.statValue}>{stats.count}</span>
-            <span className={styles.statLabel}>Custom Icons</span>
-          </div>
-          <div className={styles.statDivider} />
-          <div className={styles.statItem}>
-            <span className={styles.statValue}>{stats.totalCharacters}</span>
-            <span className={styles.statLabel}>Total Characters</span>
-          </div>
-          <div className={styles.statDivider} />
-          <div className={styles.statItem}>
-            <span className={styles.statValue}>{stats.totalSizeMB} MB</span>
-            <span className={styles.statLabel}>Total Size</span>
-          </div>
-        </div>
-
-        {/* Controls */}
-        <div className={styles.controls}>
-          <input
-            type="text"
-            placeholder="Search characters..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={styles.searchInput}
-          />
-          <label className={styles.filterCheckbox}>
-            <input
-              type="checkbox"
-              checked={showOnlyCustom}
-              onChange={(e) => setShowOnlyCustom(e.target.checked)}
-            />
-            <span>Show only custom icons</span>
-          </label>
-        </div>
-
-        {/* Character Grid */}
-        <div className={styles.content}>
-          {filteredCharacters.length === 0 ? (
-            <div className={styles.emptyState}>
-              <p>
-                {showOnlyCustom
-                  ? 'No custom icons yet. Upload icons below to get started.'
-                  : searchQuery
-                    ? `No characters found matching "${searchQuery}"`
-                    : 'No characters available'}
-              </p>
-            </div>
-          ) : (
-            <div className={styles.characterGrid}>
-              {filteredCharacters.map((character) => {
-                const customIcon = iconMap.get(character.id);
-                return (
-                  <div key={character.id} className={styles.characterCard}>
-                    <div className={styles.characterHeader}>
-                      <h3 className={styles.characterName}>{character.name}</h3>
-                      <span className={styles.characterTeam}>{character.team}</span>
-                    </div>
-
-                    <IconUploader
-                      value={customIcon?.dataUrl}
-                      onChange={(dataUrl) => handleIconUpdate(character, dataUrl)}
-                      characterName={character.name}
-                      maxSizeMB={5}
-                      showRemove={true}
-                    />
-
-                    {customIcon && (
-                      <div className={styles.iconMeta}>
-                        <span className={styles.iconSize}>
-                          {((customIcon.fileSize || 0) / 1024).toFixed(1)} KB
-                        </span>
-                        <span className={styles.iconDate}>
-                          {customIcon.lastModified
-                            ? new Date(customIcon.lastModified).toLocaleDateString()
-                            : 'Unknown'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className={styles.footer}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Manage Custom Icons"
+      size="large"
+      footer={
+        <>
           <p className={styles.footerNote}>
             ℹ️ Custom icons will be included when you export this project as a ZIP file
           </p>
-          <button onClick={onClose} className={styles.doneButton}>
+          <Button variant="accent" onClick={onClose}>
             Done
-          </button>
+          </Button>
+        </>
+      }
+    >
+      {/* Stats */}
+      <div className={styles.stats}>
+        <div className={styles.statItem}>
+          <span className={styles.statValue}>{stats.count}</span>
+          <span className={styles.statLabel}>Custom Icons</span>
+        </div>
+        <div className={styles.statDivider} />
+        <div className={styles.statItem}>
+          <span className={styles.statValue}>{stats.totalCharacters}</span>
+          <span className={styles.statLabel}>Total Characters</span>
+        </div>
+        <div className={styles.statDivider} />
+        <div className={styles.statItem}>
+          <span className={styles.statValue}>{stats.totalSizeMB} MB</span>
+          <span className={styles.statLabel}>Total Size</span>
         </div>
       </div>
-    </div>
+
+      {/* Controls */}
+      <div className={styles.controls}>
+        <input
+          type="text"
+          placeholder="Search characters..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className={styles.searchInput}
+        />
+        <label className={styles.filterCheckbox}>
+          <input
+            type="checkbox"
+            checked={showOnlyCustom}
+            onChange={(e) => setShowOnlyCustom(e.target.checked)}
+          />
+          <span>Show only custom icons</span>
+        </label>
+      </div>
+
+      {/* Character Grid */}
+      <div className={styles.content}>
+        {filteredCharacters.length === 0 ? (
+          <div className={styles.emptyState}>
+            <p>
+              {showOnlyCustom
+                ? 'No custom icons yet. Upload icons below to get started.'
+                : searchQuery
+                  ? `No characters found matching "${searchQuery}"`
+                  : 'No characters available'}
+            </p>
+          </div>
+        ) : (
+          <div className={styles.characterGrid}>
+            {filteredCharacters.map((character) => {
+              const customIcon = iconMap.get(character.id);
+              return (
+                <div key={character.id} className={styles.characterCard}>
+                  <div className={styles.characterHeader}>
+                    <h3 className={styles.characterName}>{character.name}</h3>
+                    <span className={styles.characterTeam}>{character.team}</span>
+                  </div>
+
+                  <IconUploader
+                    value={customIcon?.dataUrl}
+                    onChange={(dataUrl) => handleIconUpdate(character, dataUrl)}
+                    characterName={character.name}
+                    maxSizeMB={5}
+                    showRemove={true}
+                  />
+
+                  {customIcon && (
+                    <div className={styles.iconMeta}>
+                      <span className={styles.iconSize}>
+                        {((customIcon.fileSize || 0) / 1024).toFixed(1)} KB
+                      </span>
+                      <span className={styles.iconDate}>
+                        {customIcon.lastModified
+                          ? new Date(customIcon.lastModified).toLocaleDateString()
+                          : 'Unknown'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </Modal>
   );
 }

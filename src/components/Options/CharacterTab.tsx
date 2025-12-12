@@ -1,5 +1,7 @@
 import { memo, useState } from 'react'
 import type { GenerationOptions } from '../../ts/types/index'
+import { AssetPreviewSelector } from '../Shared/AssetPreviewSelector'
+import { ColorPreviewSelector } from '../Shared/ColorPreviewSelector'
 import { OptionGroup } from '../Shared/OptionGroup'
 import { SegmentedControl } from '../Shared/SegmentedControl'
 import { SliderWithValue } from '../Shared/SliderWithValue'
@@ -8,11 +10,12 @@ import styles from '../../styles/components/options/OptionsTab.module.css'
 interface CharacterTabProps {
   generationOptions: GenerationOptions
   onOptionChange: (options: Partial<GenerationOptions>) => void
+  projectId?: string
 }
 
 type SubTabType = 'background' | 'name' | 'ability' | 'decoratives' | 'qol'
 
-export const CharacterTab = memo(({ generationOptions, onOptionChange }: CharacterTabProps) => {
+export const CharacterTab = memo(({ generationOptions, onOptionChange, projectId }: CharacterTabProps) => {
   const [activeSubTab, setActiveSubTab] = useState<SubTabType>('background')
 
   const handleFontSpacingChange = (type: string, value: number) => {
@@ -85,7 +88,7 @@ export const CharacterTab = memo(({ generationOptions, onOptionChange }: Charact
         {activeSubTab === 'background' && (
           <div className={styles.subtabContent}>
             <div className={styles.subsection}>
-              <OptionGroup label="Background Type" description="Choose between a solid color or image background.">
+              <OptionGroup label="Type">
                 <SegmentedControl
                   options={[
                     { value: 'image', label: 'Image' },
@@ -96,35 +99,22 @@ export const CharacterTab = memo(({ generationOptions, onOptionChange }: Charact
                 />
               </OptionGroup>
 
+              {/* Direct selector without wrapper - matches AppearancePanel */}
               {generationOptions.characterBackgroundType === 'color' ? (
-                <OptionGroup
-                  label="Background Color"
-                  description="Choose a solid background color for character tokens."
-                >
-                  <input
-                    type="color"
-                    className={styles.colorInput}
-                    value={generationOptions.characterBackgroundColor || '#FFFFFF'}
-                    onChange={(e) => onOptionChange({ characterBackgroundColor: e.target.value })}
-                  />
-                </OptionGroup>
+                <ColorPreviewSelector
+                  value={generationOptions.characterBackgroundColor || '#FFFFFF'}
+                  onChange={(value) => onOptionChange({ characterBackgroundColor: value })}
+                  shape="circle"
+                />
               ) : (
-                <OptionGroup
-                  label="Background Image"
-                  description="Choose the decorative pattern that appears behind the character icon."
-                >
-                  <select
-                    className={styles.selectInput}
-                    value={generationOptions.characterBackground}
-                    onChange={(e) => onOptionChange({ characterBackground: e.target.value })}
-                  >
-                    {Array.from({ length: 7 }, (_, i) => (
-                      <option key={i + 1} value={`character_background_${i + 1}`}>
-                        Background {i + 1}
-                      </option>
-                    ))}
-                  </select>
-                </OptionGroup>
+                <AssetPreviewSelector
+                  value={generationOptions.characterBackground || 'character_background_1'}
+                  onChange={(value) => onOptionChange({ characterBackground: value })}
+                  assetType="token-background"
+                  shape="circle"
+                  showNone={false}
+                  projectId={projectId}
+                />
               )}
             </div>
           </div>
@@ -261,26 +251,19 @@ export const CharacterTab = memo(({ generationOptions, onOptionChange }: Charact
         {activeSubTab === 'decoratives' && (
           <div className={styles.subtabContent}>
             <div className={styles.subsection}>
-              <OptionGroup
-                label="Setup Flower Style"
-                helpText="Select setup flower overlay style"
-              >
-                <select
-                  className={styles.selectInput}
-                  value={generationOptions.setupFlowerStyle}
-                  onChange={(e) => onOptionChange({ setupFlowerStyle: e.target.value })}
-                >
-                  {Array.from({ length: 7 }, (_, i) => (
-                    <option key={i + 1} value={`setup_flower_${i + 1}`}>
-                      Setup Flower {i + 1}
-                    </option>
-                  ))}
-                </select>
-              </OptionGroup>
+              {/* Setup Flower - clean selector matching AppearancePanel style */}
+              <AssetPreviewSelector
+                value={generationOptions.setupFlowerStyle || 'setup_flower_1'}
+                onChange={(value) => onOptionChange({ setupFlowerStyle: value })}
+                assetType="setup-flower"
+                shape="square"
+                showNone={false}
+                projectId={projectId}
+              />
 
               <OptionGroup
                 label="Maximum Leaves"
-                helpText="Maximum number of leaves to generate (0 = disabled, limited by arc slots + 2 side positions)"
+                helpText="Maximum number of leaves to generate (0 = disabled)"
                 isSlider
               >
                 <SliderWithValue
@@ -295,18 +278,15 @@ export const CharacterTab = memo(({ generationOptions, onOptionChange }: Charact
 
               {(generationOptions.maximumLeaves ?? 0) > 0 && (
                 <>
-                  <OptionGroup
-                    label="Leaf Style"
-                    helpText="Folder name for leaf style (e.g., 'classic')"
-                  >
-                    <input
-                      type="text"
-                      className={styles.textInput}
-                      value={generationOptions.leafGeneration || 'classic'}
-                      onChange={(e) => onOptionChange({ leafGeneration: e.target.value })}
-                      placeholder="classic"
-                    />
-                  </OptionGroup>
+                  {/* Leaf Style - clean selector */}
+                  <AssetPreviewSelector
+                    value={generationOptions.leafGeneration || 'classic'}
+                    onChange={(value) => onOptionChange({ leafGeneration: value })}
+                    assetType="leaf"
+                    shape="square"
+                    showNone={false}
+                    projectId={projectId}
+                  />
 
                   <OptionGroup
                     label="Leaf Probability"

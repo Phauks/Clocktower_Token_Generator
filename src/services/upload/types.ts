@@ -19,7 +19,10 @@ export type AssetType =
   | 'script-background'
   | 'setup-flower'
   | 'leaf'
-  | 'logo';
+  | 'logo'
+  | 'studio-icon'      // Custom icon created in Studio
+  | 'studio-logo'      // Script logo created in Studio
+  | 'studio-project';  // Complete Studio project (multi-layer)
 
 /**
  * Source of how an asset was added to the system
@@ -70,6 +73,16 @@ export interface DBAsset {
   metadata: AssetMetadata;
   /** Character IDs that use this asset */
   linkedTo: string[];
+  /** SHA-256 content hash of blob (for deduplication) */
+  contentHash?: string;
+
+  // Usage tracking fields (for analytics and cleanup decisions)
+  /** Timestamp of last usage (milliseconds since epoch) */
+  lastUsedAt?: number;
+  /** Total number of times this asset has been used */
+  usageCount?: number;
+  /** Project IDs where this asset has been used */
+  usedInProjects?: string[];
 }
 
 /**
@@ -219,9 +232,13 @@ export interface AssetFilter {
   /** Filter orphaned assets only */
   orphanedOnly?: boolean;
   /** Sort field */
-  sortBy?: 'uploadedAt' | 'filename' | 'size' | 'type';
+  sortBy?: 'uploadedAt' | 'filename' | 'size' | 'type' | 'lastUsedAt' | 'usageCount';
   /** Sort direction */
   sortDirection?: 'asc' | 'desc';
+  /** Pagination: Maximum number of results to return */
+  limit?: number;
+  /** Pagination: Number of results to skip */
+  offset?: number;
 }
 
 /**
@@ -288,4 +305,36 @@ export interface AssetReference {
   filename: string;
   /** Linked character IDs */
   linkedTo: string[];
+}
+
+// ============================================================================
+// Studio Asset Extensions
+// ============================================================================
+
+/**
+ * Extended metadata for Studio-created assets
+ * Stored in the metadata field of DBAsset as additional properties
+ */
+export interface StudioAssetMetadata extends AssetMetadata {
+  /** Studio version that created this asset */
+  studioVersion?: string;
+  /** Number of layers in the project */
+  layerCount?: number;
+  /** Whether the asset has transparency */
+  hasTransparency?: boolean;
+  /** Original canvas dimensions */
+  canvasDimensions?: {
+    width: number;
+    height: number;
+  };
+  /** How the asset was created */
+  createdFrom?: 'scratch' | 'import' | 'edit' | 'preset';
+  /** Source asset ID if edited from existing */
+  sourceAssetId?: string;
+  /** Character alignment preset applied (if any) */
+  presetApplied?: string;
+  /** Tags for organization */
+  tags?: string[];
+  /** Asset description */
+  description?: string;
 }

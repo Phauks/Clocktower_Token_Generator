@@ -4,11 +4,13 @@ import { useProjectContext } from '../../contexts/ProjectContext'
 import { useScriptData } from '../../hooks/useScriptData'
 import { useTokenGenerator } from '../../hooks/useTokenGenerator'
 import { useUndoStack } from '../../hooks/useUndoStack'
-import { useProjects } from '../../hooks/useProjects'
+import { ViewLayout } from '../Layout/ViewLayout'
+import { Button } from '../Shared/Button'
 import { JsonHighlight } from '../ScriptInput/JsonHighlight'
-import { sortScriptJsonBySAO, isScriptJsonSortedBySAO } from '../../ts/utils/index.js'
+import { sortScriptJsonBySAO, isScriptJsonSortedBySAO, condenseScript, hasCondensableReferences, logger, analyzeReminderText, normalizeReminderText } from '../../ts/utils/index.js'
 import CONFIG from '../../ts/config.js'
 import styles from '../../styles/components/views/Views.module.css'
+import layoutStyles from '../../styles/components/layout/ViewLayout.module.css'
 import scriptStyles from '../../styles/components/scriptInput/ScriptInput.module.css'
 
 interface EditorViewProps {
@@ -21,8 +23,7 @@ interface EditorViewProps {
 export function EditorView({ onGenerate, onNavigateToCustomize, onNavigateToProjects, onCreateProject }: EditorViewProps) {
   const { jsonInput, setJsonInput, characters, isLoading, error, setError, warnings, setWarnings, scriptMeta, officialData } = useTokenContext()
   const { currentProject } = useProjectContext()
-  const { projects, activateProject } = useProjects()
-  const { loadScript, loadExampleScriptByName, parseJson, clearScript, addMetaToScript, hasUnderscoresInIds, removeUnderscoresFromIds } = useScriptData()
+  const { loadScript, loadExampleScriptByName, parseJson, clearScript, addMetaToScript, hasUnderscoresInIds, removeUnderscoresFromIds, updateScript } = useScriptData()
   const { generateTokens } = useTokenGenerator()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -35,6 +36,7 @@ export function EditorView({ onGenerate, onNavigateToCustomize, onNavigateToProj
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const parseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const previousJsonRef = useRef<string>('')
+  const previousProjectIdRef = useRef<string | null>(null)
   const isUndoRedoRef = useRef(false)
   const isExternalChangeRef = useRef(false)
 
@@ -50,6 +52,47 @@ export function EditorView({ onGenerate, onNavigateToCustomize, onNavigateToProj
     if (!jsonInput.trim() || characters.length === 0) return true
     return isScriptJsonSortedBySAO(jsonInput, { officialData }) ?? true
   }, [jsonInput, characters.length, officialData])
+
+  // Check if script has condensable character references (memoized to avoid recalculating on every render)
+  const hasCondensableRefs = useMemo(() => {
+    if (!jsonInput.trim() || characters.length === 0 || !officialData.length) return false
+    return hasCondensableReferences(jsonInput, officialData)
+  }, [jsonInput, characters.length, officialData])
+
+  // Check for non-standard format issues in night reminder fields
+  const formatIssuesSummary = useMemo(() => {
+    if (!jsonInput.trim() || characters.length === 0) return null
+
+    const issuesFound: { characterName: string; field: 'firstNightReminder' | 'otherNightReminder'; issues: ReturnType<typeof analyzeReminderText> }[] = []
+
+    for (const char of characters) {
+      if (char.firstNightReminder) {
+        const issues = analyzeReminderText(char.firstNightReminder)
+        if (issues.length > 0) {
+          issuesFound.push({ characterName: char.name, field: 'firstNightReminder', issues })
+        }
+      }
+      if (char.otherNightReminder) {
+        const issues = analyzeReminderText(char.otherNightReminder)
+        if (issues.length > 0) {
+          issuesFound.push({ characterName: char.name, field: 'otherNightReminder', issues })
+        }
+      }
+    }
+
+    if (issuesFound.length === 0) return null
+
+    // Get unique issue types across all characters
+    const uniqueIssueTypes = [...new Set(issuesFound.flatMap(f => f.issues.map(i => i.description)))]
+    const totalCharactersAffected = new Set(issuesFound.map(f => f.characterName)).size
+
+    return {
+      issuesFound,
+      uniqueIssueTypes,
+      totalCharactersAffected,
+      totalIssues: issuesFound.length
+    }
+  }, [jsonInput, characters])
 
   // Undo/redo stack for JSON input
   const undoStack = useUndoStack(jsonInput)
@@ -94,12 +137,16 @@ export function EditorView({ onGenerate, onNavigateToCustomize, onNavigateToProj
       return
     }
 
-    // Skip if JSON hasn't changed and not force regenerating
-    if (previousJsonRef.current === jsonInput && forceRegenerate === 0) {
+    // Force regenerate if project changed (handles project activation)
+    const projectChanged = previousProjectIdRef.current !== currentProject?.id
+
+    // Skip if JSON hasn't changed AND project hasn't changed AND not force regenerating
+    if (!projectChanged && previousJsonRef.current === jsonInput && forceRegenerate === 0) {
       return
     }
 
     previousJsonRef.current = jsonInput
+    previousProjectIdRef.current = currentProject?.id ?? null
 
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current)
@@ -115,7 +162,7 @@ export function EditorView({ onGenerate, onNavigateToCustomize, onNavigateToProj
         clearTimeout(debounceTimerRef.current)
       }
     }
-  }, [jsonInput, characters.length, autoGenerate, isLoading, generateTokens, onGenerate, forceRegenerate])
+  }, [jsonInput, characters.length, autoGenerate, isLoading, generateTokens, onGenerate, forceRegenerate, currentProject?.id])
 
   const handleTextareaChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value
@@ -128,9 +175,9 @@ export function EditorView({ onGenerate, onNavigateToCustomize, onNavigateToProj
   const handleFileUpload = useCallback(async (file: File) => {
     isExternalChangeRef.current = true
     const text = await file.text()
-    await loadScript(text)
+    await updateScript(text, 'upload')
     previousJsonRef.current = ''
-  }, [loadScript])
+  }, [updateScript])
 
   const handleExampleChange = useCallback(async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const scriptName = e.target.value
@@ -142,66 +189,114 @@ export function EditorView({ onGenerate, onNavigateToCustomize, onNavigateToProj
     }
   }, [loadExampleScriptByName])
 
-  const handleClear = useCallback(() => {
+  const handleClear = useCallback(async () => {
     // Push current value to undo stack before clearing
     if (jsonInput.trim()) {
       undoStack.push(jsonInput)
     }
-    clearScript()
+    await updateScript('', 'clear')
     setSelectedExample('')
     previousJsonRef.current = ''
-  }, [jsonInput, clearScript, undoStack])
+  }, [jsonInput, updateScript, undoStack])
 
-  const handleFormat = useCallback(() => {
+  const handleFormat = useCallback(async () => {
     try {
       const parsed = JSON.parse(jsonInput)
       const formatted = JSON.stringify(parsed, null, 2)
-      setJsonInput(formatted)
       undoStack.push(formatted)
+      await updateScript(formatted, 'format')
     } catch {
       setError('Cannot format: Invalid JSON')
     }
-  }, [jsonInput, setJsonInput, undoStack, setError])
+  }, [jsonInput, updateScript, undoStack, setError])
 
-  const handleSort = useCallback(() => {
+  const handleSort = useCallback(async () => {
     try {
       const sorted = sortScriptJsonBySAO(jsonInput, { officialData })
-      setJsonInput(sorted)
       undoStack.push(sorted)
-      // Parse the sorted JSON to update characters array
-      parseJson(sorted)
+      await updateScript(sorted, 'sort')
       // Trigger force regeneration after React updates state
       setForceRegenerate(prev => prev + 1)
     } catch {
       setError('Cannot sort: Invalid JSON')
     }
-  }, [jsonInput, setJsonInput, undoStack, setError, officialData, parseJson])
+  }, [jsonInput, updateScript, undoStack, setError, officialData])
 
-  const handleUndo = useCallback(() => {
+  const handleCondenseScript = useCallback(async () => {
+    try {
+      const condensed = condenseScript(jsonInput, officialData)
+      undoStack.push(condensed)
+      await updateScript(condensed, 'condense')
+      // Trigger force regeneration after React updates state
+      setForceRegenerate(prev => prev + 1)
+    } catch {
+      setError('Cannot condense: Invalid JSON')
+    }
+  }, [jsonInput, updateScript, undoStack, setError, officialData])
+
+  // Fix all non-standard format issues in night reminder fields
+  const handleFixFormats = useCallback(async () => {
+    try {
+      const parsed = JSON.parse(jsonInput)
+      if (!Array.isArray(parsed)) {
+        setError('Cannot fix formats: JSON must be an array')
+        return
+      }
+
+      let modified = false
+      const updated = parsed.map((entry: any) => {
+        if (typeof entry !== 'object' || entry === null) return entry
+        if (entry.id === '_meta') return entry
+
+        const newEntry = { ...entry }
+
+        if (entry.firstNightReminder && analyzeReminderText(entry.firstNightReminder).length > 0) {
+          newEntry.firstNightReminder = normalizeReminderText(entry.firstNightReminder)
+          modified = true
+        }
+
+        if (entry.otherNightReminder && analyzeReminderText(entry.otherNightReminder).length > 0) {
+          newEntry.otherNightReminder = normalizeReminderText(entry.otherNightReminder)
+          modified = true
+        }
+
+        return newEntry
+      })
+
+      if (modified) {
+        const fixedJson = JSON.stringify(updated, null, 2)
+        undoStack.push(fixedJson)
+        await updateScript(fixedJson, 'fix-formats')
+        setForceRegenerate(prev => prev + 1)
+      }
+    } catch {
+      setError('Cannot fix formats: Invalid JSON')
+    }
+  }, [jsonInput, updateScript, undoStack, setError])
+
+  const handleUndo = useCallback(async () => {
     if (undoStack.canUndo) {
       isUndoRedoRef.current = true
       const previous = undoStack.undo()
       if (previous !== undefined) {
-        setJsonInput(previous)
-        parseJson(previous)
+        await updateScript(previous, 'undo')
         previousJsonRef.current = previous
       }
       setTimeout(() => { isUndoRedoRef.current = false }, 0)
     }
-  }, [undoStack, setJsonInput, parseJson])
+  }, [undoStack, updateScript])
 
-  const handleRedo = useCallback(() => {
+  const handleRedo = useCallback(async () => {
     if (undoStack.canRedo) {
       isUndoRedoRef.current = true
       const next = undoStack.redo()
       if (next !== undefined) {
-        setJsonInput(next)
-        parseJson(next)
+        await updateScript(next, 'redo')
         previousJsonRef.current = next
       }
       setTimeout(() => { isUndoRedoRef.current = false }, 0)
     }
-  }, [undoStack, setJsonInput, parseJson])
+  }, [undoStack, updateScript])
 
   const handleManualGenerate = useCallback(async () => {
     await generateTokens()
@@ -252,94 +347,41 @@ export function EditorView({ onGenerate, onNavigateToCustomize, onNavigateToProj
   }, [handleUndo, handleRedo])
 
   return (
-    <div className={styles.editorView}>
-      <div className={styles.editorSplitLayout}>
-        {/* Left Panel - Create New Character & Load Scripts */}
-        <div className={styles.editorLeftPanel}>
-          <div className={styles.leftPanelSection}>
-            <h3 className={styles.leftPanelTitle}>Project</h3>
-            <p className={styles.leftPanelDesc}>
-              Manage your token generator projects.
-            </p>
-            <button
-              className={`btn-secondary ${styles.btnLeftPanelAction}`}
-              onClick={onCreateProject}
-            >
-              Create New Project
-            </button>
-            <button
-              className={`btn-secondary ${styles.btnLeftPanelAction}`}
-              onClick={onNavigateToProjects}
-              style={{ marginTop: '0.5rem' }}
-            >
-              Load Project
-            </button>
-            {(() => {
-              // Find the most recently accessed project (excluding current if any)
-              const lastProject = projects
-                .filter(p => !currentProject || p.id !== currentProject.id)
-                .sort((a, b) => b.lastAccessedAt - a.lastAccessedAt)[0]
-              
-              if (!lastProject) return null
-              
-              return (
-                <button
-                  className={`btn-secondary ${styles.btnLeftPanelAction}`}
-                  onClick={() => activateProject(lastProject.id)}
-                  style={{ marginTop: '0.5rem' }}
-                >
-                  Load Last Project: {lastProject.name}
-                </button>
-              )
-            })()}
-          </div>
+    <ViewLayout variant="2-panel">
+      {/* Left Sidebar - Load Scripts */}
+      <ViewLayout.Panel position="left" width="left" scrollable>
+        <div className={layoutStyles.panelContent}>
+          {/* Upload Script */}
+          <details className={layoutStyles.sidebarCard} open>
+            <summary className={layoutStyles.sectionHeader}>Upload Script</summary>
+            <div className={layoutStyles.optionSection}>
+              <p className={styles.leftPanelDesc}>
+                Import a script JSON file from your computer.
+              </p>
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept=".json"
+                onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
+                style={{ display: 'none' }}
+              />
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={() => fileInputRef.current?.click()}
+              >
+                📁 Upload JSON File
+              </Button>
+            </div>
+          </details>
 
-          <div className={styles.leftPanelSection}>
-            <h3 className={styles.leftPanelTitle}>Create Custom Character</h3>
-            <p className={styles.leftPanelDesc}>
-              Design your own custom character token from scratch.
-            </p>
-            <button
-              className={`btn-primary ${styles.btnLeftPanelAction}`}
-              onClick={onNavigateToCustomize}
-            >
-              ✨ Create New Character
-            </button>
-            <button
-              className={`btn-secondary ${styles.btnLeftPanelAction}`}
-              disabled
-              style={{ marginTop: '0.5rem', opacity: 0.5, cursor: 'not-allowed' }}
-            >
-              📚 Add Official Character
-            </button>
-          </div>
-
-          <div className={styles.leftPanelSection}>
-            <h3 className={styles.leftPanelTitle}>Upload Script</h3>
-            <p className={styles.leftPanelDesc}>
-              Import a script JSON file from your computer.
-            </p>
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept=".json"
-              onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
-              style={{ display: 'none' }}
-            />
-            <button
-              className={`btn-secondary ${styles.btnLeftPanelAction}`}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              📁 Upload JSON File
-            </button>
-          </div>
-
-          <div className={styles.leftPanelSection}>
-            <h3 className={styles.leftPanelTitle}>Load Example Script</h3>
-            <p className={styles.leftPanelDesc}>
-              Try an example script to explore the generator.
-            </p>
-            <div className={styles.leftPanelRow}>
+          {/* Load Example Script */}
+          <details className={layoutStyles.sidebarCard} open>
+            <summary className={layoutStyles.sectionHeader}>Example Scripts</summary>
+            <div className={layoutStyles.optionSection}>
+              <p className={styles.leftPanelDesc}>
+                Try an example script to explore the generator.
+              </p>
               <select
                 className={styles.leftPanelSelect}
                 value={selectedExample}
@@ -350,21 +392,23 @@ export function EditorView({ onGenerate, onNavigateToCustomize, onNavigateToProj
                   <option key={name} value={name}>{name}</option>
                 ))}
               </select>
-              <button
-                className={`btn-secondary ${styles.btnLeftPanelSmall}`}
+              <Button
+                variant="secondary"
+                fullWidth
                 onClick={() => selectedExample && loadExampleScriptByName(selectedExample)}
                 disabled={!selectedExample}
-                title="Load selected example"
+                style={{ marginTop: '0.5rem' }}
               >
-                Load
-              </button>
+                Load Example
+              </Button>
             </div>
-          </div>
+          </details>
         </div>
+      </ViewLayout.Panel>
 
-        {/* Right Panel - JSON Editor */}
-        <div className={styles.editorRightPanel}>
-          <div className={styles.editorContainer}>
+      {/* Right Panel - JSON Editor */}
+      <ViewLayout.Panel position="right" width="flex" scrollable>
+        <div className={styles.editorContainer}>
             {/* Unified Single-Row Toolbar */}
             <div className={styles.editorUnifiedToolbar}>
               <div className={styles.scriptMetaInline}>
@@ -373,52 +417,62 @@ export function EditorView({ onGenerate, onNavigateToCustomize, onNavigateToProj
               </div>
 
               <div className={styles.toolbarActions}>
-                <button
-                  className={`btn-secondary ${styles.btnIconOnly}`}
+                <Button
+                  variant="ghost"
+                  size="small"
+                  isIconOnly
                   onClick={handleFormat}
                   title="Format JSON"
                 >
                   🎨
-                </button>
-                <button
-                  className={`btn-secondary ${styles.btnIconOnly}`}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="small"
+                  isIconOnly
                   onClick={() => {
                     navigator.clipboard.writeText(jsonInput)
                       .then(() => {
-                        // Successfully copied
+                        logger.debug('EditorView', 'JSON copied to clipboard')
                       })
                       .catch((err) => {
-                        console.error('Failed to copy JSON:', err)
+                        logger.error('EditorView', 'Failed to copy JSON', err)
                         setError('Failed to copy to clipboard')
                       })
                   }}
                   title="Copy JSON to clipboard"
                 >
                   📋
-                </button>
-                <button
-                  className={`btn-secondary ${styles.btnIconOnly}`}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="small"
+                  isIconOnly
                   onClick={handleUndo}
                   disabled={!undoStack.canUndo}
                   title="Undo (Ctrl+Z)"
                 >
                   ↩️
-                </button>
-                <button
-                  className={`btn-secondary ${styles.btnIconOnly}`}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="small"
+                  isIconOnly
                   onClick={handleRedo}
                   disabled={!undoStack.canRedo}
                   title="Redo (Ctrl+Y)"
                 >
                   ↪️
-                </button>
-                <button
-                  className={`btn-secondary ${styles.btnIconOnly}`}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="small"
+                  isIconOnly
                   onClick={handleClear}
                   title="Clear editor"
                 >
                   🗑️
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -449,7 +503,7 @@ export function EditorView({ onGenerate, onNavigateToCustomize, onNavigateToProj
             </div>
 
             {/* Messages indicator (errors/warnings) - below editor */}
-            {(error || warnings.length > 0 || (characters.length > 0 && !scriptMeta) || hasUnderscoresInIds() || (characters.length > 0 && !isScriptSorted)) && (
+            {(error || warnings.length > 0 || (characters.length > 0 && !scriptMeta) || hasUnderscoresInIds() || (characters.length > 0 && !isScriptSorted) || hasCondensableRefs || formatIssuesSummary) && (
               <div className={styles.messagesBar}>
                 {/* Missing _meta recommendation */}
                 {characters.length > 0 && !scriptMeta && !error && (
@@ -487,6 +541,32 @@ export function EditorView({ onGenerate, onNavigateToCustomize, onNavigateToProj
                       title="Sort characters by Standard Amy Order"
                     >
                       Sort
+                    </button>
+                  </div>
+                )}
+                {/* Condensable character references recommendation */}
+                {hasCondensableRefs && !error && (
+                  <div className={`${styles.messageItem} ${styles.infoItem}`}>
+                    <span>💡 Some official characters use object format. They can be simplified to string format for cleaner JSON.</span>
+                    <button
+                      className={styles.addMetaBtn}
+                      onClick={handleCondenseScript}
+                      title="Convert object references like { &quot;id&quot;: &quot;clockmaker&quot; } to string format &quot;clockmaker&quot;"
+                    >
+                      Condense Script
+                    </button>
+                  </div>
+                )}
+                {/* Non-standard format issues in night reminders */}
+                {formatIssuesSummary && !error && (
+                  <div className={`${styles.messageItem} ${styles.infoItem}`}>
+                    <span>💡 Some night reminders use non-standard formats (e.g., <code>&lt;i class="reminder-token"&gt;</code> instead of <code>:reminder:</code>, or <code>**text**</code> instead of <code>*text*</code>).</span>
+                    <button
+                      className={styles.addMetaBtn}
+                      onClick={handleFixFormats}
+                      title="Normalize HTML tags and legacy formats to :reminder: and *text*"
+                    >
+                      Fix Formats
                     </button>
                   </div>
                 )}
@@ -530,9 +610,8 @@ export function EditorView({ onGenerate, onNavigateToCustomize, onNavigateToProj
                 })()}
               </div>
             )}
-          </div>
         </div>
-      </div>
-    </div>
+      </ViewLayout.Panel>
+    </ViewLayout>
   )
 }

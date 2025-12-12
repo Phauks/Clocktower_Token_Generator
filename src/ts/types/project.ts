@@ -237,6 +237,44 @@ export interface AutoSaveSnapshot {
   stateSnapshot: ProjectState;             // Full state
 }
 
+// ============================================================================
+// Project Versioning
+// ============================================================================
+
+/**
+ * Manual project version (semantic versioning milestone)
+ */
+export interface ProjectVersion {
+  // Primary identifiers
+  id: string;                              // UUID for this version
+  projectId: string;                       // Parent project ID
+
+  // Version information
+  versionNumber: string;                   // Semantic version (e.g., "1.2.0")
+  versionMajor: number;                    // Major version (for sorting/comparison)
+  versionMinor: number;                    // Minor version
+  versionPatch: number;                    // Patch version (default 0)
+
+  // Content snapshot
+  stateSnapshot: ProjectState;             // Full project state at version creation
+
+  // Metadata
+  createdAt: number;                       // Unix timestamp (ms)
+  releaseNotes?: string;                   // User-provided changelog/description
+  tags?: string[];                         // Optional tags (e.g., ["alpha", "stable"])
+
+  // Future publishing fields (placeholders, not implemented yet)
+  isPublished?: boolean;                   // True if shared to network
+  publishedAt?: number;                    // Timestamp of publication
+  downloadCount?: number;                  // How many times downloaded
+  networkId?: string;                      // Unique ID on shared network
+}
+
+/**
+ * Version increment type for semantic versioning
+ */
+export type VersionIncrementType = 'major' | 'minor' | 'patch';
+
 /**
  * Auto-save status indicator
  */
@@ -281,7 +319,8 @@ export interface ListProjectsOptions {
  * Options for exporting a project
  */
 export interface ExportOptions {
-  includeCustomIcons?: boolean;            // Default: true
+  includeAssets?: boolean;                 // Default: true - Include assets in export
+  includeUnusedAssets?: boolean;           // Default: true - Include assets with usageCount === 0
   includeThumbnail?: boolean;              // Default: true
   compressImages?: boolean;                // Default: false (future)
 }
@@ -405,4 +444,24 @@ export interface DBAutoSaveSnapshot {
   projectId: string;                       // Indexed
   timestamp: number;                       // Indexed
   stateJson: string;                       // JSON.stringify(ProjectState)
+}
+
+/**
+ * Project version entity as stored in IndexedDB
+ */
+export interface DBProjectVersion {
+  id: string;                              // Primary key (UUID)
+  projectId: string;                       // Indexed
+  versionNumber: string;                   // Semantic version
+  versionMajor: number;                    // Indexed (compound with versionMinor)
+  versionMinor: number;                    // Indexed (compound with versionMajor)
+  versionPatch: number;                    // Patch version
+  stateJson: string;                       // JSON.stringify(ProjectState)
+  createdAt: number;                       // Indexed
+  releaseNotes?: string;                   // Optional changelog
+  tags?: string[];                         // Optional tags
+  isPublished?: boolean;                   // Future: publication status
+  publishedAt?: number;                    // Future: publication timestamp
+  downloadCount?: number;                  // Future: download count
+  networkId?: string;                      // Future: network ID
 }

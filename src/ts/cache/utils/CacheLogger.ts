@@ -27,6 +27,35 @@ export interface CachePerformanceMetrics {
 }
 
 /**
+ * Aggregated cache metrics for analysis
+ */
+export interface CacheMetrics {
+  operation: string
+  hitCount: number
+  missCount: number
+  totalCount: number
+  hitRate: number
+  avgDuration: number
+  p50Duration: number
+  p95Duration: number
+  p99Duration: number
+  minDuration: number
+  maxDuration: number
+  durations: number[]
+}
+
+/**
+ * Cache recommendation based on analysis
+ */
+export interface CacheRecommendation {
+  severity: 'info' | 'warning' | 'critical'
+  category: 'hit-rate' | 'performance' | 'memory' | 'eviction'
+  message: string
+  details?: string
+  suggestedAction?: string
+}
+
+/**
  * CacheLogger - Static utility class for structured cache logging.
  *
  * Features:
@@ -36,10 +65,20 @@ export interface CachePerformanceMetrics {
  * - DevTools integration via window.__CACHE_DEBUG__
  * - localStorage persistence for log level preference
  */
+/**
+ * Cache access tracking for hit/miss analysis
+ */
+interface CacheAccessTracker {
+  hits: number
+  misses: number
+  durations: number[]
+}
+
 export class CacheLogger {
   private static level: CacheLogLevel = CacheLogLevel.WARN
   private static performanceMetrics: CachePerformanceMetrics[] = []
   private static maxMetricsHistory = 100  // Keep last 100 measurements
+  private static accessTrackers = new Map<string, CacheAccessTracker>()  // Track hits/misses per operation
 
   /**
    * Initialize logger with persisted log level from localStorage.
@@ -255,25 +294,219 @@ export class CacheLogger {
   }
 
   /**
-   * Clear all performance metrics.
+   * Log cache access (hit or miss) for analysis.
+   * Tracks hit rates and performance per operation.
+   *
+   * @param operation - Operation name (e.g., 'image-cache', 'pre-render-cache')
+   * @param hit - Whether this was a cache hit
+   * @param durationMs - Duration of the operation in milliseconds
+   */
+  static logAccess(operation: string, hit: boolean, durationMs: number): void {
+    // Get or create tracker for this operation
+    let tracker = this.accessTrackers.get(operation)
+    if (!tracker) {
+      tracker = { hits: 0, misses: 0, durations: [] }
+      this.accessTrackers.set(operation, tracker)
+    }
+
+    // Update hit/miss count
+    if (hit) {
+      tracker.hits++
+    } else {
+      tracker.misses++
+    }
+
+    // Track duration (keep last 100 for percentile calculations)
+    tracker.durations.push(durationMs)
+    if (tracker.durations.length > this.maxMetricsHistory) {
+      tracker.durations.shift()
+    }
+
+    // Log at trace level for detailed debugging
+    this.trace(`Cache access: ${operation}`, {
+      hit,
+      duration: `${durationMs.toFixed(2)}ms`,
+      hitRate: `${((tracker.hits / (tracker.hits + tracker.misses)) * 100).toFixed(1)}%`
+    })
+  }
+
+  /**
+   * Get aggregated metrics analysis for an operation.
+   * Calculates percentiles, hit rates, and performance stats.
+   *
+   * @param operation - Operation name
+   * @returns Aggregated metrics or null if no data
+   */
+  static getMetricsAnalysis(operation: string): CacheMetrics | null {
+    const tracker = this.accessTrackers.get(operation)
+    if (!tracker || tracker.durations.length === 0) {
+      return null
+    }
+
+    const totalCount = tracker.hits + tracker.misses
+    const hitRate = totalCount > 0 ? tracker.hits / totalCount : 0
+
+    // Sort durations for percentile calculations
+    const sortedDurations = [...tracker.durations].sort((a, b) => a - b)
+
+    // Calculate percentiles
+    const p50Index = Math.floor(sortedDurations.length * 0.50)
+    const p95Index = Math.floor(sortedDurations.length * 0.95)
+    const p99Index = Math.floor(sortedDurations.length * 0.99)
+
+    const p50Duration = sortedDurations[p50Index] || 0
+    const p95Duration = sortedDurations[p95Index] || 0
+    const p99Duration = sortedDurations[p99Index] || 0
+
+    // Calculate average
+    const totalDuration = sortedDurations.reduce((sum, d) => sum + d, 0)
+    const avgDuration = totalDuration / sortedDurations.length
+
+    return {
+      operation,
+      hitCount: tracker.hits,
+      missCount: tracker.misses,
+      totalCount,
+      hitRate,
+      avgDuration,
+      p50Duration,
+      p95Duration,
+      p99Duration,
+      minDuration: sortedDurations[0] || 0,
+      maxDuration: sortedDurations[sortedDurations.length - 1] || 0,
+      durations: [...tracker.durations]
+    }
+  }
+
+  /**
+   * Generate smart recommendations based on cache performance analysis.
+   * Analyzes all tracked operations and suggests optimizations.
+   *
+   * @returns Array of recommendations sorted by severity
+   */
+  static getRecommendations(): CacheRecommendation[] {
+    const recommendations: CacheRecommendation[] = []
+
+    // Analyze each tracked operation
+    for (const [operation, tracker] of this.accessTrackers.entries()) {
+      const metrics = this.getMetricsAnalysis(operation)
+      if (!metrics) continue
+
+      // Check hit rate (critical if < 50%, warning if < 70%)
+      if (metrics.hitRate < 0.5) {
+        recommendations.push({
+          severity: 'critical',
+          category: 'hit-rate',
+          message: `${operation}: Very low hit rate (${(metrics.hitRate * 100).toFixed(1)}%)`,
+          details: `Only ${metrics.hitCount} hits out of ${metrics.totalCount} accesses`,
+          suggestedAction: 'Consider increasing cache size or reviewing cache key strategy'
+        })
+      } else if (metrics.hitRate < 0.7) {
+        recommendations.push({
+          severity: 'warning',
+          category: 'hit-rate',
+          message: `${operation}: Suboptimal hit rate (${(metrics.hitRate * 100).toFixed(1)}%)`,
+          details: `${metrics.hitCount} hits, ${metrics.missCount} misses`,
+          suggestedAction: 'Cache size may be too small for current workload'
+        })
+      }
+
+      // Check performance (warning if p95 > 100ms, critical if p95 > 500ms)
+      if (metrics.p95Duration > 500) {
+        recommendations.push({
+          severity: 'critical',
+          category: 'performance',
+          message: `${operation}: Slow performance (P95: ${metrics.p95Duration.toFixed(1)}ms)`,
+          details: `95% of operations take longer than 500ms`,
+          suggestedAction: 'Investigate slow operations, consider background preloading'
+        })
+      } else if (metrics.p95Duration > 100) {
+        recommendations.push({
+          severity: 'warning',
+          category: 'performance',
+          message: `${operation}: Moderate slowness (P95: ${metrics.p95Duration.toFixed(1)}ms)`,
+          details: `Some operations are slower than optimal`,
+          suggestedAction: 'Consider optimizing cache lookup or prefetching strategies'
+        })
+      }
+
+      // Check for high variability (P99 >> P50 indicates inconsistent performance)
+      const variability = metrics.p50Duration > 0 ? metrics.p99Duration / metrics.p50Duration : 0
+      if (variability > 10) {
+        recommendations.push({
+          severity: 'warning',
+          category: 'performance',
+          message: `${operation}: Inconsistent performance`,
+          details: `P99 (${metrics.p99Duration.toFixed(1)}ms) is ${variability.toFixed(1)}x slower than P50 (${metrics.p50Duration.toFixed(1)}ms)`,
+          suggestedAction: 'Some operations are outliers - investigate cache misses or slow paths'
+        })
+      }
+    }
+
+    // Check eviction tracking from performance metrics
+    const evictionMetrics = this.performanceMetrics.filter(m =>
+      m.metadata?.reason === 'lru' || m.metadata?.reason === 'ttl'
+    )
+    if (evictionMetrics.length > 20) {
+      recommendations.push({
+        severity: 'warning',
+        category: 'eviction',
+        message: `High eviction rate detected (${evictionMetrics.length} evictions)`,
+        details: 'Frequent evictions may indicate cache is too small',
+        suggestedAction: 'Increase maxSize or reduce TTL to keep more entries cached'
+      })
+    }
+
+    // If no issues found, add positive feedback
+    if (recommendations.length === 0 && this.accessTrackers.size > 0) {
+      recommendations.push({
+        severity: 'info',
+        category: 'hit-rate',
+        message: '✓ All cache layers performing well',
+        details: 'No performance issues detected',
+        suggestedAction: 'Continue monitoring for changes in usage patterns'
+      })
+    }
+
+    // Sort by severity (critical first, then warning, then info)
+    const severityOrder = { critical: 0, warning: 1, info: 2 }
+    return recommendations.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity])
+  }
+
+  /**
+   * Clear all performance metrics and access tracking.
    */
   static clearMetrics(): void {
     this.performanceMetrics = []
-    this.debug('Performance metrics cleared')
+    this.accessTrackers.clear()
+    this.debug('Performance metrics and access tracking cleared')
   }
 
   /**
    * Export metrics as JSON string.
    * Useful for debugging and support.
    *
-   * @returns JSON string of all metrics
+   * @returns JSON string of all metrics including performance analysis and recommendations
    */
   static exportMetrics(): string {
+    // Get analysis for all tracked operations
+    const operationAnalysis: Record<string, CacheMetrics | null> = {}
+    for (const operation of this.accessTrackers.keys()) {
+      operationAnalysis[operation] = this.getMetricsAnalysis(operation)
+    }
+
     return JSON.stringify({
       logLevel: CacheLogLevel[this.level],
-      metricsCount: this.performanceMetrics.length,
-      metrics: this.performanceMetrics,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      performanceMetrics: {
+        count: this.performanceMetrics.length,
+        recent: this.performanceMetrics
+      },
+      accessTracking: {
+        operations: Array.from(this.accessTrackers.keys()),
+        analysis: operationAnalysis
+      },
+      recommendations: this.getRecommendations()
     }, null, 2)
   }
 
@@ -308,6 +541,35 @@ export class CacheLogger {
     }
 
     this.debug(`Memory usage: ${cacheName}`, data)
+  }
+
+  /**
+   * Log cache eviction event.
+   * @param cacheName - Name of cache
+   * @param key - Key being evicted
+   * @param reason - Reason for eviction
+   * @param size - Size of evicted entry in bytes
+   * @param lastAccessed - Timestamp of last access
+   * @param accessCount - Number of times entry was accessed
+   */
+  static logEviction(
+    cacheName: string,
+    key: string,
+    reason: 'lru' | 'ttl' | 'manual',
+    size: number,
+    lastAccessed: number,
+    accessCount: number
+  ): void {
+    const sizeMB = (size / 1024 / 1024).toFixed(2)
+    const age = Math.floor((Date.now() - lastAccessed) / 1000) // seconds
+
+    this.debug(`Cache eviction: ${cacheName}`, {
+      key,
+      reason,
+      size: `${sizeMB} MB`,
+      age: `${age}s ago`,
+      accessCount
+    })
   }
 }
 

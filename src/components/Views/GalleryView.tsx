@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTokenContext } from '../../contexts/TokenContext'
 import { usePresets, type CustomPreset } from '../../hooks/usePresets'
+import { ViewLayout } from '../Layout/ViewLayout'
 import { PresetSection } from '../Presets/PresetSection'
 import { FilterBar } from '../TokenGrid/FilterBar'
 import { AppearancePanel } from '../Options/AppearancePanel'
@@ -8,26 +9,29 @@ import { OptionsPanel } from '../Options/OptionsPanel'
 import { TokenGrid } from '../TokenGrid/TokenGrid'
 import { TokenPreviewRow } from '../TokenGrid/TokenPreviewRow'
 import type { Token } from '../../ts/types/index'
+import type { TabType } from '../Layout/TabNavigation'
 import styles from '../../styles/components/views/Views.module.css'
+import layoutStyles from '../../styles/components/layout/ViewLayout.module.css'
 
 interface GalleryViewProps {
   onTokenClick: (token: Token) => void
+  onTabChange: (tab: TabType) => void
 }
 
-export function GalleryView({ onTokenClick }: GalleryViewProps) {
+export function GalleryView({ onTokenClick, onTabChange }: GalleryViewProps) {
   const { generationOptions, updateGenerationOptions, generationProgress, isLoading } = useTokenContext()
   const { getCustomPresets } = usePresets()
   // Initialize with presets directly to avoid flash of empty state
   const [customPresets, setCustomPresets] = useState<CustomPreset[]>(() => getCustomPresets())
 
   return (
-    <div className={styles.galleryView}>
+    <ViewLayout variant="2-panel">
       {/* Left Sidebar - Presets and Options */}
-      <aside className={styles.gallerySidebar}>
-        <div className={styles.panelContent}>
-          <details className={styles.sidebarCard} open>
-            <summary className={styles.sectionHeader}>Presets</summary>
-            <div className={styles.optionSection}>
+      <ViewLayout.Panel position="left" width="left" scrollable>
+        <div className={layoutStyles.panelContent}>
+          <details className={layoutStyles.sidebarCard} open>
+            <summary className={layoutStyles.sectionHeader}>Presets</summary>
+            <div className={layoutStyles.optionSection}>
               <PresetSection
                 customPresets={customPresets}
                 onCustomPresetsChange={setCustomPresets}
@@ -36,16 +40,16 @@ export function GalleryView({ onTokenClick }: GalleryViewProps) {
             </div>
           </details>
 
-          <details className={styles.sidebarCard}>
-            <summary className={styles.sectionHeader}>Filters</summary>
-            <div className={styles.optionSection}>
+          <details className={layoutStyles.sidebarCard}>
+            <summary className={layoutStyles.sectionHeader}>Filters</summary>
+            <div className={layoutStyles.optionSection}>
               <FilterBar />
             </div>
           </details>
 
-          <details className={styles.sidebarCard} open>
-            <summary className={styles.sectionHeader}>Appearance</summary>
-            <div className={styles.optionSection}>
+          <details className={layoutStyles.sidebarCard} open>
+            <summary className={layoutStyles.sectionHeader}>Appearance</summary>
+            <div className={layoutStyles.optionSection}>
               <AppearancePanel
                 generationOptions={generationOptions}
                 onOptionChange={updateGenerationOptions}
@@ -53,9 +57,9 @@ export function GalleryView({ onTokenClick }: GalleryViewProps) {
             </div>
           </details>
 
-          <details className={styles.sidebarCard} open>
-            <summary className={styles.sectionHeader}>Options</summary>
-            <div className={styles.optionSection}>
+          <details className={layoutStyles.sidebarCard} open>
+            <summary className={layoutStyles.sectionHeader}>Options</summary>
+            <div className={layoutStyles.optionSection}>
               <OptionsPanel
                 generationOptions={generationOptions}
                 onOptionChange={updateGenerationOptions}
@@ -63,10 +67,10 @@ export function GalleryView({ onTokenClick }: GalleryViewProps) {
             </div>
           </details>
         </div>
-      </aside>
+      </ViewLayout.Panel>
 
       {/* Right Content - Token Grid */}
-      <div className={styles.galleryContent}>
+      <ViewLayout.Panel position="right" width="flex" scrollable>
         <TokenPreviewRow />
         <div className={styles.galleryHeader}>
           {isLoading && generationProgress && (
@@ -75,8 +79,8 @@ export function GalleryView({ onTokenClick }: GalleryViewProps) {
             </div>
           )}
         </div>
-        <TokenGrid onTokenClick={onTokenClick} />
-      </div>
-    </div>
+        <TokenGrid onTokenClick={onTokenClick} onTabChange={onTabChange} />
+      </ViewLayout.Panel>
+    </ViewLayout>
   )
 }

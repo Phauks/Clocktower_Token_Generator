@@ -1,0 +1,34 @@
+# CODEOWNERS
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global owner - default for everything in the repo
+* @Phauks
+
+# TypeScript source code
+/src/ @Phauks
+/src/ts/ @Phauks
+
+# GitHub workflows and CI/CD
+/.github/ @Phauks
+/.github/workflows/ @Phauks
+
+# Configuration files
+/tsconfig.json @Phauks
+/vite.config.ts @Phauks
+/vitest.config.ts @Phauks
+/package.json @Phauks
+
+# Documentation
+*.md @Phauks
+/docs/ @Phauks
+
+# Tests
+**/__tests__/ @Phauks
+*.test.ts @Phauks
+
+# Assets and styles
+/assets/ @Phauks
+/css/ @Phauks
+
+# Build outputs (should rarely change)
+/dist/ @Phauks

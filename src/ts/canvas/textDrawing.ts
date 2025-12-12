@@ -5,6 +5,8 @@
 
 import { DEFAULT_COLORS, CHARACTER_LAYOUT, LINE_HEIGHTS } from '../constants.js';
 import { wrapText } from './canvasUtils.js';
+import { precalculateCurvedTextPositions, calculateCircularTextLayout } from './canvasOptimizations.js';
+import { getCachedFont } from '../cache/instances/fontCache.js';
 
 /**
  * Options for curved text rendering
@@ -75,7 +77,8 @@ export function drawCurvedText(
 
     ctx.save();
 
-    ctx.font = `bold ${fontSize}px "${fontFamily}", Georgia, serif`;
+    // Use cached font string
+    ctx.font = getCachedFont('bold', fontSize, fontFamily, 'Georgia, serif');
     ctx.fillStyle = color;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -83,8 +86,11 @@ export function drawCurvedText(
     // Add text shadow for readability
     applyConfigurableShadow(ctx, shadowBlur);
 
-    // Measure total text width
-    const totalWidth = ctx.measureText(text).width;
+    // Measure total text width including letter spacing
+    // Letter spacing is applied between characters, so (N-1) spaces for N characters
+    const baseWidth = ctx.measureText(text).width;
+    const totalLetterSpacing = text.length > 1 ? (text.length - 1) * letterSpacing : 0;
+    const totalWidth = baseWidth + totalLetterSpacing;
 
     // Calculate the angle span based on text width and radius
     // Limit to a maximum arc span to keep text readable
@@ -108,37 +114,29 @@ export function drawCurvedText(
         totalCharWidth += width;
     }
 
-    // Draw each character
-    let currentAngle = startAngle;
     const direction = position === 'bottom' ? -1 : 1;
 
-    for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        const charWidth = charWidths[i];
-        const charAngle = (charWidth / totalCharWidth) * arcSpan;
+    // Pre-calculate all character positions
+    const positions = precalculateCurvedTextPositions(
+        text,
+        charWidths,
+        totalCharWidth,
+        centerX,
+        centerY,
+        radius,
+        arcSpan,
+        startAngle,
+        direction,
+        position
+    );
 
-        currentAngle += direction * charAngle / 2;
-
-        const x = centerX + radius * Math.cos(currentAngle);
-        const y = centerY + radius * Math.sin(currentAngle);
-
+    // Draw all characters using pre-calculated positions
+    for (const { char, x, y, rotation } of positions) {
         ctx.save();
         ctx.translate(x, y);
-
-        // Rotate character to follow the curve
-        let rotation = currentAngle + Math.PI / 2;
-        if (position === 'top') {
-            rotation -= Math.PI;
-        } else {
-            // For bottom text, flip 180 degrees to face outward
-            rotation += Math.PI;
-        }
         ctx.rotate(rotation);
-
         ctx.fillText(char, 0, 0);
         ctx.restore();
-
-        currentAngle += direction * charAngle / 2;
     }
 
     ctx.restore();
@@ -167,7 +165,8 @@ export function drawCenteredWrappedText(
     ctx.save();
 
     const fontSize = diameter * fontSizeRatio;
-    ctx.font = `bold ${fontSize}px "${fontFamily}", Georgia, serif`;
+    // Use cached font string
+    ctx.font = getCachedFont('bold', fontSize, fontFamily, 'Georgia, serif');
     ctx.fillStyle = color;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -215,7 +214,8 @@ export function drawTwoLineCenteredText(
     ctx.save();
 
     const fontSize = diameter * fontSizeRatio;
-    ctx.font = `bold ${fontSize}px "${fontFamily}", Georgia, serif`;
+    // Use cached font string
+    ctx.font = getCachedFont('bold', fontSize, fontFamily, 'Georgia, serif');
     ctx.fillStyle = color;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -235,35 +235,8 @@ export function drawTwoLineCenteredText(
 }
 
 /**
- * Calculate the available width at a given Y position within a circle
- * Uses the chord formula: width = 2 * sqrt(r² - d²)
- * where r is radius and d is distance from center
- * @param yPosition - Y coordinate position
- * @param centerY - Y coordinate of circle center
- * @param radius - Circle radius
- * @param maxWidthRatio - Maximum width ratio to constrain (e.g., 0.9 = 90% of calculated width)
- * @returns Available width at that Y position
- */
-function calculateCircularWidth(yPosition: number, centerY: number, radius: number, maxWidthRatio: number = 0.9): number {
-    const distanceFromCenter = Math.abs(yPosition - centerY);
-    
-    // If outside the circle, return 0
-    if (distanceFromCenter > radius) {
-        return 0;
-    }
-    
-    // Calculate chord width at this height using Pythagorean theorem
-    // For a circle: x² + y² = r²
-    // So: x = sqrt(r² - y²), and width = 2x
-    const halfWidth = Math.sqrt(radius * radius - distanceFromCenter * distanceFromCenter);
-    const fullWidth = 2 * halfWidth;
-    
-    // Apply max width ratio to add some padding from edges
-    return fullWidth * maxWidthRatio;
-}
-
-/**
  * Draw ability text on token (horizontal, word-wrapped with adaptive width based on circular shape)
+ * This version uses optimized circular text layout calculation
  * @param ctx - Canvas context
  * @param ability - Ability text
  * @param diameter - Token diameter
@@ -292,7 +265,8 @@ export function drawAbilityText(
     ctx.save();
 
     const fontSize = diameter * fontSizeRatio;
-    ctx.font = `${fontSize}px "${fontFamily}", sans-serif`;
+    // Use cached font string (normal weight for ability text)
+    ctx.font = getCachedFont('', fontSize, fontFamily, 'sans-serif');
     ctx.fillStyle = color;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
@@ -308,47 +282,24 @@ export function drawAbilityText(
     ctx.shadowOffsetX = shadowBlur / 3;
     ctx.shadowOffsetY = shadowBlur / 3;
 
-    // Calculate circle properties
-    const radius = diameter / 2;
-    const centerY = diameter / 2;
-    const lineHeight = fontSize * lineHeightMultiplier;
     const startY = diameter * yPositionRatio;
 
-    // Split text into words for adaptive wrapping
-    const words = ability.split(' ');
-    const lines: string[] = [];
-    let currentLine = '';
+    // Use optimized circular text layout calculation
+    const layout = calculateCircularTextLayout(
+        ctx,
+        ability,
+        diameter,
+        fontSize,
+        lineHeightMultiplier,
+        startY,
+        CHARACTER_LAYOUT.ABILITY_TEXT_CIRCULAR_PADDING
+    );
+
+    // Draw lines
     let currentY = startY;
-
-    for (const word of words) {
-        const testLine = currentLine ? `${currentLine} ${word}` : word;
-        const testWidth = ctx.measureText(testLine).width;
-        
-        // Calculate available width at current Y position
-        // Use CHARACTER_LAYOUT.ABILITY_TEXT_CIRCULAR_PADDING for consistent padding from circle edges
-        const availableWidth = calculateCircularWidth(currentY + fontSize / 2, centerY, radius, CHARACTER_LAYOUT.ABILITY_TEXT_CIRCULAR_PADDING);
-        
-        if (testWidth <= availableWidth || !currentLine) {
-            // Word fits on current line (or it's the first word on the line)
-            currentLine = testLine;
-        } else {
-            // Word doesn't fit, save current line and start new one
-            lines.push(currentLine);
-            currentLine = word;
-            currentY += lineHeight;
-        }
-    }
-    
-    // Add the last line
-    if (currentLine) {
-        lines.push(currentLine);
-    }
-
-    // Draw lines with their adaptive widths
-    currentY = startY;
-    for (const line of lines) {
+    for (const line of layout.lines) {
         ctx.fillText(line, diameter / 2, currentY);
-        currentY += lineHeight;
+        currentY += layout.lineHeight;
     }
 
     ctx.restore();
@@ -378,7 +329,8 @@ export function drawQROverlayText(
     ctx.save();
 
     const fontSize = diameter * fontSizeRatio;
-    ctx.font = `bold ${fontSize}px "${fontFamily}", Georgia, serif`;
+    // Use cached font string
+    ctx.font = getCachedFont('bold', fontSize, fontFamily, 'Georgia, serif');
     ctx.fillStyle = color;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';

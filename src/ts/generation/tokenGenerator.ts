@@ -12,10 +12,23 @@ import {
     LINE_HEIGHTS,
     TOKEN_COUNT_BADGE,
     DEFAULT_COLORS,
-    QR_COLORS
+    QR_COLORS,
+    TokenType,
+    type TokenTypeValue
 } from '../constants.js';
 import { loadImage, loadLocalImage, globalImageCache } from '../utils/index.js';
-import { drawImageCover, createCircularClipPath, createCanvas, type Point, type CanvasContext } from '../canvas/index.js';
+import { isBuiltInAsset, getBuiltInAssetPath } from '../constants/builtInAssets.js';
+import { isAssetReference, resolveAssetUrl } from '../../services/upload/assetResolver.js';
+import type { AssetType } from '../../services/upload/types.js';
+import {
+    drawImageCover,
+    createCircularClipPath,
+    createCanvas,
+    type Point,
+    type CanvasContext,
+    calculateCircularTextLayout,
+    type TextLayoutResult
+} from '../canvas/index.js';
 import {
     drawCurvedText,
     drawCenteredWrappedText,
@@ -32,6 +45,12 @@ import {
     type MetaTokenContentRenderer,
     DEFAULT_TOKEN_OPTIONS
 } from '../types/tokenOptions.js';
+import {
+    IconLayoutStrategyFactory,
+    type IconLayoutStrategy,
+    type LayoutContext
+} from './iconLayoutStrategies.js';
+import { TokenCreationError, ValidationError } from '../errors.js';
 
 // Re-export generateAllTokens for backward compatibility
 export { generateAllTokens } from './batchGenerator.js';
@@ -79,6 +98,28 @@ export class TokenGenerator {
         globalImageCache.clear();
     }
 
+    /**
+     * Pre-warm the image cache with all character images
+     * This improves performance by loading all images before generation starts
+     * @param characters - Array of characters to pre-load images for
+     */
+    async prewarmImageCache(characters: Character[]): Promise<void> {
+        const imageUrls = new Set<string>();
+
+        // Collect all unique image URLs
+        for (const character of characters) {
+            const url = getCharacterImageUrl(character.image);
+            if (url) {
+                imageUrls.add(url);
+            }
+        }
+
+        // Pre-load all images in parallel
+        await Promise.allSettled(
+            Array.from(imageUrls).map(url => this.getCachedImage(url))
+        );
+    }
+
     // ========================================================================
     // CANVAS UTILITIES
     // ========================================================================
@@ -92,6 +133,32 @@ export class TokenGenerator {
         createCircularClipPath(ctx, center, radius);
     }
 
+    /**
+     * Resolve a decorative asset value to a loadable image URL/path
+     * Handles built-in asset IDs, user-uploaded asset references, and legacy paths
+     */
+    private async resolveDecorativeAsset(
+        value: string,
+        assetType: AssetType,
+        legacyPathPrefix: string
+    ): Promise<string | null> {
+        if (!value || value === 'none') return null;
+
+        // Check if it's a user-uploaded asset reference (asset:uuid)
+        if (isAssetReference(value)) {
+            const resolvedUrl = await resolveAssetUrl(value);
+            return resolvedUrl || null;
+        }
+
+        // Check if it's a built-in asset ID
+        if (isBuiltInAsset(value, assetType)) {
+            return getBuiltInAssetPath(value, assetType);
+        }
+
+        // Legacy fallback: treat as filename pattern
+        return `${legacyPathPrefix}${value}.png`;
+    }
+
     private async drawBackground(
         ctx: CanvasRenderingContext2D,
         backgroundName: string,
@@ -99,8 +166,24 @@ export class TokenGenerator {
         fallbackColor: string = DEFAULT_COLORS.FALLBACK_BACKGROUND
     ): Promise<void> {
         try {
-            const bgPath = `${CONFIG.ASSETS.CHARACTER_BACKGROUNDS}${backgroundName}.png`;
-            const bgImage = await this.getLocalImage(bgPath);
+            const bgPath = await this.resolveDecorativeAsset(
+                backgroundName,
+                'token-background',
+                CONFIG.ASSETS.CHARACTER_BACKGROUNDS
+            );
+
+            if (!bgPath) {
+                if (!this.options.transparentBackground) {
+                    ctx.fillStyle = fallbackColor;
+                    ctx.fill();
+                }
+                return;
+            }
+
+            // Determine if it's a local path or a blob URL
+            const bgImage = bgPath.startsWith('blob:')
+                ? await this.getCachedImage(bgPath)
+                : await this.getLocalImage(bgPath);
             drawImageCover(ctx, bgImage, diameter, diameter);
         } catch {
             if (!this.options.transparentBackground) {
@@ -115,6 +198,14 @@ export class TokenGenerator {
     // ========================================================================
 
     async generateCharacterToken(character: Character, imageOverride?: string): Promise<HTMLCanvasElement> {
+        // Input validation
+        if (!character?.name) {
+            throw new ValidationError('Character must have a name');
+        }
+        if (this.options.dpi <= 0) {
+            throw new ValidationError('DPI must be positive');
+        }
+
         const diameter = CONFIG.TOKEN.ROLE_DIAMETER_INCHES * this.options.dpi;
         const { canvas, ctx, center, radius } = this.createBaseCanvas(diameter);
 
@@ -134,19 +225,27 @@ export class TokenGenerator {
         // - Bootlegger rules take priority when enabled and present (replaces regular ability text)
         // - Otherwise use regular ability text if enabled
         const bootleggerText = this.options.bootleggerRules?.trim();
-        const abilityTextToDisplay = bootleggerText 
-            ? bootleggerText 
+        const abilityTextToDisplay = bootleggerText
+            ? bootleggerText
             : (this.options.displayAbilityText ? character.ability : undefined);
         const hasAbilityText = Boolean(abilityTextToDisplay?.trim());
-        
-        // Calculate optimal icon size when ability text is present
-        let abilityTextHeight = 0;
+
+        // Calculate text layout once (replaces redundant calculation)
+        let abilityTextLayout: TextLayoutResult | undefined;
         if (hasAbilityText) {
-            abilityTextHeight = this.calculateAbilityTextHeight(ctx, abilityTextToDisplay!, diameter);
+            abilityTextLayout = this.calculateAbilityTextLayout(ctx, abilityTextToDisplay!, diameter);
         }
-        
+
         // Draw character image with adjusted layout based on ability text presence
-        await this.drawCharacterImage(ctx, character, diameter, CHARACTER_LAYOUT, 'character', imageOverride, hasAbilityText, abilityTextHeight);
+        await this.drawCharacterImage(
+            ctx,
+            character,
+            diameter,
+            TokenType.CHARACTER,
+            imageOverride,
+            hasAbilityText,
+            abilityTextLayout
+        );
 
         if (character.setup) {
             await this.drawSetupFlower(ctx, diameter);
@@ -176,51 +275,53 @@ export class TokenGenerator {
         return canvas;
     }
 
-    private calculateAbilityTextHeight(ctx: CanvasRenderingContext2D, ability: string, diameter: number): number {
+    /**
+     * Calculate ability text layout (optimized version using cached layout calculation)
+     * @param ctx - Canvas context
+     * @param ability - Ability text
+     * @param diameter - Token diameter
+     * @returns Text layout result with lines and height
+     */
+    private calculateAbilityTextLayout(ctx: CanvasRenderingContext2D, ability: string, diameter: number): TextLayoutResult {
         ctx.save();
         const fontSize = diameter * CONFIG.FONTS.ABILITY_TEXT.SIZE_RATIO;
         ctx.font = `${fontSize}px "${this.options.abilityTextFont}", sans-serif`;
-        const lineHeight = fontSize * (CONFIG.FONTS.ABILITY_TEXT.LINE_HEIGHT ?? LINE_HEIGHTS.STANDARD);
-        
-        // Calculate how many lines the ability text will take
-        const radius = diameter / 2;
-        const centerY = diameter / 2;
+        const lineHeightMultiplier = CONFIG.FONTS.ABILITY_TEXT.LINE_HEIGHT ?? LINE_HEIGHTS.STANDARD;
         const startY = diameter * CHARACTER_LAYOUT.ABILITY_TEXT_Y_POSITION;
-        const words = ability.split(' ');
-        let lineCount = 0;
-        let currentLine = '';
-        let currentY = startY;
-        
-        for (const word of words) {
-            const testLine = currentLine ? `${currentLine} ${word}` : word;
-            const testWidth = ctx.measureText(testLine).width;
-            const distanceFromCenter = Math.abs(currentY + fontSize / 2 - centerY);
-            const halfWidth = distanceFromCenter < radius ? Math.sqrt(radius * radius - distanceFromCenter * distanceFromCenter) : 0;
-            const availableWidth = 2 * halfWidth * CHARACTER_LAYOUT.ABILITY_TEXT_CIRCULAR_PADDING;
-            
-            if (testWidth <= availableWidth || !currentLine) {
-                currentLine = testLine;
-            } else {
-                lineCount++;
-                currentLine = word;
-                currentY += lineHeight;
-            }
-        }
-        if (currentLine) lineCount++;
-        
+
+        // Use optimized circular text layout calculation
+        const layout = calculateCircularTextLayout(
+            ctx,
+            ability,
+            diameter,
+            fontSize,
+            lineHeightMultiplier,
+            startY,
+            CHARACTER_LAYOUT.ABILITY_TEXT_CIRCULAR_PADDING
+        );
+
         ctx.restore();
-        return lineCount * lineHeight;
+        return layout;
     }
 
+    /**
+     * Draw character image on token (optimized with layout strategies)
+     * @param ctx - Canvas context
+     * @param character - Character data
+     * @param diameter - Token diameter
+     * @param tokenType - Type of token
+     * @param imageOverride - Optional image URL override
+     * @param hasAbilityText - Whether character has ability text
+     * @param abilityTextLayout - Pre-calculated ability text layout
+     */
     private async drawCharacterImage(
         ctx: CanvasRenderingContext2D,
         character: Character,
         diameter: number,
-        layout: typeof CHARACTER_LAYOUT | typeof REMINDER_LAYOUT,
-        tokenType: 'character' | 'reminder' | 'meta',
+        tokenType: TokenTypeValue,
         imageOverride?: string,
         hasAbilityText?: boolean,
-        abilityTextHeight?: number
+        abilityTextLayout?: TextLayoutResult
     ): Promise<void> {
         const imageUrl = imageOverride || getCharacterImageUrl(character.image);
         if (!imageUrl) return;
@@ -230,84 +331,68 @@ export class TokenGenerator {
 
             // Get icon settings for this token type
             const defaultIconSettings = { scale: 1.0, offsetX: 0, offsetY: 0 };
-            const iconSettings = this.options.iconSettings?.[tokenType] || defaultIconSettings;
+            const iconSettings = this.options.iconSettings?.[tokenType as 'character' | 'reminder' | 'meta'] || defaultIconSettings;
 
-            // Adjust size and position based on ability text presence (only for character tokens)
-            // Use default values if layout doesn't specify (CHARACTER_LAYOUT doesn't have these, REMINDER_LAYOUT does)
-            let imageSizeRatio = 'IMAGE_SIZE_RATIO' in layout ? layout.IMAGE_SIZE_RATIO : 1.0;
-            let verticalOffset = 'IMAGE_VERTICAL_OFFSET' in layout ? layout.IMAGE_VERTICAL_OFFSET : 0.05;
-            
-            if (tokenType === 'character' && hasAbilityText !== undefined) {
-                // Character name is at the bottom (curved text)
-                const characterNameY = diameter * CHARACTER_LAYOUT.CURVED_TEXT_RADIUS;
-                
-                if (hasAbilityText && abilityTextHeight !== undefined) {
-                    // Dynamic sizing: maximize icon space between ability text and character name
-                    const abilityTextStartY = diameter * CHARACTER_LAYOUT.ABILITY_TEXT_Y_POSITION;
-                    const abilityTextEndY = abilityTextStartY + abilityTextHeight;
-                    
-                    // Calculate available vertical space for icon
-                    const availableHeight = characterNameY - abilityTextEndY;
-                    
-                    // Use configured ratio of available space for optimal appearance
-                    const optimalSize = availableHeight * CHARACTER_LAYOUT.ICON_SPACE_RATIO_WITH_ABILITY;
-                    
-                    // Calculate the ratio
-                    imageSizeRatio = optimalSize / diameter;
-                    
-                    // Center icon vertically in the available space
-                    const iconCenterY = abilityTextEndY + availableHeight / 2;
-                    verticalOffset = (diameter / 2 - iconCenterY) / diameter;
-                } else {
-                    // Without ability text: dynamic sizing between top margin and character name
-                    const topMargin = diameter * CHARACTER_LAYOUT.NO_ABILITY_TOP_MARGIN;
-                    
-                    // Calculate available vertical space for icon
-                    const availableHeight = characterNameY - topMargin;
-                    
-                    // Use configured ratio of available space for optimal appearance
-                    const optimalSize = availableHeight * CHARACTER_LAYOUT.ICON_SPACE_RATIO_NO_ABILITY;
-                    
-                    // Calculate the ratio
-                    imageSizeRatio = optimalSize / diameter;
-                    
-                    // Center icon vertically in the available space
-                    const iconCenterY = topMargin + availableHeight / 2;
-                    verticalOffset = (diameter / 2 - iconCenterY) / diameter;
-                }
+            // Create layout context
+            const layoutContext: LayoutContext = {
+                diameter,
+                iconScale: iconSettings.scale,
+                iconOffsetX: iconSettings.offsetX,
+                iconOffsetY: iconSettings.offsetY
+            };
+
+            // Get appropriate layout strategy
+            let strategy: IconLayoutStrategy;
+            if (tokenType === TokenType.CHARACTER) {
+                const abilityTextStartY = abilityTextLayout ? diameter * CHARACTER_LAYOUT.ABILITY_TEXT_Y_POSITION : undefined;
+                strategy = IconLayoutStrategyFactory.create(
+                    tokenType,
+                    hasAbilityText,
+                    abilityTextLayout?.totalHeight,
+                    abilityTextStartY
+                );
+            } else {
+                strategy = IconLayoutStrategyFactory.create(tokenType);
             }
 
-            // Apply icon scale
-            const imgSize = diameter * imageSizeRatio * iconSettings.scale;
+            // Calculate layout using strategy
+            const layout = strategy.calculate(layoutContext);
 
-            // Calculate base offset (centers the image)
-            const baseOffsetX = (diameter - imgSize) / 2;
-            const baseOffsetY = (diameter - imgSize) / 2 - diameter * verticalOffset;
-
-            // Apply user-defined offsets
-            // Note: offsetY is negated so positive values move the icon up (more intuitive for users)
-            const offsetX = baseOffsetX + iconSettings.offsetX;
-            const offsetY = baseOffsetY - iconSettings.offsetY;
-
+            // Draw image at calculated position
             ctx.drawImage(
                 charImage,
-                offsetX,
-                offsetY,
-                imgSize,
-                imgSize
+                layout.position.x,
+                layout.position.y,
+                layout.size,
+                layout.size
             );
         } catch (error) {
-            console.warn(`Could not load character image for ${character.name}`, error);
+            throw new TokenCreationError(
+                `Failed to load character image`,
+                character.name,
+                error instanceof Error ? error : new Error(String(error))
+            );
         }
     }
 
     private async drawSetupFlower(ctx: CanvasRenderingContext2D, diameter: number): Promise<void> {
         try {
-            const flowerPath = `${CONFIG.ASSETS.SETUP_FLOWERS}${this.options.setupFlowerStyle}.png`;
-            const flowerImage = await this.getLocalImage(flowerPath);
+            const flowerPath = await this.resolveDecorativeAsset(
+                this.options.setupFlowerStyle,
+                'setup-flower',
+                CONFIG.ASSETS.SETUP_FLOWERS
+            );
+
+            if (!flowerPath) return;
+
+            // Determine if it's a local path or a blob URL
+            const flowerImage = flowerPath.startsWith('blob:')
+                ? await this.getCachedImage(flowerPath)
+                : await this.getLocalImage(flowerPath);
             drawImageCover(ctx, flowerImage, diameter, diameter);
-        } catch {
-            console.warn('Could not load setup flower');
+        } catch (error) {
+            // Log warning but don't throw - setup flower is optional decoration
+            console.warn(`Could not load setup flower: ${this.options.setupFlowerStyle}`, error);
         }
     }
 
@@ -384,6 +469,17 @@ export class TokenGenerator {
     // ========================================================================
 
     async generateReminderToken(character: Character, reminderText: string, imageOverride?: string): Promise<HTMLCanvasElement> {
+        // Input validation
+        if (!character?.name) {
+            throw new ValidationError('Character must have a name for reminder token');
+        }
+        if (!reminderText?.trim()) {
+            throw new ValidationError('Reminder text cannot be empty');
+        }
+        if (this.options.dpi <= 0) {
+            throw new ValidationError('DPI must be positive');
+        }
+
         const diameter = CONFIG.TOKEN.REMINDER_DIAMETER_INCHES * this.options.dpi;
         const { canvas, ctx, center, radius } = this.createBaseCanvas(diameter);
 
@@ -400,7 +496,7 @@ export class TokenGenerator {
             }
         }
 
-        await this.drawCharacterImage(ctx, character, diameter, REMINDER_LAYOUT, 'reminder', imageOverride);
+        await this.drawCharacterImage(ctx, character, diameter, TokenType.REMINDER, imageOverride);
         ctx.restore();
 
         drawCurvedText(ctx, {

@@ -18,6 +18,8 @@ export const STORAGE_KEYS = {
     THEME: 'clocktower_ui_theme',
     /** Custom themes created by user */
     CUSTOM_THEMES: 'clocktower_custom_themes',
+    /** Auto-save enabled preference */
+    AUTO_SAVE_ENABLED: 'clocktower_auto_save_enabled',
     /** Legacy key for preset migration */
     LEGACY_PRESETS: 'bloodOnTheClockTower_presets',
 } as const;

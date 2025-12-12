@@ -1,14 +1,17 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useTokenContext } from '../../contexts/TokenContext'
 import { useToast } from '../../contexts/ToastContext'
+import { ViewLayout } from '../Layout/ViewLayout'
+import { Button } from '../Shared/Button'
 import { CharacterNavigation } from '../TokenDetailView/CharacterNavigation'
 import { TokenPreview } from '../TokenDetailView/TokenPreview'
 import { TokenEditor } from '../TokenDetailView/TokenEditor'
 import { MetaEditor } from '../TokenDetailView/MetaEditor'
 import { updateCharacterInJson, updateMetaInJson, downloadCharacterTokensAsZip, downloadCharacterTokenOnly, downloadReminderTokensOnly, regenerateCharacterAndReminders } from '../../ts/ui/detailViewUtils'
-import { generateRandomName, nameToId, generateUuid } from '../../ts/utils/nameGenerator'
+import { generateRandomName, nameToId, generateUuid, generateStableUuid } from '../../ts/utils/nameGenerator'
 import { getPreRenderedTokens, hashOptions } from '../../utils/customizePreRenderCache'
 import styles from '../../styles/components/views/Views.module.css'
+import layoutStyles from '../../styles/components/layout/ViewLayout.module.css'
 import previewStyles from '../../styles/components/tokenDetail/TokenPreview.module.css'
 import type { Token, Character, Team, ScriptMeta } from '../../ts/types/index.js'
 
@@ -23,34 +26,41 @@ interface CustomizeViewProps {
 export function CustomizeView({ initialToken, selectedCharacterUuid: externalSelectedUuid, onCharacterSelect, onGoToGallery, createNewCharacter }: CustomizeViewProps) {
   const { characters, tokens, jsonInput, setJsonInput, setCharacters, setTokens, generationOptions, setMetadata, deleteMetadata, getMetadata, scriptMeta, setScriptMeta, officialData } = useTokenContext()
   const { addToast } = useToast()
-  
+
   // Check if initialToken is a meta token
   const isMetaToken = (token?: Token) => {
     return token && token.type !== 'character' && token.type !== 'reminder'
   }
-  
+
   // Determine the initial character UUID from the clicked token or external prop
   const getInitialCharacterUuid = () => {
     // If initial token is a meta token, don't select any character
     if (isMetaToken(initialToken)) return ''
-    
-    if (externalSelectedUuid) return externalSelectedUuid
+
+    // Use external UUID if provided (stable UUIDs mean this always works)
+    if (externalSelectedUuid) {
+      const byUuid = characters.find(c => c.uuid === externalSelectedUuid)
+      if (byUuid) return externalSelectedUuid
+    }
+
     if (!initialToken) return characters[0]?.uuid || ''
-    
+
     if (initialToken.parentCharacter) {
       const char = characters.find(c => c.name === initialToken.parentCharacter)
       if (char) return char.uuid || ''
     }
-    
+
     if (initialToken.type === 'character') {
       const char = characters.find(c => c.name === initialToken.name)
       if (char) return char.uuid || ''
     }
-    
+
     return characters[0]?.uuid || ''
   }
   
-  const [selectedCharacterUuid, setSelectedCharacterUuid] = useState<string>(getInitialCharacterUuid())
+  const [selectedCharacterUuid, setSelectedCharacterUuid] = useState<string>(() => {
+    return getInitialCharacterUuid()
+  })
   const [editedCharacter, setEditedCharacter] = useState<Character | null>(null)
   const [selectedMetaToken, setSelectedMetaToken] = useState<Token | null>(
     initialToken && isMetaToken(initialToken) ? initialToken : null
@@ -136,9 +146,10 @@ export function CustomizeView({ initialToken, selectedCharacterUuid: externalSel
     if (createNewCharacter && !hasCreatedNewCharacterRef.current) {
       hasCreatedNewCharacterRef.current = true
       // Create a new character immediately with all properties
-      const randomName = generateRandomName()
-      const newId = nameToId(randomName)
-      const newUuid = generateUuid()
+      ;(async () => {
+        const randomName = generateRandomName()
+        const newId = nameToId(randomName)
+        const newUuid = await generateStableUuid(newId, randomName)
       const newCharacter: Character = {
         id: newId,
         name: randomName,
@@ -194,8 +205,9 @@ export function CustomizeView({ initialToken, selectedCharacterUuid: externalSel
         .catch((error) => {
           console.error('Failed to generate token for new character:', error)
         })
-      
-      addToast('New character created', 'success')
+
+        addToast('New character created', 'success')
+      })()
     }
   }, [createNewCharacter, characters, jsonInput, setCharacters, setJsonInput, addToast, generationOptions, tokens, setTokens])
 
@@ -336,53 +348,93 @@ export function CustomizeView({ initialToken, selectedCharacterUuid: externalSel
       })
   }, [editedCharacter, generationOptions])
 
-  // Immediate save to JSON when editedCharacter changes
+  // Ref to track pending save data for flush on unmount
+  const pendingSaveRef = useRef<Character | null>(null)
+
+  // Save function that can be called from timer or cleanup
+  const performSave = useCallback((charToSave: Character) => {
+    try {
+      // Mark that we're saving to prevent the sync effect from resetting editedCharacter
+      justSavedRef.current = true
+
+      // Use originalCharacterUuidRef to find the character (in case ID was changed)
+      const origUuid = originalCharacterUuidRef.current
+      const origChar = charactersRef.current.find(c => c.uuid === origUuid)
+      const origId = origChar?.id || charToSave.id
+
+      // Use ref to get current jsonInput without causing dependency cycle
+      const updatedJson = updateCharacterInJson(jsonInputRef.current, origId, charToSave)
+      setJsonInput(updatedJson)
+      // Use ref to get current characters without causing dependency cycle - match by UUID
+      const updatedChars = charactersRef.current.map(c =>
+        c.uuid === origUuid ? charToSave : c
+      )
+      setCharacters(updatedChars)
+
+      // Update metadata - check if ID still matches name-derived ID
+      if (charToSave.uuid) {
+        const expectedId = nameToId(charToSave.name)
+        const isLinked = charToSave.id === expectedId
+        setMetadata(charToSave.uuid, { idLinkedToName: isLinked })
+      }
+
+      setIsDirty(false)
+      pendingSaveRef.current = null
+    } catch (error) {
+      console.error('Save failed:', error)
+      justSavedRef.current = false
+    }
+  }, [setJsonInput, setCharacters, setMetadata])
+
+  // Debounced save to JSON when editedCharacter changes
   useEffect(() => {
     if (!isDirty || !editedCharacter) return
-    
+
+    // Track pending save for flush on unmount
+    pendingSaveRef.current = editedCharacter
+
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current)
     }
-    
+
     saveTimerRef.current = setTimeout(() => {
-      try {
-        // Mark that we're saving to prevent the sync effect from resetting editedCharacter
-        justSavedRef.current = true
-        
-        // Use originalCharacterUuidRef to find the character (in case ID was changed)
-        const origUuid = originalCharacterUuidRef.current
-        const origChar = charactersRef.current.find(c => c.uuid === origUuid)
-        const origId = origChar?.id || editedCharacter.id
-        
-        // Use ref to get current jsonInput without causing dependency cycle
-        const updatedJson = updateCharacterInJson(jsonInputRef.current, origId, editedCharacter)
-        setJsonInput(updatedJson)
-        // Use ref to get current characters without causing dependency cycle - match by UUID
-        const updatedChars = charactersRef.current.map(c => 
-          c.uuid === origUuid ? editedCharacter : c
-        )
-        setCharacters(updatedChars)
-        
-        // Update metadata - check if ID still matches name-derived ID
-        if (editedCharacter.uuid) {
-          const expectedId = nameToId(editedCharacter.name)
-          const isLinked = editedCharacter.id === expectedId
-          setMetadata(editedCharacter.uuid, { idLinkedToName: isLinked })
-        }
-        
-        setIsDirty(false)
-      } catch (error) {
-        console.error('Save failed:', error)
-        justSavedRef.current = false
-      }
+      performSave(editedCharacter)
     }, 100)
-    
+
     return () => {
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current)
       }
     }
-  }, [isDirty, editedCharacter, setJsonInput, setCharacters])
+  }, [isDirty, editedCharacter, performSave])
+
+  // Flush pending save on unmount to prevent data loss when switching tabs
+  useEffect(() => {
+    return () => {
+      if (pendingSaveRef.current) {
+        // Cancel the debounced timer
+        if (saveTimerRef.current) {
+          clearTimeout(saveTimerRef.current)
+        }
+        // Flush the save immediately
+        const charToSave = pendingSaveRef.current
+        try {
+          justSavedRef.current = true
+          const origUuid = originalCharacterUuidRef.current
+          const origChar = charactersRef.current.find(c => c.uuid === origUuid)
+          const origId = origChar?.id || charToSave.id
+          const updatedJson = updateCharacterInJson(jsonInputRef.current, origId, charToSave)
+          setJsonInput(updatedJson)
+          const updatedChars = charactersRef.current.map(c =>
+            c.uuid === origUuid ? charToSave : c
+          )
+          setCharacters(updatedChars)
+        } catch (error) {
+          console.error('Flush save failed on unmount:', error)
+        }
+      }
+    }
+  }, [setJsonInput, setCharacters])
 
   // Hover handler - pre-render character token on hover
   // Uses UUID + optionsHash as cache key for proper invalidation across projects
@@ -510,10 +562,10 @@ export function CustomizeView({ initialToken, selectedCharacterUuid: externalSel
     addToast(`Moved ${char.name} to ${newTeam}`, 'success')
   }
 
-  const handleAddCharacter = () => {
+  const handleAddCharacter = async () => {
     const randomName = generateRandomName()
     const newId = nameToId(randomName)
-    const newUuid = generateUuid()
+    const newUuid = await generateStableUuid(newId, randomName)
     const newCharacter: Character = {
       id: newId,
       name: randomName,
@@ -624,16 +676,17 @@ export function CustomizeView({ initialToken, selectedCharacterUuid: externalSel
   }
 
   // handleDuplicateCharacter receives character ID from CharacterNavigation
-  const handleDuplicateCharacter = (characterId: string) => {
+  const handleDuplicateCharacter = async (characterId: string) => {
     const charToDuplicate = characters.find(c => c.id === characterId)
     if (!charToDuplicate) return
 
     const newId = `${charToDuplicate.id}_copy_${Date.now()}`
-    const newUuid = generateUuid()
+    const newName = `${charToDuplicate.name} (Copy)`
+    const newUuid = await generateStableUuid(newId, newName)
     const newCharacter: Character = {
       ...JSON.parse(JSON.stringify(charToDuplicate)),
       id: newId,
-      name: `${charToDuplicate.name} (Copy)`,
+      name: newName,
       uuid: newUuid,  // New UUID for duplicate
       source: 'custom',  // Duplicates are always custom
     }
@@ -829,162 +882,157 @@ export function CustomizeView({ initialToken, selectedCharacterUuid: externalSel
   const displayReminderTokens = previewReminderTokens.length > 0 ? previewReminderTokens : reminderTokens
 
   return (
-    <div className={styles.customizeView}>
-      <CharacterNavigation
-        characters={characters}
-        tokens={tokens}
-        selectedCharacterUuid={selectedCharacterUuid}
-        isMetaSelected={isMetaSelected}
-        onSelectCharacter={handleSelectCharacter}
-        onAddCharacter={() => {
-          setSelectedCharacterUuid('')
-          setEditedCharacter(null)
-          setIsMetaSelected(false)
-          setSelectedMetaToken(null)
-        }}
-        onDeleteCharacter={handleDeleteCharacter}
-        onDuplicateCharacter={handleDuplicateCharacter}
-        onSelectMetaToken={handleSelectMetaToken}
-        onSelectMeta={handleSelectMeta}
-        onChangeTeam={handleChangeTeam}
-        onHoverCharacter={handleHoverCharacter}
-      />
+    <ViewLayout variant="3-panel">
+      {/* Left Panel - Character Navigation */}
+      <ViewLayout.Panel position="left" width="left" scrollable>
+        <CharacterNavigation
+          characters={characters}
+          tokens={tokens}
+          selectedCharacterUuid={selectedCharacterUuid}
+          isMetaSelected={isMetaSelected}
+          onSelectCharacter={handleSelectCharacter}
+          onAddCharacter={() => {
+            setSelectedCharacterUuid('')
+            setEditedCharacter(null)
+            setIsMetaSelected(false)
+            setSelectedMetaToken(null)
+          }}
+          onDeleteCharacter={handleDeleteCharacter}
+          onDuplicateCharacter={handleDuplicateCharacter}
+          onSelectMetaToken={handleSelectMetaToken}
+          onSelectMeta={handleSelectMeta}
+          onChangeTeam={handleChangeTeam}
+          onHoverCharacter={handleHoverCharacter}
+        />
+      </ViewLayout.Panel>
 
-      <div className={styles.customizeMain}>
+      {/* Center Panel - Preview */}
+      <ViewLayout.Panel position="center" width="flex" scrollable>
         {isMetaSelected ? (
-          // Meta editor view
-          <div className={styles.customizeContent}>
-            <div className={styles.customizeLeft}>
-              <div className={styles.customizeLeftContent}>
-                {selectedMetaToken ? (
-                  <div className={styles.metaTokenPreview}>
-                    <img 
-                      src={selectedMetaToken.canvas.toDataURL('image/png')} 
-                      alt={selectedMetaToken.name}
-                      className={styles.metaTokenImage}
-                    />
-                  </div>
-                ) : (
-                  <div className={styles.tokenPreviewPlaceholder}>
-                    <span className={styles.metaPlaceholderIcon}>📜</span>
-                    <p>Script Metadata</p>
-                    <p className={styles.placeholderHint}>Edit your script's meta information on the right.</p>
-                  </div>
-                )}
+          // Meta preview
+          <div className={`${layoutStyles.contentPanel} ${styles.customizePreview}`}>
+            {selectedMetaToken ? (
+              <div className={styles.metaTokenPreview}>
+                <img
+                  src={selectedMetaToken.canvas.toDataURL('image/png')}
+                  alt={selectedMetaToken.name}
+                  className={styles.metaTokenImage}
+                />
               </div>
-            </div>
-            <div className={styles.customizeRight}>
-              <MetaEditor 
-                scriptMeta={scriptMeta}
-                onMetaChange={(updatedMeta) => {
-                  setScriptMeta(updatedMeta)
-                  // Also update the master JSON
-                  try {
-                    if (jsonInput.trim()) {
-                      const updatedJson = updateMetaInJson(jsonInput, updatedMeta)
-                      setJsonInput(updatedJson)
-                    }
-                  } catch (e) {
-                    console.error('Failed to update meta in JSON:', e)
+            ) : (
+              <div className={styles.tokenPreviewPlaceholder}>
+                <span className={styles.metaPlaceholderIcon}>📜</span>
+                <p>Script Metadata</p>
+                <p className={styles.placeholderHint}>Edit your script's meta information on the right.</p>
+              </div>
+            )}
+          </div>
+        ) : selectedCharacter ? (
+          // Character preview
+          <div className={`${layoutStyles.contentPanel} ${styles.customizePreview}`}>
+            {displayCharacterToken ? (
+              <TokenPreview
+                characterToken={displayCharacterToken}
+                reminderTokens={displayReminderTokens}
+                onReminderClick={(reminder) => {
+                  const parentCharName = reminder.parentCharacter
+                  if (parentCharName) {
+                    const char = characters.find(c => c.name === parentCharName)
+                    if (char?.uuid) setSelectedCharacterUuid(char.uuid)
                   }
                 }}
               />
-            </div>
-          </div>
-        ) : (
-          // Character view
-          <>
-            {selectedCharacter ? (
-              <div className={styles.customizeContent}>
-                <div className={styles.customizeLeft}>
-                  <div className={styles.customizeLeftContent}>
-                    {displayCharacterToken ? (
-                      <TokenPreview
-                        characterToken={displayCharacterToken}
-                        reminderTokens={displayReminderTokens}
-                        onReminderClick={(reminder) => {
-                          const parentCharName = reminder.parentCharacter
-                          if (parentCharName) {
-                            const char = characters.find(c => c.name === parentCharName)
-                            if (char?.uuid) setSelectedCharacterUuid(char.uuid)
-                          }
-                        }}
-                      />
-                    ) : (
-                      <div className={previewStyles.previewArea}>
-                        <div className={previewStyles.preview}>
-                          <div className={styles.tokenPreviewPlaceholder}>
-                            <p>Token preview will appear here after generating.</p>
-                            <p className={styles.placeholderHint}>Fill in character details on the right, then generate tokens.</p>
-                          </div>
-                        </div>
-                        <div className={previewStyles.reminders}>
-                          <h4>Reminder Tokens</h4>
-                          <div className={previewStyles.galleryContainer}>
-                            <button
-                              type="button"
-                              className={previewStyles.galleryArrow}
-                              disabled
-                              aria-label="Show previous reminder"
-                            >
-                              ‹
-                            </button>
-                            <div className={previewStyles.gallery}>
-                              <div className={previewStyles.empty}>
-                                <span className={previewStyles.emptyText}>No reminder tokens</span>
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              className={previewStyles.galleryArrow}
-                              disabled
-                              aria-label="Show next reminder"
-                            >
-                              ›
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+            ) : (
+              <div className={previewStyles.previewArea}>
+                <div className={previewStyles.preview}>
+                  <div className={styles.tokenPreviewPlaceholder}>
+                    <p>Token preview will appear here after generating.</p>
+                    <p className={styles.placeholderHint}>Fill in character details on the right, then generate tokens.</p>
                   </div>
                 </div>
-
-                <div className={styles.customizeRight}>
-                  <TokenEditor
-                    character={selectedCharacter}
-                    onEditChange={handleEditChange}
-                    onReplaceCharacter={handleReplaceCharacter}
-                    onRefreshPreview={regeneratePreview}
-                    onPreviewVariant={handlePreviewVariant}
-                    onDownloadAll={handleDownloadAll}
-                    isOfficial={isSelectedCharacterOfficial}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className={styles.customizeEmptyState}>
-                <div className={styles.emptyStateContent}>
-                  <h3>No Character Selected</h3>
-                  <p>Create a new character or load a script to get started.</p>
-                  <button
-                    className="btn-primary"
-                    onClick={handleAddCharacter}
-                  >
-                    ✨ Create Character
-                  </button>
-                  <button
-                    className="btn-secondary"
-                    disabled
-                    style={{ marginLeft: '1.5rem', opacity: 0.5, cursor: 'not-allowed' }}
-                  >
-                    📚 Add Official Character
-                  </button>
+                <div className={previewStyles.reminders}>
+                  <h4>Reminder Tokens</h4>
+                  <div className={previewStyles.galleryContainer}>
+                    <button
+                      type="button"
+                      className={previewStyles.galleryArrow}
+                      disabled
+                      aria-label="Show previous reminder"
+                    >
+                      ‹
+                    </button>
+                    <div className={previewStyles.gallery}>
+                      <div className={previewStyles.empty}>
+                        <span className={previewStyles.emptyText}>No reminder tokens</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className={previewStyles.galleryArrow}
+                      disabled
+                      aria-label="Show next reminder"
+                    >
+                      ›
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
-          </>
+          </div>
+        ) : (
+          // Empty state
+          <div className={`${layoutStyles.contentPanel} ${styles.customizeEmptyState}`}>
+            <div className={styles.emptyStateContent}>
+              <h3>No Character Selected</h3>
+              <p>Create a new character or load a script to get started.</p>
+              <div className={styles.emptyStateButtons}>
+                <Button
+                  variant="primary"
+                  onClick={handleAddCharacter}
+                >
+                  ✨ Create New Character
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled
+                >
+                  📚 Add Official Character
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
-      </div>
-    </div>
+      </ViewLayout.Panel>
+
+      {/* Right Panel - Editor */}
+      <ViewLayout.Panel position="right" width="right" scrollable>
+        {isMetaSelected ? (
+          <MetaEditor
+            scriptMeta={scriptMeta}
+            onMetaChange={(updatedMeta) => {
+              setScriptMeta(updatedMeta)
+              try {
+                if (jsonInput.trim()) {
+                  const updatedJson = updateMetaInJson(jsonInput, updatedMeta)
+                  setJsonInput(updatedJson)
+                }
+              } catch (e) {
+                console.error('Failed to update meta in JSON:', e)
+              }
+            }}
+          />
+        ) : selectedCharacter ? (
+          <TokenEditor
+            character={selectedCharacter}
+            onEditChange={handleEditChange}
+            onReplaceCharacter={handleReplaceCharacter}
+            onRefreshPreview={regeneratePreview}
+            onPreviewVariant={handlePreviewVariant}
+            onDownloadAll={handleDownloadAll}
+            isOfficial={isSelectedCharacterOfficial}
+          />
+        ) : null}
+      </ViewLayout.Panel>
+    </ViewLayout>
   )
 }

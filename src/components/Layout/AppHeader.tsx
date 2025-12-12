@@ -1,31 +1,65 @@
 import styles from '../../styles/components/layout/Header.module.css'
 import { SyncStatusIndicator } from '../Shared/SyncStatusIndicator'
 import { AutoSaveIndicator } from '../Shared/AutoSaveIndicator'
+import { SaveAsNewProjectButton } from '../Shared/SaveAsNewProjectButton'
 
 interface AppHeaderProps {
   onSettingsClick: () => void
   onInfoClick: () => void
   onAnnouncementsClick: () => void
   onSyncDetailsClick?: () => void
+  onAssetManagerClick: () => void
   version?: string
   currentProjectName?: string | null
 }
 
-export function AppHeader({ onSettingsClick, onInfoClick, onAnnouncementsClick, onSyncDetailsClick, version = '0.3.0', currentProjectName }: AppHeaderProps) {
+export function AppHeader({
+  onSettingsClick,
+  onInfoClick,
+  onAnnouncementsClick,
+  onSyncDetailsClick,
+  onAssetManagerClick,
+  version = '0.3.0',
+  currentProjectName,
+}: AppHeaderProps) {
   return (
     <header className={styles.header}>
       <div className={styles.headerLeft}>
         <h1 className={styles.title}>Blood on the Clocktower Token Generator</h1>
+
+        {/* Show project name when project exists */}
         {currentProjectName && (
           <span style={{ marginLeft: '16px', fontSize: '14px', color: 'var(--text-secondary)', fontWeight: 500 }}>
             {currentProjectName}
           </span>
         )}
+
+        {/* Show "Save as New" when no active project */}
+        {!currentProjectName && (
+          <div style={{ marginLeft: '16px' }}>
+            <SaveAsNewProjectButton />
+          </div>
+        )}
+
         <div style={{ marginLeft: '16px' }}>
-          <AutoSaveIndicator showSaveButton={true} />
+          <AutoSaveIndicator />
         </div>
       </div>
       <div className={styles.headerRight}>
+        <button
+          type="button"
+          className={styles.iconButton}
+          onClick={onAssetManagerClick}
+          aria-label="Open Asset Manager"
+          title="Asset Manager - Manage uploaded assets"
+        >
+          <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"
+            />
+          </svg>
+        </button>
         <button
           type="button"
           className={styles.iconButton}

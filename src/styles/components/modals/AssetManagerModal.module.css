@@ -342,6 +342,107 @@
   gap: 16px;
 }
 
+/* Built-in Asset Thumbnails (for selection mode) */
+.builtInThumbnail {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  min-height: 140px;
+}
+
+.builtInThumbnail:hover {
+  border-color: var(--primary-color, #1976d2);
+  background: var(--bg-tertiary, #f0f0f0);
+}
+
+.builtInThumbnail.selectedBuiltIn {
+  border-color: var(--primary-color, #1976d2);
+  background: rgba(25, 118, 210, 0.08);
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.2);
+}
+
+.builtInImage {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  border-radius: 50%;
+  background: var(--bg-tertiary, #f0f0f0);
+}
+
+.builtInLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.builtInBadge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-color, #1976d2);
+  color: white;
+  border-radius: 50%;
+  font-size: 8px;
+  font-weight: bold;
+}
+
+.noneIcon {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  color: var(--text-muted, #999);
+  background: var(--bg-tertiary, #f0f0f0);
+  border-radius: 50%;
+}
+
+/* Separator between built-in and user assets */
+.assetSeparator {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  margin: 8px 0;
+}
+
+.assetSeparator::before,
+.assetSeparator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+
+.assetSeparator span {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted, #999);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 /* Asset List */
 .assetList {
   display: flex;
@@ -633,5 +734,144 @@
   .footerLeft {
     flex-wrap: wrap;
     justify-content: center;
+  }
+}
+
+/* ============================================
+   Content with Preview Layout
+   ============================================ */
+
+.contentWithPreview {
+  display: flex;
+  gap: 20px;
+  padding: 0 24px;
+}
+
+.contentWithPreview .content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ============================================
+   Live Preview Panel
+   ============================================ */
+
+.previewPanel {
+  width: 200px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+}
+
+.previewHeader {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.previewContainer {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary, rgba(0, 0, 0, 0.05));
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.previewImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+.previewSpinner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 50%;
+}
+
+.previewPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
+.previewPlaceholderIcon {
+  font-size: 2.5rem;
+  opacity: 0.4;
+}
+
+.previewPlaceholderText {
+  font-size: 12px;
+  text-align: center;
+}
+
+.previewLabel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: 12px;
+  text-align: center;
+}
+
+.previewCharacterName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.previewTeam {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+/* Responsive: hide preview on small screens */
+@media (max-width: 900px) {
+  .contentWithPreview {
+    flex-direction: column;
+  }
+
+  .previewPanel {
+    width: 100%;
+    flex-direction: row;
+    gap: 16px;
+    padding: 12px;
+  }
+
+  .previewContainer {
+    width: 80px;
+    height: 80px;
+  }
+
+  .previewLabel {
+    margin-top: 0;
+    align-items: flex-start;
+    text-align: left;
   }
 }

@@ -13,6 +13,7 @@ import {
 import type { ProgressState } from '../utils/index.js';
 import { TokenGenerator } from './tokenGenerator.js';
 import { getAllCharacterImageUrls } from '../data/characterUtils.js';
+import { createPreloadTasks, preResolveAssetsWithPriority } from '../../services/upload/assetResolver.js';
 import type { Character, Token, GenerationOptions, ProgressCallback, TokenCallback, Team, ScriptMeta } from '../types/index.js';
 
 // ============================================================================
@@ -330,6 +331,9 @@ async function generateCharacterAndReminderTokens(
                             order: absoluteIndex,
                             // Only set variant properties if there are multiple variants
                             ...(totalVariants > 1 && { variantIndex, totalVariants }),
+                            // Store character data and image URL for later access (e.g., Studio editing)
+                            characterData: character,
+                            imageUrl,
                         };
                         // Emit token immediately if callback provided
                         if (tokenCallback) tokenCallback(token);
@@ -394,6 +398,24 @@ export async function generateAllTokens(
         logoUrl: scriptMeta?.logo,
     };
     const generator = new TokenGenerator(generatorOptions);
+
+    // Pre-warm image cache for better performance
+    await generator.prewarmImageCache(characters);
+
+    // Pre-resolve asset references with priority-based loading
+    // First 10 characters get high priority (visible in viewport)
+    const imageFields = characters.map(c => c.image);
+    const preloadTasks = createPreloadTasks(imageFields, 10);
+
+    if (preloadTasks.length > 0) {
+        await preResolveAssetsWithPriority(preloadTasks, {
+            concurrency: 5,
+            onProgress: (loaded, total) => {
+                // Optional: could emit progress event here
+                // console.log(`Preloaded ${loaded}/${total} assets`);
+            }
+        });
+    }
 
     const total = calculateTotalTokenCount(characters, options, scriptMeta);
     const progress = createProgressState(total, progressCallback);

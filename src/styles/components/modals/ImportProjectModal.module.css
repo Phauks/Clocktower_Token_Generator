@@ -1,84 +1,9 @@
-/* Import Project Modal Styles */
-
-.overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-}
-
-.modal {
-  background: var(--bg-primary);
-  border-radius: var(--border-radius);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  width: 100%;
-  max-width: 550px;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Header */
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.title {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.closeButton {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  font-size: 24px;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.closeButton:hover:not(:disabled) {
-  background: var(--bg-tertiary, #e0e0e0);
-  color: var(--text-primary);
-}
-
-.closeButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.closeButton:focus-visible {
-  outline: 2px solid var(--primary-color, #1976d2);
-  outline-offset: 2px;
-}
-
-/* Content */
-.content {
-  padding: 24px;
-  min-height: 300px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
+/**
+ * Import Project Modal - Content Styles
+ *
+ * Note: Modal wrapper (overlay, header, footer) is handled by
+ * the unified Modal component from src/components/Shared/Modal
+ */
 
 /* Drop Zone */
 .dropZone {
@@ -272,105 +197,11 @@
   text-align: center;
 }
 
-/* Error */
-.errorMessage {
-  padding: 12px;
-  background: #ffebee;
-  color: #d32f2f;
-  border: 1px solid #ffcdd2;
-  border-radius: var(--border-radius);
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.errorIcon {
-  font-size: 18px;
-  flex-shrink: 0;
-}
-
-/* Footer */
-.footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 16px 24px;
-  border-top: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-}
-
-.cancelButton {
-  padding: 10px 20px;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.cancelButton:hover:not(:disabled) {
-  background: var(--bg-secondary);
-}
-
-.cancelButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.cancelButton:focus-visible {
-  outline: 2px solid var(--primary-color, #1976d2);
-  outline-offset: 2px;
-}
-
-.importButton {
-  padding: 10px 24px;
-  background: var(--primary-color, #1976d2);
-  color: white;
-  border: none;
-  border-radius: var(--border-radius);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.importButton:hover:not(:disabled) {
-  background: var(--primary-color-dark, #1565c0);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
-}
-
-.importButton:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.importButton:focus-visible {
-  outline: 2px solid var(--primary-color, #1976d2);
-  outline-offset: 2px;
-}
+/* Note: Error display uses unified Alert component */
+/* Note: Footer buttons use unified Button component */
 
 /* Responsive */
 @media (max-width: 600px) {
-  .modal {
-    max-width: 100%;
-    max-height: 100vh;
-    border-radius: 0;
-  }
-
-  .header,
-  .content,
-  .footer {
-    padding-left: 20px;
-    padding-right: 20px;
-  }
-
   .dropZone {
     padding: 40px 24px;
     min-height: 220px;
@@ -383,14 +214,5 @@
 
   .dropText {
     font-size: 15px;
-  }
-
-  .footer {
-    flex-direction: column-reverse;
-  }
-
-  .cancelButton,
-  .importButton {
-    width: 100%;
   }
 }

@@ -1,8 +1,11 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, type RefCallback } from 'react'
 import { JsonEditorPanel } from '../Shared/JsonEditorPanel'
+import { AssetPreviewSelector } from '../Shared/AssetPreviewSelector'
 import type { Character, DecorativeOverrides } from '../../ts/types/index.js'
 import { generateRandomName, nameToId } from '../../ts/utils/nameGenerator'
+import { analyzeReminderText, normalizeReminderText, type FormatIssue } from '../../ts/utils/textFormatAnalyzer'
 import { useTokenContext } from '../../contexts/TokenContext'
+import { dataSyncService } from '../../ts/sync/index.js'
 import styles from '../../styles/components/tokenDetail/TokenEditor.module.css'
 import viewStyles from '../../styles/components/views/Views.module.css'
 
@@ -60,10 +63,17 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
   const [localOtherNightReminder, setLocalOtherNightReminder] = useState(character.otherNightReminder || '')
   const [localFirstNight, setLocalFirstNight] = useState(character.firstNight ?? 0)
   const [localOtherNight, setLocalOtherNight] = useState(character.otherNight ?? 0)
+
+  // Format issue tracking for night reminder fields
+  const [firstNightFormatIssues, setFirstNightFormatIssues] = useState<FormatIssue[]>([])
+  const [otherNightFormatIssues, setOtherNightFormatIssues] = useState<FormatIssue[]>([])
   const [localImages, setLocalImages] = useState<string[]>(
     Array.isArray(character.image) ? character.image : [character.image || '']
   )
-  
+
+  // Resolved image URLs for preview (handles official character images from Cache API)
+  const [resolvedImageUrls, setResolvedImageUrls] = useState<(string | null)[]>([])
+
   // Local state for ID linking (immediate UI feedback)
   // Use metadata store for persistence, default to true (linked)
   const [isIdLinked, setIsIdLinked] = useState(metadata.idLinkedToName)
@@ -88,7 +98,43 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
   // Drag and drop state for reminders
   const [draggedReminderIndex, setDraggedReminderIndex] = useState<number | null>(null)
   const [dragOverReminderIndex, setDragOverReminderIndex] = useState<number | null>(null)
-  
+
+  // Auto-resize textareas - track all registered textareas
+  const textareaRefs = useRef<Set<HTMLTextAreaElement>>(new Set())
+
+  // Utility function to resize a single textarea to fit its content
+  const resizeTextarea = useCallback((textarea: HTMLTextAreaElement | null) => {
+    if (!textarea) return
+    // Reset height to auto to get accurate scrollHeight
+    textarea.style.height = 'auto'
+    // Set height to scrollHeight (minimum 60px via CSS)
+    textarea.style.height = `${textarea.scrollHeight}px`
+  }, [])
+
+  // Callback ref to register textareas for auto-resize
+  const registerTextareaRef: RefCallback<HTMLTextAreaElement> = useCallback((element) => {
+    if (element) {
+      textareaRefs.current.add(element)
+      // Initial resize with requestAnimationFrame to ensure styles are computed
+      requestAnimationFrame(() => resizeTextarea(element))
+    }
+  }, [resizeTextarea])
+
+  // Resize all textareas when character changes
+  useEffect(() => {
+    // Use requestAnimationFrame to ensure DOM has updated
+    requestAnimationFrame(() => {
+      textareaRefs.current.forEach((textarea) => {
+        resizeTextarea(textarea)
+      })
+    })
+  }, [character.uuid, localAbility, localFlavor, localOverview, localExamples, localHowToRun, localTips, localFirstNightReminder, localOtherNightReminder, resizeTextarea])
+
+  // Handler for textarea input that also auto-resizes
+  const handleTextareaInput = useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
+    resizeTextarea(e.currentTarget)
+  }, [resizeTextarea])
+
   // Debounce timer refs
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const jsonDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -126,6 +172,93 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
       setJsonError(null)
     }
   }, [character])
+
+  // Analyze night reminder format issues when text changes
+  useEffect(() => {
+    setFirstNightFormatIssues(analyzeReminderText(localFirstNightReminder))
+  }, [localFirstNightReminder])
+
+  useEffect(() => {
+    setOtherNightFormatIssues(analyzeReminderText(localOtherNightReminder))
+  }, [localOtherNightReminder])
+
+  // Handler to fix format issues in first night reminder
+  const handleFixFirstNightFormat = useCallback(() => {
+    if (isOfficial) return
+    const normalized = normalizeReminderText(localFirstNightReminder)
+    setLocalFirstNightReminder(normalized)
+    onEditChange('firstNightReminder', normalized)
+  }, [localFirstNightReminder, onEditChange, isOfficial])
+
+  // Handler to fix format issues in other night reminder
+  const handleFixOtherNightFormat = useCallback(() => {
+    if (isOfficial) return
+    const normalized = normalizeReminderText(localOtherNightReminder)
+    setLocalOtherNightReminder(normalized)
+    onEditChange('otherNightReminder', normalized)
+  }, [localOtherNightReminder, onEditChange, isOfficial])
+
+  // Resolve official character image URLs from Cache API
+  useEffect(() => {
+    let isMounted = true
+    const objectUrls: string[] = []
+
+    const resolveImages = async () => {
+      const resolved = await Promise.all(
+        localImages.map(async (url) => {
+          if (!url || !url.trim()) return null
+
+          // If it's a full URL (http/https), use it directly
+          if (url.startsWith('http://') || url.startsWith('https://')) {
+            return url
+          }
+
+          // If it's an asset reference (asset:), use it directly (will be resolved by assetResolver)
+          if (url.startsWith('asset:')) {
+            return url
+          }
+
+          // Try to extract character ID and resolve from sync storage
+          // Handle formats: "washerwoman", "Icon_washerwoman.png", "icons/washerwoman.webp"
+          const extractCharacterId = (path: string): string | null => {
+            const segments = path.split('/')
+            const filename = segments[segments.length - 1]
+            const match = filename.match(/^(?:Icon_)?([a-z_]+)(?:\.(?:webp|png|jpg|jpeg|gif))?$/i)
+            return match ? match[1].toLowerCase() : null
+          }
+
+          const characterId = extractCharacterId(url)
+          if (characterId) {
+            try {
+              const blob = await dataSyncService.getCharacterImage(characterId)
+              if (blob) {
+                const objectUrl = URL.createObjectURL(blob)
+                objectUrls.push(objectUrl)
+                return objectUrl
+              }
+            } catch (error) {
+              console.warn(`Failed to resolve official character image: ${characterId}`, error)
+            }
+          }
+
+          // Fallback: return original URL (may fail to load, but will show error state)
+          return url
+        })
+      )
+
+      if (isMounted) {
+        setResolvedImageUrls(resolved)
+      }
+    }
+
+    resolveImages()
+
+    // Cleanup: revoke object URLs when component unmounts or URLs change
+    return () => {
+      isMounted = false
+      objectUrls.forEach(url => URL.revokeObjectURL(url))
+    }
+  }, [localImages])
 
   // Debounced field update helper
   const debouncedUpdate = useCallback((field: keyof Character, value: any, delay = 500) => {
@@ -375,7 +508,7 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
                   disabled={isDownloading}
                   title="Download character token, reminders, and JSON as ZIP"
                 >
-                  📥 {isDownloading ? 'Downloading...' : 'Download'}
+                  {isDownloading ? 'Downloading...' : 'Download'}
                 </button>
                 <button
                   className={styles.downloadCaretBtn}
@@ -632,7 +765,7 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
                         title="Click to preview this variant"
                       >
                         <img
-                          src={url}
+                          src={resolvedImageUrls[index] || url}
                           alt={`Preview ${index + 1}`}
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23333" width="100" height="100"/><text fill="%23999" x="50" y="55" text-anchor="middle" font-size="14">?</text></svg>'
@@ -709,7 +842,9 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
             <div className={styles.formGroup}>
               <label htmlFor="edit-ability">Ability Text</label>
               <textarea
+                ref={registerTextareaRef}
                 id="edit-ability"
+                className={styles.autoExpand}
                 value={localAbility}
                 disabled={isOfficial}
                 onChange={(e) => {
@@ -717,6 +852,7 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
                   setLocalAbility(e.target.value)
                   debouncedUpdate('ability', e.target.value)
                 }}
+                onInput={handleTextareaInput}
                 onBlur={() => {
                   if (isOfficial) return
                   onEditChange('ability', localAbility)
@@ -872,7 +1008,13 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
                     }}
                     onBlur={() => {
                       if (isOfficial) return
-                      const normalizedValue = localFirstNight || 0
+                      let normalizedValue = localFirstNight || 0
+
+                      // If reminder text exists, don't allow 0 (minimum is 1)
+                      if (localFirstNightReminder.trim() && normalizedValue === 0) {
+                        normalizedValue = 1
+                      }
+
                       setLocalFirstNight(normalizedValue)
                       onEditChange('firstNight', normalizedValue)
                     }}
@@ -880,14 +1022,24 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
                 </span>
               </div>
               <textarea
+                ref={registerTextareaRef}
                 id="edit-firstnight"
+                className={styles.autoExpand}
                 value={localFirstNightReminder}
                 disabled={isOfficial}
                 onChange={(e) => {
                   if (isOfficial) return
-                  setLocalFirstNightReminder(e.target.value)
-                  debouncedUpdate('firstNightReminder', e.target.value)
+                  const newValue = e.target.value
+                  setLocalFirstNightReminder(newValue)
+                  debouncedUpdate('firstNightReminder', newValue)
+
+                  // Auto-default night order to 1 if reminder text exists and night order is 0
+                  if (newValue.trim() && localFirstNight === 0) {
+                    setLocalFirstNight(1)
+                    onEditChange('firstNight', 1)
+                  }
                 }}
+                onInput={handleTextareaInput}
                 onBlur={() => {
                   if (isOfficial) return
                   onEditChange('firstNightReminder', localFirstNightReminder)
@@ -895,6 +1047,28 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
                 placeholder="Reminder text for the first night"
                 rows={2}
               />
+              <p className={styles.fieldHint}>Use *TEXT* for bold, :reminder: for reminder circle.</p>
+              {firstNightFormatIssues.length > 0 && (
+                <div className={styles.formatWarning}>
+                  <span className={styles.warningIcon}>⚠️</span>
+                  <div className={styles.warningContent}>
+                    <span className={styles.warningTitle}>Non-standard format detected:</span>
+                    <ul className={styles.warningList}>
+                      {[...new Set(firstNightFormatIssues.map(i => i.description))].map((desc, idx) => (
+                        <li key={idx}>{desc}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleFixFirstNightFormat}
+                    className={styles.fixButton}
+                    disabled={isOfficial}
+                  >
+                    Fix Format
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className={styles.formGroup}>
@@ -916,7 +1090,13 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
                     }}
                     onBlur={() => {
                       if (isOfficial) return
-                      const normalizedValue = localOtherNight || 0
+                      let normalizedValue = localOtherNight || 0
+
+                      // If reminder text exists, don't allow 0 (minimum is 1)
+                      if (localOtherNightReminder.trim() && normalizedValue === 0) {
+                        normalizedValue = 1
+                      }
+
                       setLocalOtherNight(normalizedValue)
                       onEditChange('otherNight', normalizedValue)
                     }}
@@ -924,14 +1104,24 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
                 </span>
               </div>
               <textarea
+                ref={registerTextareaRef}
                 id="edit-othernight"
+                className={styles.autoExpand}
                 value={localOtherNightReminder}
                 disabled={isOfficial}
                 onChange={(e) => {
                   if (isOfficial) return
-                  setLocalOtherNightReminder(e.target.value)
-                  debouncedUpdate('otherNightReminder', e.target.value)
+                  const newValue = e.target.value
+                  setLocalOtherNightReminder(newValue)
+                  debouncedUpdate('otherNightReminder', newValue)
+
+                  // Auto-default night order to 1 if reminder text exists and night order is 0
+                  if (newValue.trim() && localOtherNight === 0) {
+                    setLocalOtherNight(1)
+                    onEditChange('otherNight', 1)
+                  }
                 }}
+                onInput={handleTextareaInput}
                 onBlur={() => {
                   if (isOfficial) return
                   onEditChange('otherNightReminder', localOtherNightReminder)
@@ -939,6 +1129,28 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
                 placeholder="Reminder text for other nights"
                 rows={2}
               />
+              <p className={styles.fieldHint}>Use *TEXT* for bold, :reminder: for reminder circle.</p>
+              {otherNightFormatIssues.length > 0 && (
+                <div className={styles.formatWarning}>
+                  <span className={styles.warningIcon}>⚠️</span>
+                  <div className={styles.warningContent}>
+                    <span className={styles.warningTitle}>Non-standard format detected:</span>
+                    <ul className={styles.warningList}>
+                      {[...new Set(otherNightFormatIssues.map(i => i.description))].map((desc, idx) => (
+                        <li key={idx}>{desc}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleFixOtherNightFormat}
+                    className={styles.fixButton}
+                    disabled={isOfficial}
+                  >
+                    Fix Format
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className={styles.formGroup}>
@@ -1109,7 +1321,9 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
             <div className={styles.formGroup}>
               <label htmlFor="edit-flavor">Flavor Text</label>
               <textarea
+                ref={registerTextareaRef}
                 id="edit-flavor"
+                className={styles.autoExpand}
                 value={localFlavor}
                 disabled={isOfficial}
                 onChange={(e) => {
@@ -1117,6 +1331,7 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
                   setLocalFlavor(e.target.value)
                   debouncedUpdate('flavor', e.target.value)
                 }}
+                onInput={handleTextareaInput}
                 onBlur={() => {
                   if (isOfficial) return
                   onEditChange('flavor', localFlavor)
@@ -1129,7 +1344,9 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
             <div className={styles.formGroup}>
               <label htmlFor="edit-overview">Overview</label>
               <textarea
+                ref={registerTextareaRef}
                 id="edit-overview"
+                className={styles.autoExpand}
                 value={localOverview}
                 disabled={isOfficial}
                 onChange={(e) => {
@@ -1137,6 +1354,7 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
                   setLocalOverview(e.target.value)
                   debouncedUpdate('overview', e.target.value)
                 }}
+                onInput={handleTextareaInput}
                 onBlur={() => {
                   if (isOfficial) return
                   onEditChange('overview', localOverview)
@@ -1149,7 +1367,9 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
             <div className={styles.formGroup}>
               <label htmlFor="edit-examples">Examples</label>
               <textarea
+                ref={registerTextareaRef}
                 id="edit-examples"
+                className={styles.autoExpand}
                 value={localExamples}
                 disabled={isOfficial}
                 onChange={(e) => {
@@ -1157,6 +1377,7 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
                   setLocalExamples(e.target.value)
                   debouncedUpdate('examples', e.target.value)
                 }}
+                onInput={handleTextareaInput}
                 onBlur={() => {
                   if (isOfficial) return
                   onEditChange('examples', localExamples)
@@ -1169,7 +1390,9 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
             <div className={styles.formGroup}>
               <label htmlFor="edit-howtorun">How to Run</label>
               <textarea
+                ref={registerTextareaRef}
                 id="edit-howtorun"
+                className={styles.autoExpand}
                 value={localHowToRun}
                 disabled={isOfficial}
                 onChange={(e) => {
@@ -1177,6 +1400,7 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
                   setLocalHowToRun(e.target.value)
                   debouncedUpdate('howToRun', e.target.value)
                 }}
+                onInput={handleTextareaInput}
                 onBlur={() => {
                   if (isOfficial) return
                   onEditChange('howToRun', localHowToRun)
@@ -1189,7 +1413,9 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
             <div className={styles.formGroup}>
               <label htmlFor="edit-tips">Tips</label>
               <textarea
+                ref={registerTextareaRef}
                 id="edit-tips"
+                className={styles.autoExpand}
                 value={localTips}
                 disabled={isOfficial}
                 onChange={(e) => {
@@ -1197,6 +1423,7 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
                   setLocalTips(e.target.value)
                   debouncedUpdate('tips', e.target.value)
                 }}
+                onInput={handleTextareaInput}
                 onBlur={() => {
                   if (isOfficial) return
                   onEditChange('tips', localTips)
@@ -1233,14 +1460,15 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
                 <>
                   <div className={styles.formGroup}>
                     <label htmlFor="leaf-style">Leaf Style</label>
-                    <select
-                      id="leaf-style"
+                    <AssetPreviewSelector
                       value={decoratives.leafStyle || 'classic'}
-                      onChange={(e) => updateDecoratives({ leafStyle: e.target.value })}
-                    >
-                      <option value="classic">Classic</option>
-                      <option value="none">None (disable leaves)</option>
-                    </select>
+                      onChange={(value) => updateDecoratives({ leafStyle: value })}
+                      assetType="leaf"
+                      shape="square"
+                      size="small"
+                      showNone={true}
+                      noneLabel="None (disable)"
+                    />
                   </div>
                   
                   <div className={styles.formGroup}>
@@ -1291,17 +1519,14 @@ export function TokenEditor({ character, onEditChange, onReplaceCharacter, onRef
                 {!decoratives.hideSetupFlower && (
                   <div className={styles.formGroup}>
                     <label htmlFor="setup-flower-style">Flower Style</label>
-                    <select
-                      id="setup-flower-style"
-                      value={decoratives.setupFlowerStyle || 'default'}
-                      onChange={(e) => updateDecoratives({ setupFlowerStyle: e.target.value })}
-                    >
-                      <option value="default">Use global setting</option>
-                      <option value="setup_flower_1">Style 1</option>
-                      <option value="setup_flower_2">Style 2</option>
-                      <option value="setup_flower_3">Style 3</option>
-                      <option value="setup_flower_4">Style 4</option>
-                    </select>
+                    <AssetPreviewSelector
+                      value={decoratives.setupFlowerStyle || 'setup_flower_1'}
+                      onChange={(value) => updateDecoratives({ setupFlowerStyle: value })}
+                      assetType="setup-flower"
+                      shape="square"
+                      size="small"
+                      showNone={false}
+                    />
                   </div>
                 )}
               </div>

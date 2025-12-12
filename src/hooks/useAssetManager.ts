@@ -55,6 +55,12 @@ export interface UseAssetManagerReturn {
   setFilter: (filter: Partial<AssetFilter>) => void;
   resetFilter: () => void;
 
+  // Pagination
+  totalCount: number;
+  hasMore: boolean;
+  loadMore: () => Promise<void>;
+  isLoadingMore: boolean;
+
   // Selection
   selectedIds: Set<string>;
   toggleSelect: (id: string) => void;
@@ -70,7 +76,9 @@ export interface UseAssetManagerReturn {
   deleteAsset: (id: string) => Promise<void>;
   deleteSelected: () => Promise<void>;
   promoteToGlobal: (id: string) => Promise<void>;
+  promoteSelectedToGlobal: () => Promise<void>;
   moveToProject: (id: string, projectId: string) => Promise<void>;
+  moveSelectedToProject: (projectId: string) => Promise<void>;
   cleanupOrphans: () => Promise<number>;
   refresh: () => Promise<void>;
 }
@@ -91,6 +99,7 @@ export function useAssetManager(options: AssetManagerOptions = {}): UseAssetMana
   // State
   const [assets, setAssets] = useState<AssetWithUrl[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilterState] = useState<AssetFilter>({
     ...DEFAULT_FILTER,
@@ -99,6 +108,7 @@ export function useAssetManager(options: AssetManagerOptions = {}): UseAssetMana
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [stats, setStats] = useState<AssetStats | null>(null);
   const [orphanedCount, setOrphanedCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
 
   // Fetch assets
   const fetchAssets = useCallback(async () => {
@@ -115,6 +125,10 @@ export function useAssetManager(options: AssetManagerOptions = {}): UseAssetMana
       const fetchedAssets = await assetStorageService.listWithUrls(effectiveFilter);
       setAssets(fetchedAssets);
 
+      // Fetch total count (for pagination)
+      const count = await assetStorageService.count(effectiveFilter);
+      setTotalCount(count);
+
       // Fetch stats
       const fetchedStats = await assetStorageService.getStats(effectiveFilter);
       setStats(fetchedStats);
@@ -128,6 +142,35 @@ export function useAssetManager(options: AssetManagerOptions = {}): UseAssetMana
       setIsLoading(false);
     }
   }, [filter, options.currentProjectId]);
+
+  // Load more assets (for infinite scroll)
+  const loadMore = useCallback(async () => {
+    if (isLoadingMore || !filter.limit) return;
+
+    setIsLoadingMore(true);
+    setError(null);
+
+    try {
+      const effectiveFilter = { ...filter };
+      if (options.currentProjectId && effectiveFilter.projectId === undefined) {
+        effectiveFilter.projectId = options.currentProjectId;
+      }
+
+      // Increment offset by current limit
+      const nextOffset = (filter.offset ?? 0) + filter.limit;
+      effectiveFilter.offset = nextOffset;
+
+      const moreAssets = await assetStorageService.listWithUrls(effectiveFilter);
+      setAssets((prev) => [...prev, ...moreAssets]);
+
+      // Update filter offset for next load
+      setFilterState((prev) => ({ ...prev, offset: nextOffset }));
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [filter, isLoadingMore, options.currentProjectId]);
 
   // Initial fetch
   useEffect(() => {
@@ -244,6 +287,35 @@ export function useAssetManager(options: AssetManagerOptions = {}): UseAssetMana
     [fetchAssets]
   );
 
+  const promoteSelectedToGlobal = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+
+    try {
+      await assetStorageService.bulkPromoteToGlobal(Array.from(selectedIds));
+      setSelectedIds(new Set());
+      await fetchAssets();
+    } catch (err) {
+      setError((err as Error).message);
+      throw err;
+    }
+  }, [selectedIds, fetchAssets]);
+
+  const moveSelectedToProject = useCallback(
+    async (projectId: string) => {
+      if (selectedIds.size === 0) return;
+
+      try {
+        await assetStorageService.bulkMoveToProject(Array.from(selectedIds), projectId);
+        setSelectedIds(new Set());
+        await fetchAssets();
+      } catch (err) {
+        setError((err as Error).message);
+        throw err;
+      }
+    },
+    [selectedIds, fetchAssets]
+  );
+
   const cleanupOrphans = useCallback(async () => {
     try {
       const count = await assetStorageService.cleanupOrphans();
@@ -259,6 +331,12 @@ export function useAssetManager(options: AssetManagerOptions = {}): UseAssetMana
     await fetchAssets();
   }, [fetchAssets]);
 
+  // Compute hasMore for pagination
+  const hasMore = useMemo(() => {
+    const currentCount = assets.length;
+    return currentCount < totalCount;
+  }, [assets.length, totalCount]);
+
   return {
     // State
     assets,
@@ -269,6 +347,12 @@ export function useAssetManager(options: AssetManagerOptions = {}): UseAssetMana
     filter,
     setFilter,
     resetFilter,
+
+    // Pagination
+    totalCount,
+    hasMore,
+    loadMore,
+    isLoadingMore,
 
     // Selection
     selectedIds,
@@ -285,7 +369,9 @@ export function useAssetManager(options: AssetManagerOptions = {}): UseAssetMana
     deleteAsset,
     deleteSelected,
     promoteToGlobal,
+    promoteSelectedToGlobal,
     moveToProject,
+    moveSelectedToProject,
     cleanupOrphans,
     refresh,
   };

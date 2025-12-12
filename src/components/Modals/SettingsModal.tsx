@@ -1,12 +1,21 @@
-import { useEffect, useRef, useState } from 'react'
+/**
+ * Settings Modal
+ *
+ * Global application settings including DPI, theme, sync, and data management.
+ * Migrated to use unified Modal and Button components.
+ */
+
+import { useEffect, useState } from 'react'
 import { useToast } from '../../contexts/ToastContext'
 import { useTokenContext } from '../../contexts/TokenContext'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useDataSync } from '../../contexts/DataSyncContext'
 import { getThemeIds, UI_THEMES } from '../../ts/themes'
 import { storageManager } from '../../ts/sync/index.js'
+import { Modal } from '../Shared/Modal/Modal'
+import { Button } from '../Shared/Button'
 import type { DPIOption } from '../../ts/types/index'
-import styles from '../../styles/components/layout/Modal.module.css'
+import styles from './SettingsModal.module.css'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -15,7 +24,6 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ isOpen, onClose, onOpenSyncDetails }: SettingsModalProps) {
-  const contentRef = useRef<HTMLDivElement>(null)
   const { addToast } = useToast()
   const { generationOptions, updateGenerationOptions } = useTokenContext()
   const { currentThemeId, setTheme } = useTheme()
@@ -33,32 +41,6 @@ export function SettingsModal({ isOpen, onClose, onOpenSyncDetails }: SettingsMo
     }
   }, [isOpen, isSyncInitialized])
 
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose()
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape)
-      document.body.style.overflow = 'hidden'
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape)
-      document.body.style.overflow = 'unset'
-    }
-  }, [isOpen, onClose])
-
-  if (!isOpen) return null
-
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose()
-    }
-  }
-
   const handleAutoSyncChange = async (enabled: boolean) => {
     try {
       await storageManager.setSetting('autoSync', enabled)
@@ -72,8 +54,8 @@ export function SettingsModal({ isOpen, onClose, onOpenSyncDetails }: SettingsMo
 
   const handleOpenSyncDetails = () => {
     if (onOpenSyncDetails) {
-      onClose() // Close settings modal first
-      setTimeout(() => onOpenSyncDetails(), 100) // Small delay for smooth transition
+      onClose()
+      setTimeout(() => onOpenSyncDetails(), 100)
     }
   }
 
@@ -82,132 +64,110 @@ export function SettingsModal({ isOpen, onClose, onOpenSyncDetails }: SettingsMo
       localStorage.clear()
       addToast('All local data has been cleared', 'success')
       onClose()
-      // Reload page to reset state
       setTimeout(() => window.location.reload(), 500)
     }
   }
 
-
   return (
-    <div className={styles.overlay} role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
-      <div className={styles.backdrop} onClick={handleBackdropClick} />
-      <div className={`${styles.container} ${styles.containerLarge}`} ref={contentRef}>
-        <div className={styles.header}>
-          <h2 id="settingsModalTitle" className={styles.title}>Global Settings</h2>
-          <button
-            type="button"
-            className={styles.close}
-            onClick={onClose}
-            aria-label="Close settings"
-          >
-            ×
-          </button>
-        </div>
-        <div className={styles.body}>
-          <div className={styles.settingsColumns}>
-            {/* Left Column - General Settings */}
-            <div className={styles.settingsColumnLeft}>
-              <div className={styles.optionGroup}>
-                <label className={styles.optionLabel} htmlFor="dpiSetting">
-                  <span>Image Quality (DPI)</span>
-                </label>
-                <div className={styles.selectWithTooltip}>
-                  <select
-                    id="dpiSetting"
-                    className={styles.selectInput}
-                    value={generationOptions.dpi}
-                    onChange={(e) => updateGenerationOptions({ dpi: parseInt(e.target.value) as DPIOption })}
-                  >
-                    <option value="300">300 DPI (Standard)</option>
-                    <option value="600">600 DPI (High Quality)</option>
-                  </select>
-                  <span className={styles.tooltipText}>Higher DPI creates larger, more detailed token images</span>
-                </div>
-              </div>
-
-              <div className={styles.optionGroup}>
-                <label className={styles.optionLabel} htmlFor="colorSchema">
-                  <span>Color Theme</span>
-                </label>
-                <div className={styles.selectWithTooltip}>
-                  <select
-                    id="colorSchema"
-                    className={styles.selectInput}
-                    value={currentThemeId}
-                    onChange={(e) => setTheme(e.target.value)}
-                  >
-                    {getThemeIds().map(themeId => {
-                      const theme = UI_THEMES[themeId]
-                      return (
-                        <option key={themeId} value={themeId}>
-                          {theme.icon} {theme.name}
-                        </option>
-                      )
-                    })}
-                  </select>
-                  <span className={styles.tooltipText}>Choose a color theme for the application interface</span>
-                </div>
-              </div>
+    <Modal isOpen={isOpen} onClose={onClose} title="Global Settings" size="large">
+      <div className={styles.columns}>
+        {/* Left Column - General Settings */}
+        <div className={styles.columnLeft}>
+          <div className={styles.optionGroup}>
+            <label className={styles.label} htmlFor="dpiSetting">
+              Image Quality (DPI)
+            </label>
+            <div className={styles.selectWrapper}>
+              <select
+                id="dpiSetting"
+                className={styles.select}
+                value={generationOptions.dpi}
+                onChange={(e) => updateGenerationOptions({ dpi: parseInt(e.target.value) as DPIOption })}
+              >
+                <option value="300">300 DPI (Standard)</option>
+                <option value="600">600 DPI (High Quality)</option>
+              </select>
+              <span className={styles.helpText}>
+                Higher DPI creates larger, more detailed token images
+              </span>
             </div>
+          </div>
 
-            {/* Right Column - Data Sync & Management */}
-            <div className={styles.settingsColumnRight}>
-              {/* Data Synchronization Section */}
-              <div className={styles.settingsDataSectionInline}>
-                <h3>Data Synchronization</h3>
-                <div className={styles.syncSettingsInfo}>
-                  <p className={styles.syncStatus}>
-                    Status: <strong>{syncStatus.state === 'success' ? '✓ Synced' : syncStatus.state}</strong>
-                    {syncStatus.currentVersion && <span> • Version {syncStatus.currentVersion}</span>}
-                  </p>
-                  <p className={styles.syncSource}>
-                    Source: {syncStatus.dataSource === 'github' ? 'GitHub Releases' :
-                             syncStatus.dataSource === 'cache' ? 'Local Cache' :
-                             syncStatus.dataSource === 'offline' ? 'Offline' : 'Unknown'}
-                  </p>
-                </div>
-
-                <div className={styles.optionGroup}>
-                  <label className={styles.optionLabel}>
-                    <input
-                      type="checkbox"
-                      checked={autoSync}
-                      onChange={(e) => handleAutoSyncChange(e.target.checked)}
-                      disabled={!isSyncInitialized}
-                    />
-                    <span>Automatically check for updates</span>
-                  </label>
-                  <span className={styles.tooltipText}>
-                    When enabled, the app will periodically check for new character data from GitHub
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleOpenSyncDetails}
-                  className={styles.btnSecondary}
-                  title="View detailed sync information"
-                >
-                  ⚙️ View Sync Details
-                </button>
-              </div>
-
-              {/* Data Management Section */}
-              <div className={styles.settingsDataSectionInline}>
-                <h3>Data Management</h3>
-                <button
-                  type="button"
-                  onClick={handleWipeData}
-                  className={styles.btnDanger}
-                  title="Clear all saved settings and data"
-                >
-                  🗑️ Delete All Local Data
-                </button>
-              </div>
+          <div className={styles.optionGroup}>
+            <label className={styles.label} htmlFor="colorSchema">
+              Color Theme
+            </label>
+            <div className={styles.selectWrapper}>
+              <select
+                id="colorSchema"
+                className={styles.select}
+                value={currentThemeId}
+                onChange={(e) => setTheme(e.target.value)}
+              >
+                {getThemeIds().map(themeId => {
+                  const theme = UI_THEMES[themeId]
+                  return (
+                    <option key={themeId} value={themeId}>
+                      {theme.icon} {theme.name}
+                    </option>
+                  )
+                })}
+              </select>
+              <span className={styles.helpText}>
+                Choose a color theme for the application interface
+              </span>
             </div>
           </div>
         </div>
+
+        {/* Right Column - Data Sync & Management */}
+        <div className={styles.columnRight}>
+          {/* Data Synchronization Section */}
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Data Synchronization</h3>
+            <div className={styles.syncInfo}>
+              <p className={styles.syncStatus}>
+                Status: <strong>{syncStatus.state === 'success' ? '✓ Synced' : syncStatus.state}</strong>
+                {syncStatus.currentVersion && <span> • Version {syncStatus.currentVersion}</span>}
+              </p>
+              <p className={styles.syncSource}>
+                Source: {syncStatus.dataSource === 'github' ? 'GitHub Releases' :
+                         syncStatus.dataSource === 'cache' ? 'Local Cache' :
+                         syncStatus.dataSource === 'offline' ? 'Offline' : 'Unknown'}
+              </p>
+            </div>
+
+            <label className={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={autoSync}
+                onChange={(e) => handleAutoSyncChange(e.target.checked)}
+                disabled={!isSyncInitialized}
+              />
+              <span>Automatically check for updates</span>
+            </label>
+            <span className={styles.helpText}>
+              When enabled, the app will periodically check for new character data from GitHub
+            </span>
+
+            <Button
+              variant="secondary"
+              onClick={handleOpenSyncDetails}
+              style={{ marginTop: 'var(--spacing-md)' }}
+            >
+              ⚙️ View Sync Details
+            </Button>
+          </div>
+
+          {/* Data Management Section */}
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Data Management</h3>
+            <Button variant="danger" onClick={handleWipeData}>
+              🗑️ Delete All Local Data
+            </Button>
+          </div>
+        </div>
       </div>
-    </div>
+    </Modal>
   )
 }

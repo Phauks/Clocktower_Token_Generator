@@ -46,3 +46,27 @@ export {
     type QRCodeOptions,
     type QRCodeConstructor,
 } from './qrGeneration.js';
+
+// Canvas optimization utilities
+export {
+    calculateCircularTextLayout,
+    createCircularWidthCalculator,
+    calculateCircularWidth,
+    precalculateCurvedTextPositions,
+    type TextLayoutResult,
+    type CharacterPosition,
+} from './canvasOptimizations.js';
+
+// Font cache (using hexagonal architecture)
+export {
+    getCachedFont,
+    clearFontCache,
+    getFontCacheStats,
+    fontCache
+} from '../cache/instances/fontCache.js';
+
+// Canvas pooling
+export {
+    CanvasPool,
+    globalCanvasPool,
+} from './canvasPool.js';

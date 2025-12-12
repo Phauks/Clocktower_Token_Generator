@@ -90,9 +90,24 @@ export {
 export type { CreateAssetData } from './AssetStorageService.js';
 
 export {
+  AssetSuggestionService,
+  assetSuggestionService,
+} from './AssetSuggestionService.js';
+
+export type {
+  AssetSuggestion,
+  SuggestionOptions,
+} from './AssetSuggestionService.js';
+
+export {
   FileUploadService,
   fileUploadService,
 } from './FileUploadService.js';
+
+export {
+  AssetArchiveService,
+  assetArchiveService,
+} from './AssetArchiveService.js';
 
 // Asset Reference Resolver
 export {

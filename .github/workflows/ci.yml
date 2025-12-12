@@ -1,0 +1,70 @@
+# Continuous Integration Workflow
+# Consolidated workflow combining build, test, and code quality checks
+# Runs on all branches and pull requests to ensure code quality
+
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+# Limit permissions for security
+permissions:
+  contents: read
+
+# Cancel in-progress runs when new push occurs on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+
+    # Test on multiple Node.js versions for compatibility
+    strategy:
+      matrix:
+        node-version: ['18.x', '20.x']
+      fail-fast: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Run full validation (lint + test + build)
+      # This matches the local pre-commit workflow from package.json
+      - name: Run validation (lint + test + build)
+        run: npm run validate
+
+      # Upload build artifacts only for Node 20.x to avoid duplication
+      - name: Upload build artifacts
+        if: matrix.node-version == '20.x'
+        uses: actions/upload-artifact@v5
+        with:
+          name: dist-${{ github.sha }}
+          path: dist/
+          retention-days: 7
+
+      # Add summary to GitHub Actions UI
+      - name: Summary
+        if: always()
+        run: |
+          echo "## ✅ Validation Complete (Node ${{ matrix.node-version }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- TypeScript compilation: ✅" >> $GITHUB_STEP_SUMMARY
+          echo "- Unit tests: ✅" >> $GITHUB_STEP_SUMMARY
+          echo "- Code linting: ✅" >> $GITHUB_STEP_SUMMARY

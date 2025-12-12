@@ -4,6 +4,21 @@
  */
 
 // ============================================================================
+// TOKEN TYPE CONSTANTS - Type-safe token type definitions
+// ============================================================================
+
+/**
+ * Token type constants for type-safe token generation
+ */
+export const TokenType = {
+    CHARACTER: 'character',
+    REMINDER: 'reminder',
+    META: 'meta'
+} as const;
+
+export type TokenTypeValue = typeof TokenType[keyof typeof TokenType];
+
+// ============================================================================
 // LAYOUT RATIOS - Used for token element positioning and sizing
 // ============================================================================
 
@@ -270,6 +285,7 @@ export const TOKEN_PREVIEW = {
 // ============================================================================
 
 export default {
+    TokenType,
     CHARACTER_LAYOUT,
     REMINDER_LAYOUT,
     META_TOKEN_LAYOUT,

@@ -1,0 +1,381 @@
+/**
+ * Project History Modal Styles
+ *
+ * Two-panel layout: timeline on left, details/diff on right
+ */
+
+.container {
+  display: flex;
+  gap: 24px;
+  height: 600px;
+  max-height: 70vh;
+}
+
+/* ==========================================================================
+   Timeline Panel (Left)
+   ========================================================================== */
+
+.timeline {
+  flex: 0 0 350px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border-color);
+  padding-right: 24px;
+}
+
+.timelineHeader {
+  margin-bottom: 16px;
+}
+
+.timelineHeader h3 {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.timelineCount {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Tab Navigation */
+.tabNav {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tab {
+  flex: 1;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab:hover {
+  color: var(--text-primary);
+  background: var(--surface-background);
+}
+
+.tabActive {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+.timelineList {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ==========================================================================
+   Timeline Items
+   ========================================================================== */
+
+.timelineItem {
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--card-background);
+}
+
+.timelineItem:hover {
+  border-color: var(--border-color-hover);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.timelineItem.selected {
+  border-color: var(--primary-color);
+  border-width: 2px;
+  padding: 11px;
+  background: var(--primary-background);
+}
+
+.timelineItem.version {
+  border-left-width: 4px;
+  border-left-color: var(--primary-color);
+  padding-left: 8px;
+}
+
+.timelineItem.snapshot {
+  border-left-width: 4px;
+  border-left-color: var(--secondary-color);
+  padding-left: 8px;
+}
+
+.itemHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.itemType {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.typeIcon {
+  font-size: 14px;
+}
+
+.typeLabelVersion {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.typeLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.itemTimestamp {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.itemNotes {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.itemActions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ==========================================================================
+   Details Panel (Right)
+   ========================================================================== */
+
+.details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.emptyDetails {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.detailsContent {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.detailsHeader {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 12px;
+}
+
+.detailsHeader h3 {
+  margin: 0 0 4px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.detailsTimestamp {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   Release Notes
+   ========================================================================== */
+
+.releaseNotes {
+  padding: 12px;
+  background: var(--surface-background);
+  border-radius: 6px;
+}
+
+.releaseNotes h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.releaseNotes p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+/* ==========================================================================
+   Diff Display
+   ========================================================================== */
+
+.diff {
+  padding: 12px;
+  background: var(--surface-background);
+  border-radius: 6px;
+}
+
+.diff h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.noChanges {
+  margin: 0;
+  font-size: 13px;
+  color: var(--success-color);
+  font-weight: 500;
+}
+
+.diffSummary {
+  margin: 0 0 16px 0;
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+  padding: 8px;
+  background: var(--warning-background);
+  border-left: 3px solid var(--warning-color);
+  border-radius: 4px;
+}
+
+.diffSection {
+  margin-bottom: 16px;
+}
+
+.diffSection:last-child {
+  margin-bottom: 0;
+}
+
+.diffSection h5 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.diffItem {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.diffLabel {
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.diffItem span:last-child {
+  color: var(--text-primary);
+}
+
+/* ==========================================================================
+   Loading & Empty States
+   ========================================================================== */
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px;
+  color: var(--text-secondary);
+}
+
+.spinner {
+  font-size: 32px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.empty p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+    height: auto;
+    max-height: none;
+  }
+
+  .timeline {
+    flex: none;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    padding-right: 0;
+    padding-bottom: 16px;
+    max-height: 300px;
+  }
+
+  .details {
+    overflow-y: visible;
+  }
+}

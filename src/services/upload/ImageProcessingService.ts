@@ -410,6 +410,64 @@ export class ImageProcessingService {
 
     return this.canvasToBlob(canvas, source.type || 'image/png', PROCESSED_IMAGE_QUALITY);
   }
+
+  // ==========================================================================
+  // Content Hashing (for deduplication)
+  // ==========================================================================
+
+  /**
+   * Generate SHA-256 content hash for a blob.
+   * Used for asset deduplication - identical files produce identical hashes.
+   *
+   * @param blob - Blob to hash
+   * @returns Hex-encoded SHA-256 hash
+   *
+   * @example
+   * ```typescript
+   * const hash = await imageProcessingService.hashBlob(imageBlob);
+   * // hash = "a3c5f2e8d9b1..."
+   * ```
+   */
+  async hashBlob(blob: Blob): Promise<string> {
+    // Read blob as ArrayBuffer
+    const buffer = await blob.arrayBuffer();
+
+    // Generate SHA-256 hash
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+
+    // Convert to hex string
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    return hashHex;
+  }
+
+  /**
+   * Generate content hashes for both processed blob and thumbnail.
+   *
+   * @param processedBlob - Main processed image blob
+   * @param thumbnailBlob - Thumbnail blob
+   * @returns Object with mainHash and thumbnailHash
+   *
+   * @example
+   * ```typescript
+   * const { mainHash, thumbnailHash } = await imageProcessingService.hashProcessedImage(
+   *   processedImage.blob,
+   *   processedImage.thumbnail
+   * );
+   * ```
+   */
+  async hashProcessedImage(
+    processedBlob: Blob,
+    thumbnailBlob: Blob
+  ): Promise<{ mainHash: string; thumbnailHash: string }> {
+    const [mainHash, thumbnailHash] = await Promise.all([
+      this.hashBlob(processedBlob),
+      this.hashBlob(thumbnailBlob)
+    ]);
+
+    return { mainHash, thumbnailHash };
+  }
 }
 
 // ============================================================================

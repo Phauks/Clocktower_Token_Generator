@@ -3,9 +3,13 @@
  *
  * Modal for exporting projects as ZIP files with customizable options.
  * Shows estimated file size and progress during export.
+ * Migrated to use unified Modal, Button, and Alert components.
  */
 
 import { useState, useCallback, useMemo } from 'react';
+import { Modal } from '../Shared/Modal/Modal';
+import { Button } from '../Shared/Button';
+import { Alert } from '../Shared/Alert';
 import { ProjectExporter } from '../../ts/services/project/ProjectExporter';
 import type { Project, ExportOptions } from '../../ts/types/project.js';
 import styles from '../../styles/components/modals/ExportProjectModal.module.css';
@@ -120,128 +124,116 @@ export function ExportProjectModal({ isOpen, onClose, project }: ExportProjectMo
     }
   }, [isExporting, onClose]);
 
-  if (!isOpen || !project) return null;
+  if (!project) return null;
 
   return (
-    <div className={styles.overlay} onClick={handleClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className={styles.header}>
-          <h2 className={styles.title}>Export Project</h2>
-          <button
-            onClick={handleClose}
-            className={styles.closeButton}
-            aria-label="Close"
-            disabled={isExporting}
-          >
-            ×
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className={styles.content}>
-          {/* Project Info */}
-          <div className={styles.projectInfo}>
-            <h3 className={styles.projectName}>{project.name}</h3>
-            {project.description && <p className={styles.projectDescription}>{project.description}</p>}
-            <div className={styles.projectStats}>
-              <span>{project.stats.characterCount} characters</span>
-              <span>•</span>
-              <span>{project.state.customIcons?.length || 0} custom icons</span>
-            </div>
-          </div>
-
-          {/* Export Options */}
-          <div className={styles.options}>
-            <h4 className={styles.optionsTitle}>Export Options</h4>
-
-            <label className={styles.option}>
-              <input
-                type="checkbox"
-                checked={options.includeCustomIcons}
-                onChange={(e) =>
-                  setOptions((prev) => ({ ...prev, includeCustomIcons: e.target.checked }))
-                }
-                disabled={isExporting || !project.state.customIcons?.length}
-              />
-              <div className={styles.optionContent}>
-                <span className={styles.optionLabel}>Include Custom Icons</span>
-                <span className={styles.optionDescription}>
-                  {project.state.customIcons?.length || 0} custom icon(s)
-                </span>
-              </div>
-            </label>
-
-            <label className={styles.option}>
-              <input
-                type="checkbox"
-                checked={options.includeThumbnail}
-                onChange={(e) =>
-                  setOptions((prev) => ({ ...prev, includeThumbnail: e.target.checked }))
-                }
-                disabled={isExporting}
-              />
-              <div className={styles.optionContent}>
-                <span className={styles.optionLabel}>Include Thumbnail</span>
-                <span className={styles.optionDescription}>Project preview image</span>
-              </div>
-            </label>
-
-            <label className={styles.option}>
-              <input
-                type="checkbox"
-                checked={options.compressImages}
-                onChange={(e) =>
-                  setOptions((prev) => ({ ...prev, compressImages: e.target.checked }))
-                }
-                disabled={isExporting}
-              />
-              <div className={styles.optionContent}>
-                <span className={styles.optionLabel}>Compress Images</span>
-                <span className={styles.optionDescription}>Reduce file size (~40% smaller)</span>
-              </div>
-            </label>
-          </div>
-
-          {/* File Size Estimate */}
-          <div className={styles.sizeEstimate}>
-            <span className={styles.sizeLabel}>Estimated Size:</span>
-            <span className={styles.sizeValue}>{estimatedSize}</span>
-          </div>
-
-          {/* Progress Bar */}
-          {isExporting && (
-            <div className={styles.progressSection}>
-              <div className={styles.progressBar}>
-                <div className={styles.progressFill} style={{ width: `${progress}%` }} />
-              </div>
-              <span className={styles.progressText}>Exporting... {progress}%</span>
-            </div>
-          )}
-
-          {/* Error Message */}
-          {error && (
-            <div className={styles.errorMessage} role="alert">
-              <span className={styles.errorIcon}>⚠</span>
-              {error}
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className={styles.footer}>
-          <button onClick={handleClose} className={styles.cancelButton} disabled={isExporting}>
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Export Project"
+      size="medium"
+      preventClose={isExporting}
+      footer={
+        <>
+          <Button variant="secondary" onClick={handleClose} disabled={isExporting}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="accent"
             onClick={handleExport}
-            className={styles.exportButton}
-            disabled={isExporting}
+            loading={isExporting}
+            loadingText="Exporting..."
           >
-            {isExporting ? 'Exporting...' : 'Export as ZIP'}
-          </button>
+            Export as ZIP
+          </Button>
+        </>
+      }
+    >
+      {/* Project Info */}
+      <div className={styles.projectInfo}>
+        <h3 className={styles.projectName}>{project.name}</h3>
+        {project.description && <p className={styles.projectDescription}>{project.description}</p>}
+        <div className={styles.projectStats}>
+          <span>{project.stats.characterCount} characters</span>
+          <span>•</span>
+          <span>{project.state.customIcons?.length || 0} custom icons</span>
         </div>
       </div>
-    </div>
+
+      {/* Export Options */}
+      <div className={styles.options}>
+        <h4 className={styles.optionsTitle}>Export Options</h4>
+
+        <label className={styles.option}>
+          <input
+            type="checkbox"
+            checked={options.includeCustomIcons}
+            onChange={(e) =>
+              setOptions((prev) => ({ ...prev, includeCustomIcons: e.target.checked }))
+            }
+            disabled={isExporting || !project.state.customIcons?.length}
+          />
+          <div className={styles.optionContent}>
+            <span className={styles.optionLabel}>Include Custom Icons</span>
+            <span className={styles.optionDescription}>
+              {project.state.customIcons?.length || 0} custom icon(s)
+            </span>
+          </div>
+        </label>
+
+        <label className={styles.option}>
+          <input
+            type="checkbox"
+            checked={options.includeThumbnail}
+            onChange={(e) =>
+              setOptions((prev) => ({ ...prev, includeThumbnail: e.target.checked }))
+            }
+            disabled={isExporting}
+          />
+          <div className={styles.optionContent}>
+            <span className={styles.optionLabel}>Include Thumbnail</span>
+            <span className={styles.optionDescription}>Project preview image</span>
+          </div>
+        </label>
+
+        <label className={styles.option}>
+          <input
+            type="checkbox"
+            checked={options.compressImages}
+            onChange={(e) =>
+              setOptions((prev) => ({ ...prev, compressImages: e.target.checked }))
+            }
+            disabled={isExporting}
+          />
+          <div className={styles.optionContent}>
+            <span className={styles.optionLabel}>Compress Images</span>
+            <span className={styles.optionDescription}>Reduce file size (~40% smaller)</span>
+          </div>
+        </label>
+      </div>
+
+      {/* File Size Estimate */}
+      <div className={styles.sizeEstimate}>
+        <span className={styles.sizeLabel}>Estimated Size:</span>
+        <span className={styles.sizeValue}>{estimatedSize}</span>
+      </div>
+
+      {/* Progress Bar */}
+      {isExporting && (
+        <div className={styles.progressSection}>
+          <div className={styles.progressBar}>
+            <div className={styles.progressFill} style={{ width: `${progress}%` }} />
+          </div>
+          <span className={styles.progressText}>Exporting... {progress}%</span>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error && (
+        <Alert variant="error" style={{ marginTop: 'var(--spacing-md)' }}>
+          {error}
+        </Alert>
+      )}
+    </Modal>
   );
 }

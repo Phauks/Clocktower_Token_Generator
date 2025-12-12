@@ -11,6 +11,7 @@ import type {
 } from '../core/index.js'
 import { WorkerPool } from '../utils/WorkerPool.js'
 import type { EncodeCanvasTask } from '../../workers/prerender-worker.js'
+import { globalImageCache } from '../../utils/imageCache.js'
 
 /**
  * Configuration options for gallery pre-rendering.
@@ -192,6 +193,70 @@ export class GalleryPreRenderStrategy implements IPreRenderStrategy {
       chunks.push(arr.slice(i, i + size))
     }
     return chunks
+  }
+
+  /**
+   * Preload images for tokens in gallery view during idle time.
+   * Uses requestIdleCallback to avoid blocking user interactions.
+   *
+   * @param context - Pre-render context with tokens
+   * @param onProgress - Optional progress callback (loaded, total)
+   * @returns Promise that resolves when preloading completes
+   */
+  async preloadImages(
+    context: PreRenderContext,
+    onProgress?: (loaded: number, total: number) => void
+  ): Promise<void> {
+    const { tokens, characters } = context
+    const tokensToPreload = tokens.slice(0, this.options.maxTokens)
+
+    // Extract image URLs from tokens and characters
+    const imageUrls = new Set<string>()
+
+    // Add character images
+    if (characters) {
+      for (const character of characters.slice(0, this.options.maxTokens)) {
+        if (character.image) {
+          if (Array.isArray(character.image)) {
+            character.image.forEach(url => imageUrls.add(url))
+          } else {
+            imageUrls.add(character.image)
+          }
+        }
+      }
+    }
+
+    // Add background images from generation options
+    if (context.generationOptions) {
+      const { characterBackground, reminderBackground, logoUrl } = context.generationOptions
+      if (characterBackground) imageUrls.add(characterBackground)
+      if (reminderBackground) imageUrls.add(reminderBackground)
+      if (logoUrl) imageUrls.add(logoUrl)
+    }
+
+    // Filter out already cached images
+    const urlsToLoad = Array.from(imageUrls).filter(url => !globalImageCache.has(url))
+
+    if (urlsToLoad.length === 0) {
+      // All images already cached
+      onProgress?.(0, 0)
+      return
+    }
+
+    // Preload images using idle callback for non-blocking behavior
+    return new Promise((resolve) => {
+      const preload = async () => {
+        await globalImageCache.preloadMany(urlsToLoad, false, onProgress)
+        resolve()
+      }
+
+      if (this.options.useIdleCallback && 'requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(preload, { timeout: 2000 })
+      } else {
+        // Fallback: use setTimeout for non-blocking behavior
+        setTimeout(preload, 0)
+      }
+    })
   }
 
   /**

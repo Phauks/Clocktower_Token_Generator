@@ -53,7 +53,7 @@ export function useScriptData() {
 
         // Parse the script data with lenient validation
         const parsed = JSON.parse(jsonString)
-        const { characters: scriptChars, warnings } = validateAndParseScript(parsed, officialData)
+        const { characters: scriptChars, warnings } = await validateAndParseScript(parsed, officialData)
 
         // Extract metadata if present
         const meta = extractScriptMeta(parsed)
@@ -77,24 +77,6 @@ export function useScriptData() {
       }
     },
     [setJsonInput, setCharacters, setScriptMeta, setError, setIsLoading, setWarnings, officialData, clearAllMetadata, setMetadata]
-  )
-
-  const loadExampleScriptByName = useCallback(
-    async (name: string) => {
-      try {
-        setIsLoading(true)
-        setError(null)
-
-        const scriptJson = await loadExampleScript(name)
-        await loadScript(JSON.stringify(scriptJson, null, 2))
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load example script'
-        setError(errorMessage)
-      } finally {
-        setIsLoading(false)
-      }
-    },
-    [loadScript, setIsLoading, setError]
   )
 
   const loadOfficialData = useCallback(async () => {
@@ -143,7 +125,7 @@ export function useScriptData() {
    * Used for live editing - jsonInput is already set by the textarea
    */
   const parseJson = useCallback(
-    (jsonString: string) => {
+    async (jsonString: string) => {
       // Handle empty input
       if (!jsonString.trim()) {
         setCharacters([])
@@ -163,7 +145,7 @@ export function useScriptData() {
       try {
         // Parse the script data with lenient validation
         const parsed = JSON.parse(jsonString)
-        const { characters: scriptChars, warnings } = validateAndParseScript(parsed, officialData)
+        const { characters: scriptChars, warnings } = await validateAndParseScript(parsed, officialData)
 
         // Extract metadata if present
         const meta = extractScriptMeta(parsed)
@@ -195,11 +177,66 @@ export function useScriptData() {
   }, [setJsonInput, setCharacters, setTokens, setScriptMeta, setWarnings, setError, clearAllMetadata])
 
   /**
+   * Central gateway for all script state updates
+   * Ensures auto-save triggers reliably for all bulk operations
+   *
+   * @param newJson - The new JSON content (empty string for clear)
+   * @param source - Where the update came from (for logging/analytics)
+   */
+  const updateScript = useCallback(async (
+    newJson: string,
+    source: 'user-edit' | 'format' | 'sort' | 'condense' | 'add-meta' | 'remove-underscores' | 'upload' | 'load-example' | 'clear' | 'undo' | 'redo'
+  ) => {
+    console.log('[ScriptData] Updating script via gateway', {
+      source,
+      jsonLength: newJson.length,
+      isEmpty: newJson === '',
+    })
+
+    try {
+      if (source === 'clear') {
+        // Special case: clear all state
+        clearScript()
+        console.debug('[ScriptData] Script cleared successfully')
+      } else {
+        // Normal case: update JSON and reparse
+        await loadScript(newJson)
+        console.debug('[ScriptData] Script updated and parsed')
+      }
+
+      // Auto-save will trigger automatically via detector
+      // (detector watches jsonInput, characters, etc.)
+
+    } catch (error) {
+      console.error('[ScriptData] Failed to update script', { source, error })
+      throw error // Re-throw so handlers can show user-friendly messages
+    }
+  }, [clearScript, loadScript])
+
+  const loadExampleScriptByName = useCallback(
+    async (name: string) => {
+      try {
+        setIsLoading(true)
+        setError(null)
+
+        const scriptJson = await loadExampleScript(name)
+        await updateScript(JSON.stringify(scriptJson, null, 2), 'load-example')
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load example script'
+        setError(errorMessage)
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [updateScript, setIsLoading, setError]
+  )
+
+  /**
    * Add a _meta entry to the current script JSON
    * Creates a new _meta object with default properties (id, name, author, version)
    */
   const addMetaToScript = useCallback(
-    (metaData: { name?: string; author?: string; version?: string } = {}) => {
+    async (metaData: { name?: string; author?: string; version?: string } = {}) => {
       if (!jsonInput.trim()) return
 
       try {
@@ -224,14 +261,14 @@ export function useScriptData() {
         const updatedScript = [newMeta, ...parsed]
         const updatedJson = JSON.stringify(updatedScript, null, 2)
 
-        setJsonInput(updatedJson)
-        setScriptMeta(newMeta)
+        // Use gateway to trigger auto-save
+        await updateScript(updatedJson, 'add-meta')
       } catch (err) {
         console.error('Failed to add _meta to script:', err)
         setError('Failed to add metadata: Invalid JSON')
       }
     },
-    [jsonInput, setJsonInput, setScriptMeta, setError]
+    [jsonInput, updateScript, setError]
   )
 
   /**
@@ -281,7 +318,7 @@ export function useScriptData() {
    * Remove underscores from all character IDs in the script
    * Converts IDs like "fortune_teller" to "fortuneteller" to match official character IDs
    */
-  const removeUnderscoresFromIds = useCallback(() => {
+  const removeUnderscoresFromIds = useCallback(async () => {
     if (!jsonInput.trim()) return
 
     try {
@@ -304,15 +341,14 @@ export function useScriptData() {
       })
 
       const updatedJson = JSON.stringify(updatedScript, null, 2)
-      setJsonInput(updatedJson)
-      
-      // Re-parse to update characters
-      parseJson(updatedJson)
+
+      // Use gateway to trigger auto-save
+      await updateScript(updatedJson, 'remove-underscores')
     } catch (err) {
       console.error('Failed to remove underscores from IDs:', err)
       setError('Failed to update IDs: Invalid JSON')
     }
-  }, [jsonInput, setJsonInput, parseJson, setError])
+  }, [jsonInput, updateScript, setError])
 
   return {
     loadScript,
@@ -323,5 +359,6 @@ export function useScriptData() {
     addMetaToScript,
     hasUnderscoresInIds,
     removeUnderscoresFromIds,
+    updateScript, // ← NEW: Gateway for all script state updates
   }
 }

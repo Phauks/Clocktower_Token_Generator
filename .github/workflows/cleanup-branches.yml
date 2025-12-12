@@ -1,0 +1,83 @@
+# Branch Cleanup Workflow
+# Automatically deletes merged branches to keep the repository clean
+# Runs weekly on schedule and can be triggered manually
+
+name: Cleanup Merged Branches
+
+on:
+  # Run weekly on Sundays at midnight UTC
+  schedule:
+    - cron: '0 0 * * 0'
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    name: Delete Merged Branches
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # Fetch all history to identify merged branches
+
+      - name: Delete merged branches
+        run: |
+          echo "## 🧹 Branch Cleanup Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Get the default branch
+          DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
+          echo "Default branch: $DEFAULT_BRANCH" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Fetch latest data
+          git fetch --prune
+
+          # Find merged branches (excluding main/master and any protected branches)
+          MERGED_BRANCHES=$(git branch -r --merged origin/$DEFAULT_BRANCH | \
+            grep -v "HEAD" | \
+            grep -v "$DEFAULT_BRANCH" | \
+            grep -v "release/" | \
+            sed 's/origin\///' | \
+            xargs)
+
+          if [ -z "$MERGED_BRANCHES" ]; then
+            echo "✅ **No merged branches to delete**" >> $GITHUB_STEP_SUMMARY
+            echo "All remote branches are either unmerged or protected." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          echo "📋 **Branches to delete:**" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "$MERGED_BRANCHES" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Delete merged branches
+          DELETED_COUNT=0
+          for branch in $MERGED_BRANCHES; do
+            echo "Deleting branch: $branch"
+            if git push origin --delete "$branch" 2>&1; then
+              DELETED_COUNT=$((DELETED_COUNT + 1))
+            else
+              echo "⚠️ Failed to delete: $branch" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Deleted $DELETED_COUNT merged branch(es)**" >> $GITHUB_STEP_SUMMARY
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "**Next cleanup:** Scheduled for next Sunday at midnight UTC" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Manual trigger:** Use the 'Run workflow' button to clean up branches anytime" >> $GITHUB_STEP_SUMMARY

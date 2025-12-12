@@ -1,0 +1,219 @@
+/**
+ * Version Card Styles
+ *
+ * Individual version card in the timeline
+ */
+
+.card {
+  background: var(--card-background);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.card:hover {
+  border-color: var(--border-color-hover);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Current version indicator */
+.current {
+  border-color: var(--primary-color);
+  border-width: 2px;
+  padding: 15px; /* Adjust padding to compensate for thicker border */
+}
+
+.current::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-color), var(--primary-color-light));
+  border-radius: 8px 8px 0 0;
+}
+
+/* ==========================================================================
+   Header
+   ========================================================================== */
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.versionNumber {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.currentBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--success-color);
+  background: var(--success-background);
+  border: 1px solid var(--success-color);
+  border-radius: 4px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--tag-background);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.timestamp {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   Release Notes
+   ========================================================================== */
+
+.releaseNotes {
+  margin-bottom: 12px;
+}
+
+.releaseNotes p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+/* ==========================================================================
+   Summary Stats
+   ========================================================================== */
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px;
+  background: var(--surface-background);
+  border-radius: 6px;
+}
+
+.summaryItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.summaryIcon {
+  font-size: 16px;
+}
+
+.summaryText {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   Actions
+   ========================================================================== */
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ==========================================================================
+   Published Badge (Future Feature)
+   ========================================================================== */
+
+.publishedBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: var(--info-background);
+  border: 1px solid var(--info-color);
+  border-radius: 6px;
+}
+
+.publishedIcon {
+  font-size: 14px;
+}
+
+.publishedText {
+  font-size: 13px;
+  color: var(--info-color);
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .card {
+    padding: 12px;
+  }
+
+  .current {
+    padding: 11px;
+  }
+
+  .header {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .headerLeft,
+  .headerRight {
+    width: 100%;
+  }
+
+  .headerRight {
+    justify-content: flex-start;
+  }
+
+  .summary {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .actions button {
+    width: 100%;
+  }
+}

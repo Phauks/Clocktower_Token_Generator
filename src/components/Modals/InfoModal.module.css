@@ -1,0 +1,31 @@
+/* ============================================
+   Component: InfoModal
+   Styles specific to the Info/About modal
+   ============================================ */
+
+.description {
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-md);
+  line-height: 1.6;
+}
+
+.supportText {
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-lg);
+  line-height: 1.6;
+}
+
+.kofiContainer {
+  display: flex;
+  justify-content: center;
+}
+
+.kofiImage {
+  border: 0;
+  height: 36px;
+  transition: transform var(--transition-fast);
+}
+
+.kofiImage:hover {
+  transform: scale(1.05);
+}

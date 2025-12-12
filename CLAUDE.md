@@ -9,13 +9,14 @@
 **Before writing ANY new TypeScript code, Claude should:**
 
 1. **Search for existing utilities** in these locations (in order):
-   - `src/ts/utils/` - Domain-specific utilities (strings, images, JSON, colors, async)
+   - `src/ts/utils/` - Domain-specific utilities (strings, images, JSON, colors, async, **logger**, **errorUtils**)
    - `src/ts/canvas/` - Canvas rendering utilities (text, shapes, images, QR codes)
    - `src/ts/data/` - Data loading and script parsing utilities
-   - `src/ts/sync/` - 🆕 GitHub data synchronization (IndexedDB, Cache API, GitHub releases)
+   - `src/ts/sync/` - GitHub data synchronization (IndexedDB, Cache API, GitHub releases)
    - `src/ts/export/` - Export utilities (PDF, PNG, ZIP)
-   - `src/ts/generation/` - Token generation and presets
+   - `src/ts/generation/` - Token generation (**refactored with DI**), presets, renderers
    - `src/ts/ui/` - UI utility functions
+   - `src/hooks/` - Custom React hooks (including **refactored TokenGrid hooks**, **cache warming**)
    - `src/ts/constants.ts` - Magic numbers, layout ratios, colors
    - `src/ts/config.ts` - Application configuration
    - `src/ts/types/index.ts` - Type definitions
@@ -102,7 +103,8 @@ src/ts/
 │   ├── classNames.ts      # 🆕 CSS className utility
 │   ├── nameGenerator.ts   # 🆕 Unique name generation
 │   ├── storageKeys.ts     # 🆕 localStorage key constants
-│   └── tokenGrouping.ts   # 🆕 Token grouping logic
+│   ├── tokenGrouping.ts   # 🆕 Token grouping logic
+│   └── characterImageResolver.ts # 🆕 SSOT for character icon URL resolution
 │
 ├── themes.ts       # 🆕 Theme definitions and utilities
 ├── index.ts        # Root barrel export (all modules)
@@ -137,6 +139,7 @@ import {
 | `colorUtils.ts` | Color manipulation | `hexToRgb`, `getContrastColor` |
 | `asyncUtils.ts` | Async patterns | `shuffleArray`, `debounce`, `sleep` |
 | `progressUtils.ts` | Progress tracking | `createProgressState`, `updateProgress` |
+| `characterImageResolver.ts` | **🆕 SSOT** character icon resolution | `resolveCharacterImageUrl`, `resolveCharacterImages`, `isExternalUrl`, `extractCharacterIdFromPath` |
 
 ### Canvas Module (`src/ts/canvas/`)
 
@@ -338,6 +341,36 @@ const externalImg = await loadImage(url);      // For URLs (with CORS)
 const localImg = await loadLocalImage(path);   // For local assets
 ```
 
+### Resolving Character Icon URLs (SSOT)
+
+```typescript
+// DON'T: Duplicate resolution logic in multiple places
+if (url.startsWith('http')) { /* ... */ }
+else if (url.startsWith('asset:')) { /* ... */ }
+else { const blob = await dataSyncService.getCharacterImage(id) /* ... */ }
+
+// DO: Use the SSOT utility for single URLs
+import { resolveCharacterImageUrl } from './utils/characterImageResolver.js';
+
+const result = await resolveCharacterImageUrl(imageUrl, characterId);
+// result.url = resolved URL (http/data/blob)
+// result.source = 'asset' | 'external' | 'sync' | 'fallback'
+// result.blobUrl = blob URL to cleanup (if source is 'sync')
+
+// DO: Use the SSOT utility for batch resolution (in hooks)
+import { resolveCharacterImages } from './utils/characterImageResolver.js';
+
+const { urls, blobUrls } = await resolveCharacterImages(characters);
+// urls = Map<uuid, resolvedUrl>
+// blobUrls = array of blob URLs for cleanup
+
+// DO: Use the React hook wrapper for components
+import { useCharacterImageResolver } from '../hooks/useCharacterImageResolver';
+
+const { resolvedUrls, isLoading } = useCharacterImageResolver({ characters });
+const iconUrl = resolvedUrls.get(character.uuid);
+```
+
 ### Using Layout Constants
 
 ```typescript
@@ -436,3 +469,190 @@ Create new types when:
 ---
 
 *This guide should be consulted before any significant code changes to maintain consistency and reduce refactoring needs.*
+
+---
+
+## 🔧 Refactoring Patterns (2025 Update)
+
+### NEW: Structured Logging
+
+**ALWAYS use the logger utility instead of console.**
+
+```typescript
+// DON'T: Use console directly
+console.log('Loading data...');
+console.error('Failed:', error);
+
+// DO: Use structured logger
+import { logger } from './ts/utils/logger.js';
+
+logger.info('DataLoader', 'Loading data...');
+logger.error('DataLoader', 'Failed to load', error);
+
+// Child loggers for modules
+const syncLogger = logger.child('DataSync');
+syncLogger.debug('Checking for updates');
+
+// Performance timing
+const result = await logger.time('SlowOperation', 'Processing', async () => {
+  return await processData();
+});
+```
+
+### NEW: Error Handling in Hooks
+
+**Use error utilities to eliminate boilerplate.**
+
+```typescript
+// DON'T: Repetitive error handling
+try {
+  setIsLoading(true);
+  setError(null);
+  const data = await fetchData();
+  return data;
+} catch (err) {
+  setError(err instanceof Error ? err.message : 'Failed');
+  console.error('Failed:', err);
+} finally {
+  setIsLoading(false);
+}
+
+// DO: Use handleAsyncOperation
+import { handleAsyncOperation } from './ts/utils/errorUtils.js';
+
+const data = await handleAsyncOperation(
+  () => fetchData(),
+  'Fetch data',
+  setIsLoading,
+  setError,
+  { successMessage: 'Data loaded successfully' }
+);
+```
+
+### NEW: Dependency Injection Pattern
+
+**Use DI for better testability (TokenGenerator example).**
+
+```typescript
+// DON'T: Hard-coded dependencies
+class TokenGenerator {
+  async getCachedImage(url: string) {
+    return globalImageCache.get(url); // Hard dependency
+  }
+}
+
+// DO: Inject dependencies
+import type { IImageCache } from './TokenImageRenderer.js';
+
+class TokenGenerator {
+  constructor(
+    options: TokenGeneratorOptions,
+    private imageCache: IImageCache = defaultImageCache
+  ) {}
+
+  async getCachedImage(url: string) {
+    return this.imageCache.get(url); // Injected, mockable
+  }
+}
+
+// Easy to test
+const mockCache = { get: vi.fn(), clear: vi.fn() };
+const generator = new TokenGenerator(options, mockCache);
+```
+
+### NEW: Extract Complex Logic to Custom Hooks
+
+**Create focused hooks for reusability.**
+
+```typescript
+// DON'T: Complex component with mixed concerns
+export function TokenGrid() {
+  const [tokenToDelete, setTokenToDelete] = useState(null);
+  const handleDelete = useCallback(...); // 30 lines
+  const confirmDelete = useCallback(...); // 20 lines
+  const handleSort = useMemo(...); // 40 lines
+  const handleGroup = useMemo(...); // 30 lines
+  // Component is 200+ lines
+}
+
+// DO: Extract to custom hooks
+import { useTokenDeletion, useTokenGrouping } from '../hooks';
+
+export function TokenGrid() {
+  const deletion = useTokenDeletion({ tokens, setTokens, ... });
+  const grouped = useTokenGrouping(tokens);
+
+  // Component is now 50 lines, logic is reusable
+}
+```
+
+### NEW: Type-Safe Event Emitters
+
+**Define event types for compile-time safety.**
+
+```typescript
+// DON'T: Untyped events
+const emitter = new EventEmitter();
+emitter.on('data', (data) => { /* data is 'any' */ });
+
+// DO: Define event map
+interface SyncEvents {
+  'progress': [loaded: number, total: number];
+  'complete': [data: Character[]];
+  'error': [error: Error];
+}
+
+const emitter = new EventEmitter<SyncEvents>();
+emitter.on('progress', (loaded, total) => {
+  // loaded: number, total: number (fully typed!)
+});
+```
+
+---
+
+## 📦 New Utilities Reference
+
+### Logger (`src/ts/utils/logger.ts`)
+- `logger.debug(context, message, ...data)` - Debug logs (dev only)
+- `logger.info(context, message, ...data)` - Info logs
+- `logger.warn(context, message, ...data)` - Warnings
+- `logger.error(context, message, ...error)` - Errors
+- `logger.time(context, label, fn)` - Performance timing
+- `logger.child(context)` - Create context-specific logger
+
+### Error Handling (`src/ts/utils/errorUtils.ts`)
+- `handleHookError(error, context, setError, options?)` - Simple error handling
+- `handleAsyncOperation(fn, context, setLoading, setError, options?)` - Complete async wrapper
+- `retryOperation(fn, context, options?)` - Retry with exponential backoff
+- `validateRequiredFields(obj, fields, context)` - Form validation
+
+### Refactored Hooks (`src/hooks/`)
+- `useTokenDeletion({ tokens, setTokens, ... })` - Token deletion logic
+- `useTokenGrouping(tokens)` - Token sorting/grouping
+- `useStudioNavigation({ onTabChange })` - Studio navigation
+- `useProjectCacheWarming(project)` - Auto cache warming
+
+### Refactored Components (`src/ts/generation/`)
+- `TokenImageRenderer` - Image rendering (265 lines)
+- `TokenTextRenderer` - Text rendering (298 lines)
+- `TokenGeneratorRefactored` - Main generator with DI (< 300 lines)
+- `ImageCacheAdapter` - Cache adapter for DI
+
+---
+
+## 🎯 Code Review Checklist
+
+Before committing, verify:
+
+- [ ] NO `console.log/error/warn` - use `logger` instead
+- [ ] NO repetitive try-catch - use `handleAsyncOperation`
+- [ ] Complex hooks extracted to separate files
+- [ ] Dependencies injected, not hard-coded
+- [ ] Event emitters use typed event maps
+- [ ] Functions < 50 lines
+- [ ] Classes < 300 lines
+- [ ] No `any` types (use generics or `unknown`)
+
+---
+
+*Last updated: 2025-12-10 - See REFACTORING_GUIDE.md for migration details*

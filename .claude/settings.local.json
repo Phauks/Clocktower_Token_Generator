@@ -32,7 +32,22 @@
       "Bash(del \"C:\\Users\\Trevo\\OneDrive\\Desktop\\Board Games\\Blood on the Clocktower\\Github - Token Generator\\Clocktower_Token_Generator\\src\\components\\Modals\\ProjectsModal.tsx\")",
       "Bash(del \"C:\\Users\\Trevo\\OneDrive\\Desktop\\Board Games\\Blood on the Clocktower\\Github - Token Generator\\Clocktower_Token_Generator\\src\\components\\Projects\\ProjectsView.tsx\" \"C:\\Users\\Trevo\\OneDrive\\Desktop\\Board Games\\Blood on the Clocktower\\Github - Token Generator\\Clocktower_Token_Generator\\src\\components\\Projects\\ProjectDetailView.tsx\" \"C:\\Users\\Trevo\\OneDrive\\Desktop\\Board Games\\Blood on the Clocktower\\Github - Token Generator\\Clocktower_Token_Generator\\src\\components\\Projects\\ProjectsTabNavigation.tsx\")",
       "Bash(git stash:*)",
-      "Bash(git remote:*)"
+      "Bash(git remote:*)",
+      "Bash(git rm:*)",
+      "Bash(git push:*)",
+      "Bash(git fetch:*)",
+      "WebFetch(domain:)",
+      "Bash(npx eslint --version)",
+      "Bash(wc:*)",
+      "Bash(node scripts/verify-refactoring.js:*)",
+      "Bash(node scripts/verify-refactoring.cjs:*)",
+      "Bash(lsof:*)",
+      "Bash(node apply-studio-fix.js:*)",
+      "Bash(node apply-studio-fix.cjs:*)",
+      "Bash(python fix-update-layer.py:*)",
+      "Bash(timeout 15 npm run dev:serve:*)",
+      "Bash(node:*)",
+      "Bash(timeout 15 npm run dev:*)"
     ],
     "deny": [],
     "ask": []

@@ -10,15 +10,21 @@
  * - Independently scrollable right panel
  */
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useProjects } from '../../hooks/useProjects'
 import { useTokenContext } from '../../contexts/TokenContext'
 import { useToast } from '../../contexts/ToastContext'
 import { TokenGrid } from '../TokenGrid/TokenGrid'
+import { CharacterListView } from './CharacterListView'
+import { VersionSelector } from './VersionSelector'
+import { VersionCompareView } from './VersionCompareView'
+import { Button } from '../Shared/Button'
+import { VersionsView } from '../Views/VersionsView'
 import { generateAllTokens } from '../../ts/generation/batchGenerator.js'
-import type { Project } from '../../ts/types/project.js'
+import type { Project, ProjectVersion } from '../../ts/types/project.js'
 import type { ScriptMeta, Token } from '../../ts/types/index.js'
 import styles from '../../styles/components/projects/ProjectEditor.module.css'
+import layoutStyles from '../../styles/components/layout/ViewLayout.module.css'
 
 interface ProjectEditorProps {
   project: Project | null
@@ -26,11 +32,15 @@ interface ProjectEditorProps {
   onExport: (project: Project) => void
   onDelete: (project: Project) => void
   onDuplicate: (project: Project) => void
+  onCreateProject?: () => void
+  onImportProject?: () => void
+  onLoadLastProject?: () => void
+  lastProject?: Project | null
 }
 
-export function ProjectEditor({ project, scriptNameTokenCache, onExport, onDelete, onDuplicate }: ProjectEditorProps) {
+export function ProjectEditor({ project, scriptNameTokenCache, onExport, onDelete, onDuplicate, onCreateProject, onImportProject, onLoadLastProject, lastProject }: ProjectEditorProps) {
   const { updateProject, activateProject, currentProject, isLoading } = useProjects()
-  const { tokens } = useTokenContext()
+  const { tokens, setTokens } = useTokenContext()
   const { addToast } = useToast()
 
   // State for non-active project preview tokens
@@ -38,6 +48,9 @@ export function ProjectEditor({ project, scriptNameTokenCache, onExport, onDelet
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
+
+  // Ref to preserve preview tokens when project becomes active
+  const lastPreviewTokensRef = useRef<Token[]>([])
 
   const [isEditingBasic, setIsEditingBasic] = useState(false)
   const [isEditingMeta, setIsEditingMeta] = useState(false)
@@ -49,6 +62,21 @@ export function ProjectEditor({ project, scriptNameTokenCache, onExport, onDelet
   const [storytellerTips, setStorytellerTips] = useState('')
   const [changelog, setChangelog] = useState('')
   const [error, setError] = useState<string | null>(null)
+
+  // Tab navigation state
+  type ProjectEditorTab = 'overview' | 'versions' | 'settings'
+  const [activeTab, setActiveTab] = useState<ProjectEditorTab>('overview')
+
+  // Display mode for character view (tokens grid vs compact list)
+  type DisplayMode = 'tokens' | 'list'
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('tokens')
+
+  // Version comparison state
+  const [selectedVersion, setSelectedVersion] = useState<ProjectVersion | null>(null)
+  const [isRestoringVersion, setIsRestoringVersion] = useState(false)
+
+  // Computed: are we in compare mode?
+  const isCompareMode = selectedVersion !== null
 
   // Optional fields visibility state
   const [visibleOptionalFields, setVisibleOptionalFields] = useState<Set<string>>(new Set())
@@ -99,7 +127,7 @@ export function ProjectEditor({ project, scriptNameTokenCache, onExport, onDelet
     if (project) {
       // Scroll container to top when switching projects
       containerRef.current?.scrollTo({ top: 0, behavior: 'instant' })
-      
+
       setName(project.name)
       setDescription(project.description || '')
       setPrivateNotes(project.privateNotes || '')
@@ -111,6 +139,7 @@ export function ProjectEditor({ project, scriptNameTokenCache, onExport, onDelet
       setIsEditingBasic(false)
       setIsEditingMeta(false)
       setShowAddFieldDropdown(false)
+      setSelectedVersion(null) // Reset version comparison when switching projects
 
       // Auto-show optional fields that have content
       const fieldsWithContent = new Set<string>()
@@ -128,8 +157,13 @@ export function ProjectEditor({ project, scriptNameTokenCache, onExport, onDelet
 
   // Generate preview tokens for non-active projects
   useEffect(() => {
-    // Clear preview when no project or when viewing active project
+    // When project becomes active, copy preview tokens to context and clear local state
     if (!project || isActiveProject) {
+      // If we have preview tokens and the project just became active, copy them to context
+      if (isActiveProject && lastPreviewTokensRef.current.length > 0) {
+        setTokens(lastPreviewTokensRef.current)
+        lastPreviewTokensRef.current = []
+      }
       setPreviewTokens([])
       setIsGeneratingPreview(false)
       abortControllerRef.current?.abort()
@@ -155,6 +189,8 @@ export function ProjectEditor({ project, scriptNameTokenCache, onExport, onDelet
           abortControllerRef.current.signal
         )
         setPreviewTokens(generated)
+        // Store in ref so we can copy to context if project becomes active
+        lastPreviewTokensRef.current = generated
       } catch (err: unknown) {
         if (err instanceof Error && err.name !== 'AbortError') {
           console.error('Failed to generate preview tokens:', err)
@@ -169,7 +205,46 @@ export function ProjectEditor({ project, scriptNameTokenCache, onExport, onDelet
     return () => {
       abortControllerRef.current?.abort()
     }
-  }, [project?.id, isActiveProject])
+  }, [project?.id, isActiveProject, setTokens])
+
+  // Handle page refresh case: generate tokens if project is active but tokens are empty
+  useEffect(() => {
+    if (!project || !isActiveProject || tokens.length > 0 || isGeneratingPreview) {
+      return
+    }
+
+    // Project is active but has no tokens (e.g., after page refresh)
+    const generateTokensForActiveProject = async () => {
+      abortControllerRef.current?.abort()
+      abortControllerRef.current = new AbortController()
+
+      setIsGeneratingPreview(true)
+
+      try {
+        const generated = await generateAllTokens(
+          project.state.characters,
+          project.state.generationOptions,
+          null,
+          project.state.scriptMeta,
+          null,
+          abortControllerRef.current.signal
+        )
+        setTokens(generated)
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name !== 'AbortError') {
+          console.error('Failed to generate tokens for active project:', err)
+        }
+      } finally {
+        setIsGeneratingPreview(false)
+      }
+    }
+
+    generateTokensForActiveProject()
+
+    return () => {
+      abortControllerRef.current?.abort()
+    }
+  }, [project?.id, isActiveProject, tokens.length, isGeneratingPreview, setTokens])
 
   const handleSaveBasic = async () => {
     if (!project) return
@@ -327,19 +402,99 @@ export function ProjectEditor({ project, scriptNameTokenCache, onExport, onDelet
     onDelete(project)
   }
 
+  // Version comparison handlers
+  const handleVersionSelect = useCallback((version: ProjectVersion | null) => {
+    setSelectedVersion(version)
+  }, [])
+
+  const handleExitCompare = useCallback(() => {
+    setSelectedVersion(null)
+  }, [])
+
+  const handleRestoreVersion = useCallback(async (version: ProjectVersion) => {
+    if (!project) return
+
+    if (!confirm(`Restore project to version ${version.versionNumber}? Your current state will be replaced.`)) {
+      return
+    }
+
+    try {
+      setIsRestoringVersion(true)
+      await updateProject(project.id, {
+        state: version.stateSnapshot,
+      })
+      addToast(`Restored to version ${version.versionNumber}`, 'success')
+      setSelectedVersion(null)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to restore version'
+      addToast(errorMessage, 'error')
+    } finally {
+      setIsRestoringVersion(false)
+    }
+  }, [project, updateProject, addToast])
+
   if (!project) {
     return (
-      <div className={styles.emptyState}>
-        <h2>No Project Selected</h2>
-        <p>Select a project from the sidebar to view its details.</p>
+      <div className={`${layoutStyles.contentPanel} ${styles.emptyState}`}>
+        <div className={styles.emptyStateContent}>
+          <h2>No Project Selected</h2>
+          <p>Create a new project or load an existing one to get started.</p>
+          <div className={styles.emptyStateButtons}>
+            <Button
+              variant="primary"
+              onClick={onCreateProject}
+            >
+              ✨ Create New Project
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={onImportProject}
+            >
+              📁 Import Project
+            </Button>
+            {lastProject && (
+              <Button
+                variant="secondary"
+                onClick={onLoadLastProject}
+              >
+                🕒 Load Last: {lastProject.name}
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className={styles.container} ref={containerRef}>
-      {/* Top Section: Project Settings on left, Logo + Actions on right */}
-      <div className={styles.topSection}>
+    <div className={`${layoutStyles.contentPanel} ${layoutStyles.hiddenScrollbar}`} ref={containerRef}>
+      {/* Tab Navigation */}
+      <div className={styles.tabNavigation}>
+        <button
+          className={`${styles.tabButton} ${activeTab === 'overview' ? styles.tabActive : ''}`}
+          onClick={() => setActiveTab('overview')}
+        >
+          ⚙️ Overview
+        </button>
+        <button
+          className={`${styles.tabButton} ${activeTab === 'versions' ? styles.tabActive : ''}`}
+          onClick={() => setActiveTab('versions')}
+        >
+          🏷️ Versions
+        </button>
+        <button
+          className={`${styles.tabButton} ${activeTab === 'settings' ? styles.tabActive : ''}`}
+          onClick={() => setActiveTab('settings')}
+        >
+          🔧 Settings
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'overview' && (
+        <>
+          {/* Top Section: Project Settings on left, Logo + Actions on right */}
+          <div className={styles.topSection}>
         {/* Left Column: Project Info + Meta Settings */}
         <div className={styles.leftColumn}>
           {/* Project Settings Box */}
@@ -573,7 +728,7 @@ export function ProjectEditor({ project, scriptNameTokenCache, onExport, onDelet
         </div>
         {/* End Left Column */}
 
-        {/* Right: Logo + Action Buttons */}
+        {/* Right: Logo + Version Selector + Action Buttons */}
         <div className={styles.logoActionsBox}>
           <div className={styles.logoDisplayContainer}>
             {scriptNameTokenUrl ? (
@@ -589,53 +744,130 @@ export function ProjectEditor({ project, scriptNameTokenCache, onExport, onDelet
               </div>
             )}
           </div>
+
+          {/* Version Selector - for quick access to compare mode */}
+          <VersionSelector
+            project={project}
+            selectedVersion={selectedVersion}
+            onVersionSelect={handleVersionSelect}
+            disabled={isLoading}
+          />
+
           <div className={styles.actionButtons}>
             <button
               onClick={handleToggleActive}
-              disabled={isLoading}
+              disabled={isLoading || isCompareMode}
               className={isActiveProject ? styles.deactivateButton : styles.activateButton}
+              title={isCompareMode ? 'Exit compare mode first' : undefined}
             >
               {isLoading
                 ? (isActiveProject ? 'Deactivating...' : 'Activating...')
                 : (isActiveProject ? '✓ Click to Deactivate' : '⭐ Set as Active')
               }
             </button>
-            <div className={styles.actionDivider} />
-            <button
-              onClick={() => onExport(project)}
-              className={styles.exportButton}
-            >
-              📥 Export
-            </button>
-            <button
-              onClick={() => onDuplicate(project)}
-              className={styles.duplicateButton}
-            >
-              📋 Duplicate
-            </button>
-            <button
-              onClick={handleDelete}
-              className={styles.deleteButton}
-              disabled={isActiveProject}
-              title={isActiveProject ? 'Cannot delete active project' : 'Delete project'}
-            >
-              🗑️ Delete
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Tokens Section - Read-only view matching Gallery */}
-      <div className={styles.charactersSection}>
-        {isGeneratingPreview ? (
-          <div className={styles.loadingState}>
-            <div className={styles.spinner}></div>
-            <p>Generating token preview...</p>
+      {/* Version Compare View - Shown prominently when in compare mode */}
+      {isCompareMode && selectedVersion && (
+        <div className={styles.compareSection}>
+          <VersionCompareView
+            currentState={project.state}
+            compareVersion={selectedVersion}
+            onExitCompare={handleExitCompare}
+            onRestore={handleRestoreVersion}
+            isRestoring={isRestoringVersion}
+          />
+        </div>
+      )}
+
+      {/* Characters Section - Hidden when in compare mode */}
+      {!isCompareMode && (
+        <div className={styles.charactersSection}>
+          {/* View Mode Toggle */}
+          <div className={styles.viewToggle}>
+            <span className={styles.viewToggleLabel}>View:</span>
+            <button
+              className={`${styles.viewToggleButton} ${displayMode === 'tokens' ? styles.viewToggleActive : ''}`}
+              onClick={() => setDisplayMode('tokens')}
+              title="View as tokens"
+            >
+              🎨 Tokens
+            </button>
+            <button
+              className={`${styles.viewToggleButton} ${displayMode === 'list' ? styles.viewToggleActive : ''}`}
+              onClick={() => setDisplayMode('list')}
+              title="View as list"
+            >
+              📋 List
+            </button>
           </div>
-        ) : (
-          <TokenGrid tokens={displayTokens} readOnly />
-        )}
-      </div>
+
+          {isGeneratingPreview ? (
+            <div className={styles.loadingState}>
+              <div className={styles.spinner}></div>
+              <p>Generating token preview...</p>
+            </div>
+          ) : displayMode === 'tokens' ? (
+            <TokenGrid tokens={displayTokens} readOnly />
+          ) : (
+            <CharacterListView tokens={displayTokens} />
+          )}
+        </div>
+      )}
+        </>
+      )}
+
+      {/* Versions Tab Content */}
+      {activeTab === 'versions' && (
+        <div className={styles.versionsContainer}>
+          <VersionsView project={project} />
+        </div>
+      )}
+
+      {/* Settings Tab Content */}
+      {activeTab === 'settings' && (
+        <div className={styles.settingsContainer}>
+          <div className={styles.settingsSection}>
+            <h3 className={styles.settingsSectionTitle}>Project Actions</h3>
+            <div className={styles.settingsActions}>
+              <button
+                onClick={() => onExport(project)}
+                className={styles.settingsButton}
+              >
+                📥 Export Project
+              </button>
+              <button
+                onClick={() => onDuplicate(project)}
+                className={styles.settingsButton}
+              >
+                📋 Duplicate Project
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.settingsSection}>
+            <h3 className={styles.settingsSectionTitle}>Danger Zone</h3>
+            <p className={styles.settingsDescription}>
+              Deleting a project is permanent and cannot be undone.
+            </p>
+            <button
+              onClick={handleDelete}
+              className={styles.deleteButtonLarge}
+              disabled={isActiveProject}
+              title={isActiveProject ? 'Cannot delete active project. Deactivate it first.' : 'Delete project permanently'}
+            >
+              🗑️ Delete Project
+            </button>
+            {isActiveProject && (
+              <p className={styles.settingsWarning}>
+                ⚠️ Cannot delete the active project. Deactivate it first.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

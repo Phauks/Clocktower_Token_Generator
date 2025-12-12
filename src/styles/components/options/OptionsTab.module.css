@@ -170,4 +170,20 @@
   font-size: 0.875rem;
 }
 
+/* ============================================
+   Decorative Section (Setup Flower, Leaf Style)
+   Clean layout without OptionGroup wrapper
+   ============================================ */
 
+.decorativeSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-md);
+}
+
+.decorativeLabel {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}

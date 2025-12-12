@@ -8,6 +8,12 @@
  * @module services/upload/assetResolver
  */
 
+import type { AssetReference } from '../../ts/types/index.js';
+import {
+  isAssetReference as isAssetRef,
+  extractAssetId as extractId,
+  createAssetReference as createRef
+} from '../../ts/types/index.js';
 import { assetStorageService } from './AssetStorageService.js';
 
 // ============================================================================
@@ -18,38 +24,41 @@ import { assetStorageService } from './AssetStorageService.js';
 export const ASSET_REF_PREFIX = 'asset:';
 
 // ============================================================================
-// Type Guards
+// Type Guards and Utilities
 // ============================================================================
 
 /**
- * Check if a string is an asset reference
+ * Check if a string is an asset reference (branded type guard)
+ * Re-export from types/index.ts for convenience
  *
  * @param url - URL string to check
- * @returns True if the string is an asset reference
+ * @returns True if the string is an AssetReference
  */
-export function isAssetReference(url: string | undefined): boolean {
-  return typeof url === 'string' && url.startsWith(ASSET_REF_PREFIX);
+export function isAssetReference(url: string | undefined): url is AssetReference {
+  return typeof url === 'string' && isAssetRef(url);
 }
 
 /**
- * Extract asset ID from an asset reference
+ * Extract asset ID from an asset reference (with null safety)
+ * Re-export from types/index.ts for convenience
  *
  * @param ref - Asset reference string (e.g., "asset:abc-123")
  * @returns Asset ID or null if not a valid reference
  */
 export function extractAssetId(ref: string): string | null {
   if (!isAssetReference(ref)) return null;
-  return ref.slice(ASSET_REF_PREFIX.length);
+  return extractId(ref);
 }
 
 /**
- * Create an asset reference from an asset ID
+ * Create a type-safe asset reference from an asset ID
+ * Re-export from types/index.ts for convenience
  *
  * @param assetId - Asset ID
- * @returns Asset reference string
+ * @returns Branded AssetReference string
  */
-export function createAssetReference(assetId: string): string {
-  return `${ASSET_REF_PREFIX}${assetId}`;
+export function createAssetReference(assetId: string): AssetReference {
+  return createRef(assetId);
 }
 
 // ============================================================================
@@ -96,6 +105,12 @@ export async function resolveAssetUrl(url: string): Promise<string> {
     const asset = await assetStorageService.getByIdWithUrl(assetId);
     if (asset) {
       resolvedUrlCache.set(assetId, asset.url);
+
+      // Track asset usage (fire-and-forget, don't block resolution)
+      assetStorageService.trackAssetUsage(assetId).catch(err => {
+        console.warn(`Failed to track asset usage for ${assetId}:`, err);
+      });
+
       return asset.url;
     }
   } catch (error) {
@@ -117,13 +132,13 @@ export async function resolveAssetUrls(urls: string[]): Promise<string[]> {
 }
 
 /**
- * Resolve a character image field (string or array)
+ * Resolve a character image field (string, AssetReference, or array)
  *
- * @param imageField - Image field value from character
+ * @param imageField - Image field value from character (URL or AssetReference)
  * @returns Resolved URL(s) in the same format as input
  */
 export async function resolveCharacterImage(
-  imageField: string | string[] | undefined
+  imageField: string | string[] | AssetReference | AssetReference[] | undefined
 ): Promise<string | string[] | undefined> {
   if (!imageField) return imageField;
 
@@ -158,10 +173,10 @@ export function getResolvedUrlSync(url: string): string {
  * Pre-resolve and cache asset URLs for a batch of characters
  * Useful for batch token generation
  *
- * @param imageFields - Array of image field values
+ * @param imageFields - Array of image field values (URLs or AssetReferences)
  */
 export async function preResolveAssets(
-  imageFields: (string | string[] | undefined)[]
+  imageFields: (string | string[] | AssetReference | AssetReference[] | undefined)[]
 ): Promise<void> {
   const assetIds = new Set<string>();
 
@@ -192,4 +207,151 @@ export async function preResolveAssets(
       }
     })
   );
+}
+
+// ============================================================================
+// Priority-Based Preloading
+// ============================================================================
+
+/**
+ * Priority level for asset preloading
+ * - high: First N tokens visible in viewport (load immediately)
+ * - normal: Remaining visible tokens (load next)
+ * - low: Off-screen tokens (load when idle)
+ */
+export type AssetPriority = 'high' | 'normal' | 'low';
+
+/**
+ * Preload task with priority
+ */
+export interface PreloadTask {
+  /** Asset ID to preload */
+  assetId: string;
+  /** Priority level */
+  priority: AssetPriority;
+  /** Optional index for ordering within same priority */
+  index?: number;
+}
+
+/**
+ * Options for priority-based preloading
+ */
+export interface PreloadOptions {
+  /** Maximum concurrent asset loads (default: 5) */
+  concurrency?: number;
+  /** Callback for progress updates */
+  onProgress?: (loaded: number, total: number) => void;
+}
+
+/**
+ * Pre-resolve assets with priority-based parallel loading
+ * Loads high-priority assets first, with concurrency limiting
+ *
+ * @param tasks - Array of preload tasks with priorities
+ * @param options - Preload options
+ */
+export async function preResolveAssetsWithPriority(
+  tasks: PreloadTask[],
+  options: PreloadOptions = {}
+): Promise<void> {
+  const { concurrency = 5, onProgress } = options;
+
+  // Filter out already cached assets
+  const uncachedTasks = tasks.filter(task => !resolvedUrlCache.has(task.assetId));
+
+  if (uncachedTasks.length === 0) {
+    onProgress?.(0, 0);
+    return;
+  }
+
+  // Sort by priority (high -> normal -> low), then by index
+  const sortedTasks = [...uncachedTasks].sort((a, b) => {
+    const priorityOrder = { high: 0, normal: 1, low: 2 };
+    const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
+
+    if (priorityDiff !== 0) return priorityDiff;
+
+    // Within same priority, sort by index
+    return (a.index ?? 0) - (b.index ?? 0);
+  });
+
+  let loaded = 0;
+  const total = sortedTasks.length;
+
+  // Process tasks with concurrency limit
+  const queue = [...sortedTasks];
+  const inProgress = new Set<Promise<void>>();
+
+  while (queue.length > 0 || inProgress.size > 0) {
+    // Fill up to concurrency limit
+    while (queue.length > 0 && inProgress.size < concurrency) {
+      const task = queue.shift()!;
+
+      const promise = (async () => {
+        try {
+          const asset = await assetStorageService.getByIdWithUrl(task.assetId);
+          if (asset) {
+            resolvedUrlCache.set(task.assetId, asset.url);
+
+            // Track asset usage (fire-and-forget)
+            assetStorageService.trackAssetUsage(task.assetId).catch(err => {
+              console.warn(`Failed to track asset usage for ${task.assetId}:`, err);
+            });
+          }
+        } catch (error) {
+          console.warn(`Failed to pre-resolve asset (priority: ${task.priority}): ${task.assetId}`, error);
+        } finally {
+          loaded++;
+          onProgress?.(loaded, total);
+        }
+      })();
+
+      inProgress.add(promise);
+
+      // Remove from in-progress when done
+      promise.finally(() => {
+        inProgress.delete(promise);
+      });
+    }
+
+    // Wait for at least one to complete before adding more
+    if (inProgress.size > 0) {
+      await Promise.race(inProgress);
+    }
+  }
+}
+
+/**
+ * Create preload tasks from image fields with automatic prioritization
+ * First N items are marked as high priority, rest as normal
+ *
+ * @param imageFields - Array of image field values (URLs or AssetReferences)
+ * @param highPriorityCount - Number of items to mark as high priority (default: 10)
+ * @returns Array of preload tasks
+ */
+export function createPreloadTasks(
+  imageFields: (string | string[] | AssetReference | AssetReference[] | undefined)[],
+  highPriorityCount: number = 10
+): PreloadTask[] {
+  const tasks: PreloadTask[] = [];
+
+  imageFields.forEach((field, index) => {
+    if (!field) return;
+
+    const urls = Array.isArray(field) ? field : [field];
+    for (const url of urls) {
+      if (isAssetReference(url)) {
+        const assetId = extractAssetId(url);
+        if (assetId) {
+          tasks.push({
+            assetId,
+            priority: index < highPriorityCount ? 'high' : 'normal',
+            index
+          });
+        }
+      }
+    }
+  });
+
+  return tasks;
 }

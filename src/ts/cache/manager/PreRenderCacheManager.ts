@@ -5,6 +5,7 @@
 
 import { EventEmitter } from '../utils/EventEmitter.js'
 import { CacheLogger } from '../utils/CacheLogger.js'
+import { cacheInvalidationService } from '../CacheInvalidationService.js'
 import type {
   IPreRenderStrategy,
   PreRenderContext,
@@ -32,6 +33,60 @@ export class PreRenderCacheManager extends EventEmitter {
   private caches = new Map<string, ICacheStrategy>()
   private isRendering = new Set<string>()  // Prevent concurrent renders
   private inProgressOperations = new Map<string, Promise<PreRenderResult>>()  // Request deduplication
+
+  constructor() {
+    super()
+
+    // Subscribe to cache invalidation events
+    this.setupInvalidationListeners()
+  }
+
+  /**
+   * Setup listeners for cache invalidation events.
+   * Automatically clears relevant caches when assets/characters/projects change.
+   */
+  private setupInvalidationListeners(): void {
+    // Asset invalidation - clear all caches (asset changes affect rendering)
+    cacheInvalidationService.subscribe('asset', async (event) => {
+      CacheLogger.debug('Asset invalidation received', {
+        assetIds: event.entityIds,
+        reason: event.reason
+      })
+
+      // Clear all pre-render caches since we don't know which tokens use which assets
+      await this.clearAllCaches()
+    })
+
+    // Character invalidation - clear customize and project caches
+    cacheInvalidationService.subscribe('character', async (event) => {
+      CacheLogger.debug('Character invalidation received', {
+        characterIds: event.entityIds,
+        reason: event.reason
+      })
+
+      // Clear customize cache (affected by character changes)
+      await this.clearCache('customize')
+      // Clear gallery cache (might contain affected characters)
+      await this.clearCache('gallery')
+    })
+
+    // Project invalidation - clear project cache
+    cacheInvalidationService.subscribe('project', async (event) => {
+      CacheLogger.debug('Project invalidation received', {
+        projectIds: event.entityIds,
+        reason: event.reason
+      })
+
+      // Clear project-specific cache
+      await this.clearCache('project')
+    })
+
+    // Global invalidation - clear everything
+    cacheInvalidationService.subscribe('global', async () => {
+      CacheLogger.info('Global invalidation received, clearing all caches')
+      await this.clearAllCaches()
+    })
+  }
 
   /**
    * Register a pre-render strategy.

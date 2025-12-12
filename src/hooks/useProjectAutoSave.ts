@@ -4,223 +4,47 @@
  * Provides automatic state persistence with debouncing and snapshot management.
  * Monitors TokenContext for changes and saves to the active project.
  *
+ * This hook orchestrates two separate hooks:
+ * - useAutoSaveDetector: Watches for state changes and sets isDirty flag
+ * - useAutoSaveTrigger: Watches isDirty flag and triggers debounced saves
+ *
  * @module hooks/useProjectAutoSave
  */
 
-import { useEffect, useCallback, useRef } from 'react';
-import { useTokenContext } from '../contexts/TokenContext';
-import { useProjectContext } from '../contexts/ProjectContext';
-import { projectDatabaseService } from '../ts/services/project';
-import { debounce } from '../ts/utils/index.js';
-import { generateUuid } from '../ts/utils/nameGenerator.js';
-import type { Project, AutoSaveSnapshot, ProjectState } from '../ts/types/project.js';
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-const AUTO_SAVE_DEBOUNCE_MS = 2000; // 2 seconds
-const MAX_SNAPSHOTS = 10; // Keep last 10 snapshots
-
-// ============================================================================
-// Hook
-// ============================================================================
+import { useEffect } from 'react';
+import { useProjectContext } from '../contexts/ProjectContext.js';
+import { useAutoSaveDetector } from './useAutoSaveDetector.js';
+import { useAutoSaveTrigger } from './useAutoSaveTrigger.js';
 
 /**
  * Auto-save hook for active project
  *
+ * @param enabled - Whether auto-save is enabled (default: true)
+ *
  * Usage:
  * ```tsx
  * function MyComponent() {
- *   useProjectAutoSave();
+ *   const { isEnabled } = useAutoSavePreference();
+ *   const { saveNow } = useProjectAutoSave(isEnabled);
  *   // ...
  * }
  * ```
  */
-export function useProjectAutoSave() {
-  const {
-    characters,
-    scriptMeta,
-    generationOptions,
-    jsonInput,
-    filters,
-    characterMetadata,
-  } = useTokenContext();
+export function useProjectAutoSave(enabled: boolean = true) {
+  const { currentProject } = useProjectContext();
 
-  const {
-    currentProject,
-    setCurrentProject,
-    autoSaveStatus,
-    setAutoSaveStatus,
-    setLastSavedAt,
-  } = useProjectContext();
+  // Detect state changes → sets isDirty flag
+  useAutoSaveDetector();
 
-  // Track previous state to detect changes
-  const previousStateRef = useRef<string | null>(null);
-
-  /**
-   * Create a project state snapshot from current TokenContext
-   */
-  const captureCurrentState = useCallback((): ProjectState => {
-    return {
-      jsonInput,
-      characters,
-      scriptMeta,
-      characterMetadata: Object.fromEntries(characterMetadata),
-      generationOptions: { ...generationOptions },
-      customIcons: currentProject?.state.customIcons || [], // Preserve custom icons from project
-      filters,
-      schemaVersion: 1,
-    };
-  }, [characters, scriptMeta, generationOptions, jsonInput, filters, characterMetadata, currentProject]);
-
-  /**
-   * Save the current state to the active project
-   */
-  const saveProject = useCallback(async () => {
-    if (!currentProject) {
-      return; // No active project to save
-    }
-
-    try {
-      // Update status to saving
-      setAutoSaveStatus({
-        state: 'saving',
-        isDirty: false,
-        lastSavedAt: autoSaveStatus.lastSavedAt,
-      });
-
-      // Capture current state
-      const currentState = captureCurrentState();
-
-      // Calculate stats
-      const stats = {
-        characterCount: characters.length,
-        tokenCount: 0, // Will be updated when tokens are generated
-        reminderCount: characters.reduce(
-          (sum, char) => sum + (char.reminders?.length || 0),
-          0
-        ),
-        customIconCount: currentState.customIcons.length,
-        presetCount: 0,
-        lastGeneratedAt: currentProject.stats.lastGeneratedAt,
-      };
-
-      // Create updated project
-      const updatedProject: Project = {
-        ...currentProject,
-        state: currentState,
-        stats,
-        lastModifiedAt: Date.now(),
-        lastAccessedAt: Date.now(),
-      };
-
-      // Save to database
-      await projectDatabaseService.saveProject(updatedProject);
-
-      // Save snapshot for undo/recovery
-      const snapshot: AutoSaveSnapshot = {
-        id: generateUuid(),
-        projectId: currentProject.id,
-        timestamp: Date.now(),
-        stateSnapshot: currentState,
-      };
-      await projectDatabaseService.saveSnapshot(snapshot);
-
-      // Clean up old snapshots
-      await projectDatabaseService.deleteOldSnapshots(currentProject.id, MAX_SNAPSHOTS);
-
-      // Update context
-      setCurrentProject(updatedProject);
-      const savedAt = Date.now();
-      setLastSavedAt(savedAt);
-
-      // Update status to saved
-      setAutoSaveStatus({
-        state: 'saved',
-        isDirty: false,
-        lastSavedAt: savedAt,
-      });
-    } catch (error) {
-      console.error('Auto-save failed:', error);
-
-      // Update status to error
-      setAutoSaveStatus({
-        state: 'error',
-        isDirty: true,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
-  }, [
-    currentProject,
-    captureCurrentState,
-    characters,
-    setCurrentProject,
-    setAutoSaveStatus,
-    setLastSavedAt,
-    autoSaveStatus.lastSavedAt,
-  ]);
-
-  // Create debounced save function
-  const debouncedSave = useRef(debounce(saveProject, AUTO_SAVE_DEBOUNCE_MS));
-
-  /**
-   * Trigger auto-save when state changes
-   */
-  useEffect(() => {
-    if (!currentProject) {
-      return; // No active project
-    }
-
-    // Serialize current state for comparison
-    const currentState = JSON.stringify(captureCurrentState());
-
-    // Check if state has changed
-    if (previousStateRef.current === null) {
-      // First render - just store state
-      previousStateRef.current = currentState;
-      return;
-    }
-
-    if (previousStateRef.current !== currentState) {
-      // State has changed - mark as dirty and trigger debounced save
-      setAutoSaveStatus({
-        state: 'idle',
-        isDirty: true,
-        lastSavedAt: autoSaveStatus.lastSavedAt,
-      });
-
-      debouncedSave.current();
-      previousStateRef.current = currentState;
-    }
-  }, [
-    currentProject,
-    captureCurrentState,
-    setAutoSaveStatus,
-    autoSaveStatus.lastSavedAt,
-  ]);
-
-  /**
-   * Cancel pending saves on unmount
-   */
-  useEffect(() => {
-    return () => {
-      debouncedSave.current.cancel();
-    };
-  }, []);
-
-  /**
-   * Manual save function (for "Save Now" button)
-   */
-  const saveNow = useCallback(async () => {
-    debouncedSave.current.cancel(); // Cancel debounced save
-    await saveProject(); // Save immediately
-  }, [saveProject]);
+  // Watch isDirty flag → trigger debounced saves
+  const { saveNow, conflictModalProps, telemetry } = useAutoSaveTrigger(enabled);
 
   return {
     saveNow,
-    autoSaveStatus,
+    conflictModalProps, // Pass through conflict modal props for parent to render
+    telemetry, // Pass through telemetry stats for debugging/analytics
     isAutoSaveEnabled: !!currentProject,
+    isUserEnabled: enabled,
   };
 }
 
@@ -230,6 +54,13 @@ export function useProjectAutoSave() {
 
 /**
  * Hook to warn user about unsaved changes before navigation
+ *
+ * Shows warning when:
+ * - User has unsaved changes (isDirty)
+ * - OR a save is currently in progress (state === 'saving')
+ *
+ * This prevents users from closing the tab while a save is pending,
+ * which could result in data loss with the 2-second debounce delay.
  *
  * Usage:
  * ```tsx
@@ -244,7 +75,11 @@ export function useUnsavedChangesWarning() {
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (autoSaveStatus.isDirty) {
+      // Warn if there are unsaved changes OR a save is currently in progress
+      const hasUnsavedChanges = autoSaveStatus.isDirty;
+      const isSaving = autoSaveStatus.state === 'saving';
+
+      if (hasUnsavedChanges || isSaving) {
         e.preventDefault();
         e.returnValue = ''; // Chrome requires returnValue to be set
       }
@@ -255,5 +90,5 @@ export function useUnsavedChangesWarning() {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [autoSaveStatus.isDirty]);
+  }, [autoSaveStatus.isDirty, autoSaveStatus.state]);
 }

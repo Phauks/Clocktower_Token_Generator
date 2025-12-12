@@ -5,7 +5,15 @@
  * - project.json (project data)
  * - manifest.json (package metadata)
  * - thumbnail.png (project thumbnail)
- * - icons/ folder (custom character icons)
+ * - assets/ folder (character icons and other assets)
+ *
+ * Features:
+ * - Fetches assets from AssetStorageService (new unified system)
+ * - Filters unused assets (usageCount === 0) when includeUnusedAssets = false
+ * - Converts assets to customIcons format in project.json for backward compatibility
+ * - Supports legacy projects with customIcons in ProjectState
+ * - Automatic streaming mode for large projects (50+ assets) to prevent OOM errors
+ * - Smart memory management: loads assets one-at-a-time when streaming
  *
  * @module services/project/ProjectExporter
  */
@@ -18,16 +26,19 @@ import type {
   ProjectManifest,
   CustomIconMetadata,
 } from '../../types/project.js';
+import type { DBAsset } from '../../../services/upload/types.js';
 import { sanitizeFilename } from '../../utils/stringUtils.js';
 import { downloadFile } from '../../utils/imageUtils.js';
 import { CONFIG } from '../../config.js';
+import { assetStorageService } from '../../../services/upload/AssetStorageService.js';
 
 // ============================================================================
 // Constants
 // ============================================================================
 
 const DEFAULT_EXPORT_OPTIONS: Required<ExportOptions> = {
-  includeCustomIcons: true,
+  includeAssets: true,
+  includeUnusedAssets: true,
   includeThumbnail: true,
   compressImages: false, // Future feature
 };
@@ -53,12 +64,35 @@ export class ProjectExporter implements IProjectExporter {
     // Create new ZIP instance
     const zip = new JSZip();
 
+    // Determine if we should use streaming (for large projects)
+    const STREAMING_THRESHOLD = 50; // Use streaming for 50+ assets
+    const assetCount = opts.includeAssets
+      ? await assetStorageService.count({ type: 'character-icon', projectId: project.id })
+      : 0;
+    const useStreaming = assetCount >= STREAMING_THRESHOLD;
+
+    // Fetch assets for metadata (lightweight - for project.json and manifest)
+    let projectAssets: DBAsset[] = [];
+    if (opts.includeAssets && !useStreaming) {
+      // Small projects: fetch all assets upfront
+      projectAssets = await this.fetchProjectAssets(project.id, opts.includeUnusedAssets);
+    } else if (opts.includeAssets && useStreaming) {
+      // Large projects: fetch lightweight metadata only
+      projectAssets = await assetStorageService.list({
+        type: 'character-icon',
+        projectId: project.id,
+      });
+      if (!opts.includeUnusedAssets) {
+        projectAssets = projectAssets.filter((asset) => (asset.usageCount ?? 0) > 0);
+      }
+    }
+
     // 1. Add project.json (project data without embedded images)
-    const projectData = this.prepareProjectData(project);
+    const projectData = await this.prepareProjectData(project, projectAssets);
     zip.file('project.json', JSON.stringify(projectData, null, 2));
 
     // 2. Add manifest.json (package metadata)
-    const manifest = await this.generateManifest(project, opts);
+    const manifest = await this.generateManifest(project, projectAssets, opts);
     zip.file('manifest.json', JSON.stringify(manifest, null, 2));
 
     // 3. Add thumbnail (if enabled and available)
@@ -66,9 +100,16 @@ export class ProjectExporter implements IProjectExporter {
       await this.addThumbnail(zip, project);
     }
 
-    // 4. Add custom icons (if enabled and available)
-    if (opts.includeCustomIcons && project.state.customIcons.length > 0) {
-      await this.addCustomIcons(zip, project.state.customIcons);
+    // 4. Add assets (if enabled and available)
+    if (opts.includeAssets && assetCount > 0) {
+      if (useStreaming) {
+        console.log(
+          `[ProjectExporter] Using streaming export for ${assetCount} assets (threshold: ${STREAMING_THRESHOLD})`
+        );
+        await this.addAssetsStreaming(zip, project.id, opts.includeUnusedAssets);
+      } else {
+        await this.addAssets(zip, projectAssets);
+      }
     }
 
     // 5. Generate ZIP blob
@@ -110,20 +151,72 @@ export class ProjectExporter implements IProjectExporter {
   // ==========================================================================
 
   /**
+   * Fetch assets for a project with optional filtering
+   *
+   * @param projectId - Project ID
+   * @param includeUnused - Whether to include assets with usageCount === 0
+   * @returns Array of assets to export
+   */
+  private async fetchProjectAssets(
+    projectId: string,
+    includeUnused: boolean
+  ): Promise<DBAsset[]> {
+    try {
+      // Fetch all character-icon assets for this project
+      const assets = await assetStorageService.list({
+        type: 'character-icon',
+        projectId,
+      });
+
+      // Filter out unused assets if requested
+      if (!includeUnused) {
+        return assets.filter((asset) => (asset.usageCount ?? 0) > 0);
+      }
+
+      return assets;
+    } catch (error) {
+      console.warn(`Failed to fetch assets for project ${projectId}:`, error);
+      return [];
+    }
+  }
+
+  /**
    * Prepare project data for export (strip out data URLs to keep file clean)
    */
-  private prepareProjectData(project: Project): Project {
+  private async prepareProjectData(
+    project: Project,
+    assets: DBAsset[]
+  ): Promise<Project> {
     // Deep clone to avoid mutating original
     const exportData: Project = JSON.parse(JSON.stringify(project));
 
-    // Remove data URLs from custom icons (they'll be in icons/ folder)
-    exportData.state.customIcons = exportData.state.customIcons.map((icon) => ({
-      ...icon,
-      dataUrl: undefined, // Remove data URL
-      storedInIndexedDB: false, // This is for import reference
-    }));
+    // Convert assets to customIcons format for backward compatibility
+    exportData.state.customIcons = assets.map((asset) =>
+      this.assetToCustomIconMetadata(asset)
+    );
 
     return exportData;
+  }
+
+  /**
+   * Convert DBAsset to CustomIconMetadata for backward compatibility
+   */
+  private assetToCustomIconMetadata(asset: DBAsset): CustomIconMetadata {
+    // Extract character info from linkedTo
+    const characterId = asset.linkedTo[0] || 'unknown';
+    const characterName = asset.metadata.filename.replace(/\.[^/.]+$/, ''); // Remove extension
+
+    return {
+      characterId,
+      characterName,
+      filename: asset.metadata.filename,
+      source: asset.metadata.sourceType === 'upload' ? 'uploaded' : 'url',
+      dataUrl: undefined, // Will be in assets/ folder
+      storedInIndexedDB: false,
+      fileSize: asset.metadata.size,
+      mimeType: asset.metadata.mimeType,
+      lastModified: asset.metadata.uploadedAt,
+    };
   }
 
   /**
@@ -131,18 +224,20 @@ export class ProjectExporter implements IProjectExporter {
    */
   private async generateManifest(
     project: Project,
+    assets: DBAsset[],
     options: Required<ExportOptions>
   ): Promise<ProjectManifest> {
-    const customIconFiles = options.includeCustomIcons
-      ? project.state.customIcons.map((icon) => `icons/${icon.filename}`)
+    const assetFiles = options.includeAssets
+      ? assets.map((asset) => `assets/${asset.metadata.filename}`)
       : [];
 
     // Calculate file sizes (approximate)
-    const projectJsonSize = JSON.stringify(this.prepareProjectData(project)).length;
+    const projectData = await this.prepareProjectData(project, assets);
+    const projectJsonSize = JSON.stringify(projectData).length;
     const manifestJsonSize = 500; // Approximate
     const thumbnailSize = options.includeThumbnail ? this.estimateThumbnailSize(project) : 0;
-    const iconsSize = project.state.customIcons.reduce((sum, icon) => sum + (icon.fileSize || 0), 0);
-    const totalUncompressed = projectJsonSize + manifestJsonSize + thumbnailSize + iconsSize;
+    const assetsSize = assets.reduce((sum, asset) => sum + asset.metadata.size, 0);
+    const totalUncompressed = projectJsonSize + manifestJsonSize + thumbnailSize + assetsSize;
 
     return {
       format: 'blood-on-the-clocktower-project-package',
@@ -155,14 +250,14 @@ export class ProjectExporter implements IProjectExporter {
       files: {
         projectData: 'project.json',
         thumbnail: options.includeThumbnail ? 'thumbnail.png' : undefined,
-        customIcons: customIconFiles,
+        customIcons: assetFiles, // Using new assets system
       },
 
       stats: {
         totalSizeBytes: 0, // Will be calculated after ZIP generation
         uncompressedBytes: totalUncompressed,
         compressionRatio: 0, // Will be calculated after ZIP generation
-        iconCount: project.state.customIcons.length,
+        iconCount: assets.length,
         characterCount: project.stats.characterCount,
       },
 
@@ -198,29 +293,55 @@ export class ProjectExporter implements IProjectExporter {
   }
 
   /**
-   * Add custom icons to ZIP package
+   * Add assets to ZIP package
    */
-  private async addCustomIcons(
-    zip: JSZip,
-    customIcons: CustomIconMetadata[]
-  ): Promise<void> {
-    const iconsFolder = zip.folder('icons');
-    if (!iconsFolder) {
-      throw new Error('Failed to create icons folder in ZIP');
+  private async addAssets(zip: JSZip, assets: DBAsset[]): Promise<void> {
+    const assetsFolder = zip.folder('assets');
+    if (!assetsFolder) {
+      throw new Error('Failed to create assets folder in ZIP');
     }
 
-    for (const icon of customIcons) {
-      if (!icon.dataUrl) {
-        console.warn(`Skipping icon ${icon.filename} - no data URL available`);
-        continue;
-      }
-
+    for (const asset of assets) {
       try {
-        const blob = await this.dataUrlToBlob(icon.dataUrl);
-        iconsFolder.file(icon.filename, blob);
+        // Use the blob directly from the asset
+        assetsFolder.file(asset.metadata.filename, asset.blob);
       } catch (error) {
-        console.warn(`Failed to add icon ${icon.filename}:`, error);
-        // Continue with other icons
+        console.warn(`Failed to add asset ${asset.metadata.filename}:`, error);
+        // Continue with other assets
+      }
+    }
+  }
+
+  /**
+   * Add assets to ZIP using streaming (for large projects)
+   *
+   * This method uses an async generator to load assets one at a time,
+   * preventing memory issues with projects containing 100+ assets.
+   *
+   * @param zip - JSZip instance
+   * @param projectId - Project ID
+   * @param includeUnused - Whether to include unused assets
+   */
+  private async addAssetsStreaming(
+    zip: JSZip,
+    projectId: string,
+    includeUnused: boolean
+  ): Promise<void> {
+    const assetsFolder = zip.folder('assets');
+    if (!assetsFolder) {
+      throw new Error('Failed to create assets folder in ZIP');
+    }
+
+    // Stream assets one at a time
+    for await (const asset of assetStorageService.streamExportableAssets(
+      projectId,
+      includeUnused
+    )) {
+      try {
+        assetsFolder.file(asset.filename, asset.blob);
+      } catch (error) {
+        console.warn(`Failed to add asset ${asset.filename}:`, error);
+        // Continue with other assets
       }
     }
   }

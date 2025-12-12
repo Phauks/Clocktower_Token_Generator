@@ -1,6 +1,6 @@
-import { memo, useState, useMemo } from 'react'
-import type { GenerationOptions, ImageOption } from '../../ts/types/index'
-import { ImageSelector } from '../Shared/ImageSelector'
+import { memo, useState } from 'react'
+import type { GenerationOptions } from '../../ts/types/index'
+import { AssetPreviewSelector } from '../Shared/AssetPreviewSelector'
 import { OptionGroup } from '../Shared/OptionGroup'
 import { SliderWithValue } from '../Shared/SliderWithValue'
 import styles from '../../styles/components/options/OptionsPanel.module.css'
@@ -9,32 +9,15 @@ import viewStyles from '../../styles/components/views/Views.module.css'
 interface OptionsPanelProps {
   generationOptions: GenerationOptions
   onOptionChange: (options: Partial<GenerationOptions>) => void
+  projectId?: string
 }
 
 type OptionTab = 'character' | 'reminder' | 'meta'
-type CharacterSubTab = 'decoratives' | 'abilityText' | 'qol'
+type CharacterSubTab = 'setup' | 'accent' | 'abilityText' | 'qol'
 
-// Generate flower options from available assets
-const FLOWER_OPTIONS: ImageOption[] = Array.from({ length: 7 }, (_, i) => ({
-  id: `setup_flower_${i + 1}`,
-  label: `Flower ${i + 1}`,
-  src: `/assets/images/setup_flower/setup_flower_${i + 1}.png`,
-  source: 'builtin' as const,
-}))
-
-// Generate leaf options from available assets
-const LEAF_OPTIONS: ImageOption[] = [
-  {
-    id: 'classic',
-    label: 'Classic',
-    src: '/assets/images/leaves/classic/leaf_1.png',
-    source: 'builtin' as const,
-  },
-]
-
-export const OptionsPanel = memo(({ generationOptions, onOptionChange }: OptionsPanelProps) => {
+export const OptionsPanel = memo(({ generationOptions, onOptionChange, projectId }: OptionsPanelProps) => {
   const [activeTab, setActiveTab] = useState<OptionTab>('character')
-  const [activeCharacterSubTab, setActiveCharacterSubTab] = useState<CharacterSubTab>('decoratives')
+  const [activeCharacterSubTab, setActiveCharacterSubTab] = useState<CharacterSubTab>('setup')
 
   const handleFontSpacingChange = (type: string, value: number): void => {
     const currentSpacing = generationOptions.fontSpacing || {
@@ -93,10 +76,16 @@ export const OptionsPanel = memo(({ generationOptions, onOptionChange }: Options
         <div className={styles.tabContent}>
           <div className={styles.subTabsNav}>
             <button
-              className={`${styles.subTabButton} ${activeCharacterSubTab === 'decoratives' ? styles.active : ''}`}
-              onClick={() => setActiveCharacterSubTab('decoratives')}
+              className={`${styles.subTabButton} ${activeCharacterSubTab === 'setup' ? styles.active : ''}`}
+              onClick={() => setActiveCharacterSubTab('setup')}
             >
-              Decoratives
+              Setup
+            </button>
+            <button
+              className={`${styles.subTabButton} ${activeCharacterSubTab === 'accent' ? styles.active : ''}`}
+              onClick={() => setActiveCharacterSubTab('accent')}
+            >
+              Accent
             </button>
             <button
               className={`${styles.subTabButton} ${activeCharacterSubTab === 'abilityText' ? styles.active : ''}`}
@@ -112,28 +101,96 @@ export const OptionsPanel = memo(({ generationOptions, onOptionChange }: Options
             </button>
           </div>
 
-          {activeCharacterSubTab === 'decoratives' && (
+          {/* Setup Tab - Setup Flower only */}
+          {activeCharacterSubTab === 'setup' && (
             <div className={styles.sectionContent}>
-              <OptionGroup label="Setup Flower">
-                <ImageSelector
-                  options={FLOWER_OPTIONS}
-                  value={generationOptions.setupFlowerStyle || 'setup_flower_1'}
-                  onChange={(value) => onOptionChange({ setupFlowerStyle: value })}
-                  shape="circle"
-                  showNone={true}
-                  noneLabel="No flower"
-                  ariaLabel="Select setup flower style"
+              <AssetPreviewSelector
+                value={generationOptions.setupFlowerStyle || 'setup_flower_1'}
+                onChange={(value) => onOptionChange({ setupFlowerStyle: value })}
+                assetType="setup-flower"
+                shape="square"
+                showNone={true}
+                noneLabel="No flower"
+                projectId={projectId}
+                generationOptions={generationOptions}
+              />
+            </div>
+          )}
+
+          {/* Accent Tab - Leaf controls */}
+          {activeCharacterSubTab === 'accent' && (
+            <div className={styles.sectionContent}>
+              {/* Leaf Style selector */}
+              <AssetPreviewSelector
+                value={generationOptions.leafGeneration || 'classic'}
+                onChange={(value) => onOptionChange({ leafGeneration: value })}
+                assetType="leaf"
+                shape="square"
+                showNone={false}
+                projectId={projectId}
+                generationOptions={generationOptions}
+              />
+
+              {/* Maximum Leaves - below leaf selection */}
+              <OptionGroup
+                label="Maximum Leaves"
+                description="Maximum number of leaves to generate (0 = disabled)"
+                isSlider
+              >
+                <SliderWithValue
+                  value={Math.min(generationOptions.maximumLeaves ?? 0, (generationOptions.leafSlots || 7) + 2)}
+                  onChange={(value) => onOptionChange({ maximumLeaves: value })}
+                  min={0}
+                  max={(generationOptions.leafSlots || 7) + 2}
+                  defaultValue={0}
+                  ariaLabel="Maximum Leaves value"
                 />
               </OptionGroup>
 
-              <OptionGroup label="Leaf Style">
-                <ImageSelector
-                  options={LEAF_OPTIONS}
-                  value={generationOptions.leafGeneration || 'classic'}
-                  onChange={(value) => onOptionChange({ leafGeneration: value })}
-                  shape="square"
-                  showNone={false}
-                  ariaLabel="Select leaf style"
+              <OptionGroup
+                label="Leaf Probability"
+                description="Chance of each position spawning a leaf"
+                isSlider
+              >
+                <SliderWithValue
+                  value={generationOptions.leafPopulationProbability || 30}
+                  onChange={(value) => onOptionChange({ leafPopulationProbability: value })}
+                  min={0}
+                  max={100}
+                  defaultValue={30}
+                  unit="%"
+                  ariaLabel="Leaf Probability value"
+                />
+              </OptionGroup>
+
+              <OptionGroup
+                label="Arc Span"
+                description="Width of the arc for leaves in degrees"
+                isSlider
+              >
+                <SliderWithValue
+                  value={generationOptions.leafArcSpan || 120}
+                  onChange={(value) => onOptionChange({ leafArcSpan: value })}
+                  min={30}
+                  max={180}
+                  defaultValue={120}
+                  unit="°"
+                  ariaLabel="Arc Span value"
+                />
+              </OptionGroup>
+
+              <OptionGroup
+                label="Arc Slots"
+                description="Number of leaf positions along the arc"
+                isSlider
+              >
+                <SliderWithValue
+                  value={generationOptions.leafSlots || 7}
+                  onChange={(value) => onOptionChange({ leafSlots: value })}
+                  min={3}
+                  max={15}
+                  defaultValue={7}
+                  ariaLabel="Arc Slots value"
                 />
               </OptionGroup>
             </div>

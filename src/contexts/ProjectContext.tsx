@@ -7,7 +7,8 @@
  * @module contexts/ProjectContext
  */
 
-import { createContext, useContext, ReactNode, useState, useCallback } from 'react';
+import { createContext, useContext, ReactNode, useState, useCallback, useRef, useEffect } from 'react';
+import { useProjectCacheWarming } from '../hooks/useProjectCacheWarming.js';
 import type {
   Project,
   AutoSaveStatus,
@@ -34,9 +35,17 @@ interface ProjectContextType {
   isDirty: boolean;
   setIsDirty: (dirty: boolean) => void;
 
+  // Change version (increments on every state change to trigger effects)
+  changeVersion: number;
+  incrementChangeVersion: () => void;
+
   // Last saved timestamp
   lastSavedAt: number | null;
   setLastSavedAt: (timestamp: number | null) => void;
+
+  // Auto-save function (manual save)
+  saveNow: (() => Promise<void>) | undefined;
+  setSaveNow: ((fn: () => Promise<void>) => void) | undefined;
 
   // Project operations (will be implemented in Phase 2-3)
   // These are placeholders for now
@@ -80,14 +89,42 @@ export function ProjectProvider({ children }: ProjectProviderProps) {
   // Dirty state tracking
   const [isDirty, setIsDirty] = useState(false);
 
+  // Change version - increments on every state change
+  const [changeVersion, setChangeVersion] = useState(0);
+  const incrementChangeVersion = useCallback(() => {
+    setChangeVersion(v => v + 1);
+  }, []);
+
   // Last saved timestamp
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+
+  // Auto-save function - use a ref-based setter to avoid function-in-state issues
+  const saveNowRef = useRef<(() => Promise<void>) | undefined>(undefined);
+
+  const setSaveNowFn = useCallback((fn: () => Promise<void>) => {
+    saveNowRef.current = fn;
+  }, []);
+
+  const saveNow = saveNowRef.current;
 
   // Sync isDirty with autoSaveStatus when it changes
   const updateAutoSaveStatus = useCallback((status: AutoSaveStatus) => {
     setAutoSaveStatus(status);
     setIsDirty(status.isDirty);
   }, []);
+
+  // Restore lastSavedAt from project metadata when project loads
+  // This ensures "Last saved" timestamp persists across page refreshes
+  useEffect(() => {
+    if (currentProject?.lastModifiedAt) {
+      setLastSavedAt(currentProject.lastModifiedAt);
+    } else {
+      setLastSavedAt(null);
+    }
+  }, [currentProject?.id, currentProject?.lastModifiedAt]);
+
+  // Warm caches when project changes
+  useProjectCacheWarming(currentProject);
 
   // Context value
   const value: ProjectContextType = {
@@ -99,8 +136,12 @@ export function ProjectProvider({ children }: ProjectProviderProps) {
     setAutoSaveStatus: updateAutoSaveStatus,
     isDirty,
     setIsDirty,
+    changeVersion,
+    incrementChangeVersion,
     lastSavedAt,
     setLastSavedAt,
+    saveNow,
+    setSaveNow: setSaveNowFn,
   };
 
   return (

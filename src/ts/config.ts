@@ -89,10 +89,10 @@ export const CONFIG: Config = {
 
     // Text Shadow Defaults
     TEXT_SHADOW: {
-        CHARACTER_NAME: 4,    // 4px blur radius
-        ABILITY_TEXT: 3,      // 3px blur radius
-        REMINDER_TEXT: 4,     // 4px blur radius
-        META_TEXT: 4          // 4px blur radius
+        CHARACTER_NAME: 0,    // 0px blur radius (disabled by default)
+        ABILITY_TEXT: 0,      // 0px blur radius (disabled by default)
+        REMINDER_TEXT: 0,     // 0px blur radius (disabled by default)
+        META_TEXT: 0          // 0px blur radius (disabled by default)
     },
 
     // ZIP Export Settings

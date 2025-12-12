@@ -1,9 +1,12 @@
-import { useMemo, useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import { useTokenContext } from '../../contexts/TokenContext'
 import { TokenCard } from './TokenCard'
 import { ConfirmModal } from '../Presets/ConfirmModal'
-import { groupTokensByIdentity } from '../../ts/utils/tokenGrouping'
-import type { Token, Character } from '../../ts/types/index.js'
+import { useTokenDeletion } from '../../hooks/useTokenDeletion'
+import { useTokenGrouping } from '../../hooks/useTokenGrouping'
+import { useStudioNavigation } from '../../hooks/useStudioNavigation'
+import type { Token } from '../../ts/types/index.js'
+import type { TabType } from '../Layout/TabNavigation'
 import styles from '../../styles/components/tokens/TokenGrid.module.css'
 
 interface TokenGridProps {
@@ -13,104 +16,43 @@ interface TokenGridProps {
   readOnly?: boolean
   /** Click handler for tokens - required when not readOnly */
   onTokenClick?: (token: Token) => void
+  /** Tab change handler - for navigating to Studio */
+  onTabChange?: (tab: TabType) => void
 }
 
-export function TokenGrid({ tokens: propTokens, readOnly = false, onTokenClick }: TokenGridProps) {
-  const { 
-    filteredTokens: contextFilteredTokens, 
-    isLoading, 
-    error, 
-    tokens: contextTokens, 
-    setTokens, 
-    characters, 
-    setCharacters, 
-    setExampleToken, 
-    updateGenerationOptions 
+export function TokenGrid({ tokens: propTokens, readOnly = false, onTokenClick, onTabChange }: TokenGridProps) {
+  const {
+    filteredTokens: contextFilteredTokens,
+    isLoading,
+    error,
+    tokens: contextTokens,
+    setTokens,
+    characters,
+    setCharacters,
+    setExampleToken,
+    updateGenerationOptions
   } = useTokenContext()
-  
+
   // Use prop tokens if provided, otherwise use context
   const displayTokens = propTokens ?? contextFilteredTokens
   const allTokens = propTokens ?? contextTokens
-  
-  const [tokenToDelete, setTokenToDelete] = useState<Token | null>(null)
 
   const handleSetAsExample = useCallback((token: Token) => {
     setExampleToken(token)
   }, [setExampleToken])
 
-  const handleDeleteRequest = useCallback((token: Token) => {
-    // Meta tokens can be deleted immediately without confirmation
-    if (token.type === 'script-name' || token.type === 'almanac' || token.type === 'pandemonium') {
-      // Disable the corresponding option
-      if (token.type === 'script-name') {
-        updateGenerationOptions({ scriptNameToken: false })
-      } else if (token.type === 'almanac') {
-        updateGenerationOptions({ almanacToken: false })
-      } else if (token.type === 'pandemonium') {
-        updateGenerationOptions({ pandemoniumToken: false })
-      }
-      
-      // Delete the token immediately
-      setTokens(allTokens.filter((t: Token) => t.filename !== token.filename))
-    } else {
-      // For character and reminder tokens, show confirmation modal
-      setTokenToDelete(token)
-    }
-  }, [allTokens, setTokens, updateGenerationOptions])
+  // Use custom hooks for token management
+  const deletion = useTokenDeletion({
+    tokens: allTokens,
+    characters,
+    setTokens,
+    setCharacters,
+    updateGenerationOptions
+  })
 
-  const confirmDelete = useCallback(() => {
-    if (tokenToDelete) {
-      // Delete tokens
-      if (tokenToDelete.type === 'character') {
-        // If deleting a character, also delete its reminder tokens
-        setTokens(allTokens.filter((t: Token) => 
-          t.filename !== tokenToDelete.filename && 
-          !(t.type === 'reminder' && t.parentCharacter === tokenToDelete.name)
-        ))
-        
-        // Remove from characters array
-        setCharacters(characters.filter((c: Character) => c.name !== tokenToDelete.name))
-      } else {
-        // Otherwise just delete the specific token
-        setTokens(allTokens.filter((t: Token) => t.filename !== tokenToDelete.filename))
-      }
-      
-      setTokenToDelete(null)
-    }
-  }, [tokenToDelete, allTokens, setTokens, setCharacters, characters])
+  const grouping = useTokenGrouping(displayTokens)
 
-  const cancelDelete = useCallback(() => {
-    setTokenToDelete(null)
-  }, [])
-
-  // Sort character tokens by their original order from JSON
-  const characterTokens = useMemo(() => {
-    const chars = displayTokens.filter((t) => t.type === 'character')
-    return [...chars].sort((a, b) => (a.order ?? 999) - (b.order ?? 999))
-  }, [displayTokens])
-
-  const metaTokens = displayTokens.filter((t) => t.type !== 'character' && t.type !== 'reminder')
-
-  // Sort reminder tokens by the order of their parent character, then by reminder text
-  const reminderTokens = useMemo(() => {
-    const reminders = displayTokens.filter((t) => t.type === 'reminder')
-    
-    return [...reminders].sort((a, b) => {
-      const orderA = a.order ?? 999
-      const orderB = b.order ?? 999
-      if (orderA !== orderB) return orderA - orderB
-      // If same character, sort by reminder text
-      return (a.reminderText || '').localeCompare(b.reminderText || '')
-    })
-  }, [displayTokens])
-
-  // Group tokens by identity to show count badges for duplicates
-  const groupedCharacterTokens = useMemo(() => 
-    groupTokensByIdentity(characterTokens), [characterTokens])
-  const groupedReminderTokens = useMemo(() => 
-    groupTokensByIdentity(reminderTokens), [reminderTokens])
-  const groupedMetaTokens = useMemo(() => 
-    groupTokensByIdentity(metaTokens), [metaTokens])
+  const studioNav = useStudioNavigation({ onTabChange })
 
   // For readOnly mode with prop tokens, skip loading/error states
   if (!propTokens && allTokens.length === 0) {
@@ -141,20 +83,21 @@ export function TokenGrid({ tokens: propTokens, readOnly = false, onTokenClick }
   return (
     <div className={styles.container}>
       <div className={styles.tokenContainer}>
-        {groupedCharacterTokens.length > 0 && (
+        {grouping.groupedCharacterTokens.length > 0 && (
           <div className={styles.section}>
             <details open className={styles.collapsible}>
               <summary className={styles.sectionHeader}>Character Tokens</summary>
               <div id="characterTokenGrid" className={styles.grid}>
-                {groupedCharacterTokens.map((group) => (
-                  <TokenCard 
-                    key={group.token.filename} 
-                    token={group.token} 
+                {grouping.groupedCharacterTokens.map((group) => (
+                  <TokenCard
+                    key={group.token.filename}
+                    token={group.token}
                     count={group.count}
                     variants={group.variants}
                     onCardClick={readOnly ? undefined : onTokenClick}
                     onSetAsExample={readOnly ? undefined : handleSetAsExample}
-                    onDelete={readOnly ? undefined : handleDeleteRequest}
+                    onDelete={readOnly ? undefined : deletion.handleDeleteRequest}
+                    onEditInStudio={readOnly ? undefined : studioNav.editInStudio}
                   />
                 ))}
               </div>
@@ -162,20 +105,20 @@ export function TokenGrid({ tokens: propTokens, readOnly = false, onTokenClick }
           </div>
         )}
 
-        {groupedReminderTokens.length > 0 && (
+        {grouping.groupedReminderTokens.length > 0 && (
           <div className={styles.section}>
             <details open className={styles.collapsible}>
               <summary className={styles.sectionHeader}>Reminder Tokens</summary>
               <div id="reminderTokenGrid" className={`${styles.grid} ${styles.gridReminders}`}>
-                {groupedReminderTokens.map((group) => (
-                  <TokenCard 
-                    key={group.token.filename} 
-                    token={group.token} 
+                {grouping.groupedReminderTokens.map((group) => (
+                  <TokenCard
+                    key={group.token.filename}
+                    token={group.token}
                     count={group.count}
                     variants={group.variants}
                     onCardClick={readOnly ? undefined : onTokenClick}
                     onSetAsExample={readOnly ? undefined : handleSetAsExample}
-                    onDelete={readOnly ? undefined : handleDeleteRequest}
+                    onDelete={readOnly ? undefined : deletion.handleDeleteRequest}
                   />
                 ))}
               </div>
@@ -183,20 +126,20 @@ export function TokenGrid({ tokens: propTokens, readOnly = false, onTokenClick }
           </div>
         )}
 
-        {groupedMetaTokens.length > 0 && (
+        {grouping.groupedMetaTokens.length > 0 && (
           <div className={styles.section}>
             <details open className={styles.collapsible}>
               <summary className={styles.sectionHeader}>Meta Tokens</summary>
               <div id="metaTokenGrid" className={styles.grid}>
-                {groupedMetaTokens.map((group) => (
-                  <TokenCard 
-                    key={group.token.filename} 
-                    token={group.token} 
+                {grouping.groupedMetaTokens.map((group) => (
+                  <TokenCard
+                    key={group.token.filename}
+                    token={group.token}
                     count={group.count}
                     variants={group.variants}
                     onCardClick={readOnly ? undefined : onTokenClick}
                     onSetAsExample={readOnly ? undefined : handleSetAsExample}
-                    onDelete={readOnly ? undefined : handleDeleteRequest}
+                    onDelete={readOnly ? undefined : deletion.handleDeleteRequest}
                   />
                 ))}
               </div>
@@ -213,11 +156,11 @@ export function TokenGrid({ tokens: propTokens, readOnly = false, onTokenClick }
 
       {!readOnly && (
         <ConfirmModal
-          isOpen={tokenToDelete !== null}
+          isOpen={deletion.tokenToDelete !== null}
           title="Delete Token"
-          message={`Are you sure you want to delete the token "${tokenToDelete?.name}"? This action cannot be undone.`}
-          onConfirm={confirmDelete}
-          onCancel={cancelDelete}
+          message={`Are you sure you want to delete the token "${deletion.tokenToDelete?.name}"? This action cannot be undone.`}
+          onConfirm={deletion.confirmDelete}
+          onCancel={deletion.cancelDelete}
           confirmText="Delete"
           cancelText="Cancel"
         />

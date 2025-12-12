@@ -5,6 +5,7 @@
 
 import { loadImage, loadLocalImage } from './imageUtils.js';
 import { dataSyncService } from '../sync/index.js';
+import { cacheInvalidationService } from '../cache/CacheInvalidationService.js';
 
 // ============================================================================
 // TYPES
@@ -224,10 +225,72 @@ class ImageCache {
     }
 
     /**
-     * Preload multiple images in parallel
+     * Invalidate cached images for specific asset URLs
+     *
+     * @param urls - Array of asset URLs to invalidate
      */
-    async preloadMany(urls: string[], isLocal: boolean = false): Promise<void> {
-        await Promise.all(urls.map(url => this.get(url, isLocal)));
+    invalidateUrls(urls: string[]): void {
+        let bytesFreed = 0;
+
+        for (const url of urls) {
+            const entry = this.cache.get(url);
+            if (entry) {
+                bytesFreed += entry.size;
+                this.cache.delete(url);
+            }
+        }
+
+        this.currentSizeBytes -= bytesFreed;
+        console.debug(`[ImageCache] Invalidated ${urls.length} URLs, freed ${(bytesFreed / 1024 / 1024).toFixed(2)} MB`);
+    }
+
+    /**
+     * Invalidate cache entries matching a pattern (e.g., asset:id URLs)
+     *
+     * @param pattern - URL pattern to match
+     */
+    invalidatePattern(pattern: string | RegExp): void {
+        const regex = typeof pattern === 'string' ? new RegExp(pattern) : pattern;
+        const urlsToInvalidate: string[] = [];
+
+        for (const [url] of this.cache) {
+            if (regex.test(url)) {
+                urlsToInvalidate.push(url);
+            }
+        }
+
+        this.invalidateUrls(urlsToInvalidate);
+    }
+
+    /**
+     * Preload multiple images in parallel
+     * @param urls - Array of image URLs to preload
+     * @param isLocal - Whether images are local file paths
+     * @param onProgress - Optional progress callback (loaded count, total count)
+     */
+    async preloadMany(
+        urls: string[],
+        isLocal: boolean = false,
+        onProgress?: (loaded: number, total: number) => void
+    ): Promise<void> {
+        const total = urls.length;
+        let loaded = 0;
+
+        // Load all images in parallel
+        await Promise.all(
+            urls.map(async (url) => {
+                try {
+                    await this.get(url, isLocal);
+                } catch (error) {
+                    console.warn(`[ImageCache] Failed to preload: ${url}`, error);
+                } finally {
+                    loaded++;
+                    if (onProgress) {
+                        onProgress(loaded, total);
+                    }
+                }
+            })
+        );
     }
 }
 
@@ -242,6 +305,21 @@ class ImageCache {
 export const globalImageCache = new ImageCache({
     maxSizeMB: 100,  // 100MB cache limit
     maxEntries: 500  // Max 500 images
+});
+
+// Subscribe to cache invalidation events
+cacheInvalidationService.subscribe('asset', (event) => {
+    // When an asset changes, invalidate any cached images using that asset
+    // Asset URLs follow pattern: asset:${id}
+    for (const assetId of event.entityIds) {
+        globalImageCache.invalidatePattern(`asset:${assetId}`);
+    }
+});
+
+cacheInvalidationService.subscribe('global', () => {
+    // Global invalidation - clear entire cache
+    globalImageCache.clear();
+    console.log('[ImageCache] Cleared all cached images (global invalidation)');
 });
 
 export default globalImageCache;

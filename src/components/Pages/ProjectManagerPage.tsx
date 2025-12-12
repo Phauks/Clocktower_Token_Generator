@@ -5,7 +5,8 @@
  * and right panel (ProjectEditor). Follows CustomizeView pattern.
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { ViewLayout } from '../Layout/ViewLayout'
 import { ProjectNavigation } from '../Projects/ProjectNavigation'
 import { ProjectEditor } from '../Projects/ProjectEditor'
 import { DeleteProjectModal } from '../Modals/DeleteProjectModal'
@@ -18,14 +19,13 @@ import { useTokenContext } from '../../contexts/TokenContext'
 import { generateScriptNameTokenOnly } from '../../ts/generation/batchGenerator.js'
 import type { Project, CustomIconMetadata } from '../../ts/types/project.js'
 import type { Token } from '../../ts/types/index.js'
-import styles from '../../styles/components/pages/Pages.module.css'
 
 interface ProjectManagerPageProps {
   initialProjectId?: string
 }
 
 export function ProjectManagerPage({ initialProjectId }: ProjectManagerPageProps) {
-  const { projects, currentProject, updateProject, deleteProject, duplicateProject, createProject } = useProjects()
+  const { projects, currentProject, updateProject, deleteProject, duplicateProject, createProject, activateProject } = useProjects()
   const { characters } = useTokenContext()
   const { addToast } = useToast()
 
@@ -117,15 +117,18 @@ export function ProjectManagerPage({ initialProjectId }: ProjectManagerPageProps
 
   const handleCreateProject = useCallback(async () => {
     try {
-      const timestamp = new Date().toLocaleString('en-US', { 
-        month: 'short', 
+      const timestamp = new Date().toLocaleString('en-US', {
+        month: 'short',
         day: 'numeric',
         hour: 'numeric',
         minute: '2-digit'
       })
       const newProject = await createProject(`New Project - ${timestamp}`)
       if (newProject) {
-        setSelectedProject(newProject)
+        // Delay selection to allow projects array to update
+        setTimeout(() => {
+          setSelectedProject(newProject)
+        }, 50)
         addToast('New project created!', 'success')
       }
     } catch (err) {
@@ -192,29 +195,62 @@ export function ProjectManagerPage({ initialProjectId }: ProjectManagerPageProps
     setProjectToDelete(null)
   }, [selectedProject, projectToDelete])
 
+  // Calculate last project (most recently accessed, excluding current)
+  const lastProject = useMemo(() => {
+    return projects
+      .filter(p => !currentProject || p.id !== currentProject.id)
+      .sort((a, b) => b.lastAccessedAt - a.lastAccessedAt)[0] || null
+  }, [projects, currentProject])
+
+  const handleLoadLastProject = useCallback(async () => {
+    if (lastProject) {
+      // Select the project
+      setSelectedProject(lastProject)
+
+      // Also activate it as the current project
+      try {
+        await activateProject(lastProject.id)
+        addToast(`Project "${lastProject.name}" is now active!`, 'success')
+      } catch (error) {
+        addToast('Failed to activate project', 'error')
+      }
+    }
+  }, [lastProject, activateProject, addToast])
+
   return (
     <>
       {/* Main unified layout: Left sidebar + Right panel */}
-      <div className={styles.unifiedView}>
-        <ProjectNavigation
-          projects={projects}
-          selectedProjectId={selectedProject?.id || null}
-          currentProjectId={currentProject?.id || null}
-          onSelectProject={handleSelectProject}
-          onHoverProject={handleHoverProject}
-          onCreateProject={handleCreateProject}
-          onImportProject={handleImportProject}
-          onIconManagement={handleIconManagement}
-          onDeleteProject={handleDeleteProject}
-        />
-        <ProjectEditor
-          project={selectedProject}
-          scriptNameTokenCache={scriptNameTokenCache.current}
-          onExport={handleExportProject}
-          onDelete={handleDeleteProject}
-          onDuplicate={handleDuplicateProject}
-        />
-      </div>
+      <ViewLayout variant="2-panel">
+        {/* Left Sidebar - Project Navigation */}
+        <ViewLayout.Panel position="left" width="left" scrollable>
+          <ProjectNavigation
+            projects={projects}
+            selectedProjectId={selectedProject?.id || null}
+            currentProjectId={currentProject?.id || null}
+            onSelectProject={handleSelectProject}
+            onHoverProject={handleHoverProject}
+            onCreateProject={handleCreateProject}
+            onImportProject={handleImportProject}
+            onIconManagement={handleIconManagement}
+            onDeleteProject={handleDeleteProject}
+          />
+        </ViewLayout.Panel>
+
+        {/* Right Panel - Project Editor */}
+        <ViewLayout.Panel position="right" width="flex" scrollable>
+          <ProjectEditor
+            project={selectedProject}
+            scriptNameTokenCache={scriptNameTokenCache.current}
+            onExport={handleExportProject}
+            onDelete={handleDeleteProject}
+            onDuplicate={handleDuplicateProject}
+            onCreateProject={handleCreateProject}
+            onImportProject={handleImportProject}
+            onLoadLastProject={handleLoadLastProject}
+            lastProject={lastProject}
+          />
+        </ViewLayout.Panel>
+      </ViewLayout>
 
       {/* Modals */}
       <DeleteProjectModal

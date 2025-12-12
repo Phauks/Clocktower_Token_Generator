@@ -4,7 +4,7 @@
  */
 
 import CONFIG from '../config.js';
-import { generateUuid } from '../utils/nameGenerator.js';
+import { generateUuid, generateStableUuid } from '../utils/nameGenerator.js';
 import type {
     Character,
     ScriptEntry,
@@ -128,14 +128,15 @@ function validateCharacterEntry(character: Character): string[] {
  * @param options - Processing options
  * @returns Processing result with character and/or warning
  */
-function processScriptEntry(options: ProcessEntryOptions): EntryProcessResult {
+async function processScriptEntry(options: ProcessEntryOptions): Promise<EntryProcessResult> {
     const { entry, officialMap, position = '', lenient = false } = options;
 
     // Handle string ID references
     if (typeof entry === 'string') {
         const officialChar = officialMap.get(entry.toLowerCase());
         if (officialChar) {
-            return { character: { ...officialChar, uuid: generateUuid(), source: 'official' }, warning: null };
+            const uuid = await generateStableUuid(officialChar.id, officialChar.name);
+            return { character: { ...officialChar, uuid, source: 'official' }, warning: null };
         }
         const warning = lenient
             ? `${position}: Character "${entry}" not found in official data`
@@ -166,7 +167,8 @@ function processScriptEntry(options: ProcessEntryOptions): EntryProcessResult {
         }
         const officialChar = officialMap.get(entry.id.toLowerCase());
         if (officialChar) {
-            return { character: { ...officialChar, uuid: generateUuid(), source: 'official' }, warning: null };
+            const uuid = await generateStableUuid(officialChar.id, officialChar.name);
+            return { character: { ...officialChar, uuid, source: 'official' }, warning: null };
         }
         const warning = lenient
             ? `${position}: Character "${entry.id}" not found in official data`
@@ -198,8 +200,15 @@ function processScriptEntry(options: ProcessEntryOptions): EntryProcessResult {
         // Determine source: official if ID matches official data, otherwise custom
         const source = officialChar ? 'official' : 'custom';
 
-        // Ensure UUID is assigned (generate new one if not present)
-        return { character: { ...mergedChar, uuid: mergedChar.uuid || generateUuid(), source } as Character, warning };
+        // Ensure UUID is assigned
+        // Use existing UUID if present, otherwise generate stable UUID
+        // Fall back to random UUID if ID or name missing (edge case to avoid collisions)
+        const uuid = mergedChar.uuid ||
+            (mergedChar.id && mergedChar.name
+                ? await generateStableUuid(mergedChar.id, mergedChar.name)
+                : generateUuid());
+
+        return { character: { ...mergedChar, uuid, source } as Character, warning };
     }
 
     return { character: null, warning: null };
@@ -216,7 +225,7 @@ function processScriptEntry(options: ProcessEntryOptions): EntryProcessResult {
  * @returns Merged character data
  * @throws Error if scriptData is not an array
  */
-export function parseScriptData(scriptData: ScriptEntry[], officialData: Character[] = []): Character[] {
+export async function parseScriptData(scriptData: ScriptEntry[], officialData: Character[] = []): Promise<Character[]> {
     if (!Array.isArray(scriptData)) {
         throw new Error('Script data must be an array');
     }
@@ -225,7 +234,7 @@ export function parseScriptData(scriptData: ScriptEntry[], officialData: Charact
     const characters: Character[] = [];
 
     for (const entry of scriptData) {
-        const result = processScriptEntry({ entry, officialMap, lenient: false });
+        const result = await processScriptEntry({ entry, officialMap, lenient: false });
         if (result.character) {
             characters.push(result.character);
         }
@@ -241,10 +250,10 @@ export function parseScriptData(scriptData: ScriptEntry[], officialData: Charact
  * @param officialData - Official character data
  * @returns Object containing valid characters and warnings for filtered entries
  */
-export function validateAndParseScript(
+export async function validateAndParseScript(
     scriptData: ScriptEntry[],
     officialData: Character[] = []
-): ScriptValidationResult {
+): Promise<ScriptValidationResult> {
     if (!Array.isArray(scriptData)) {
         return {
             characters: [],
@@ -260,7 +269,7 @@ export function validateAndParseScript(
         const entry = scriptData[i];
         const position = `Entry ${i + 1}`;
 
-        const result = processScriptEntry({ entry, officialMap, position, lenient: true });
+        const result = await processScriptEntry({ entry, officialMap, position, lenient: true });
 
         if (result.character) {
             characters.push(result.character);

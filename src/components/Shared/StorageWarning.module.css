@@ -1,0 +1,203 @@
+/**
+ * Storage Warning Banner Styles
+ */
+
+.banner {
+  position: relative;
+  width: 100%;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Warning Levels */
+.banner.warning {
+  background-color: #fff3cd;
+  border-left: 4px solid #ffc107;
+  color: #856404;
+}
+
+.banner.critical {
+  background-color: #f8d7da;
+  border-left: 4px solid #dc3545;
+  color: #721c24;
+}
+
+/* Content Layout */
+.content {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+
+.message {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.suggestions {
+  margin: 0.5rem 0 0 1.25rem;
+  padding: 0;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.suggestions li {
+  margin-bottom: 0.25rem;
+}
+
+.result {
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  flex-shrink: 0;
+}
+
+.cleanupButton {
+  padding: 0.5rem 1rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.cleanupButton:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.cleanupButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dismissButton {
+  padding: 0.5rem;
+  background-color: transparent;
+  color: inherit;
+  border: none;
+  border-radius: 4px;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.dismissButton:hover {
+  opacity: 1;
+}
+
+/* Progress Bar */
+.progressBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  transition: width 0.3s ease-out;
+}
+
+.warning .progressFill {
+  background-color: #ffc107;
+}
+
+.critical .progressFill {
+  background-color: #dc3545;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .banner {
+    padding: 0.75rem 1rem;
+  }
+
+  .content {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .actions {
+    align-self: stretch;
+  }
+
+  .cleanupButton {
+    flex: 1;
+  }
+
+  .suggestions {
+    font-size: 0.8rem;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .banner.warning {
+    background-color: #664d03;
+    border-left-color: #ffca2c;
+    color: #fff3cd;
+  }
+
+  .banner.critical {
+    background-color: #842029;
+    border-left-color: #ea868f;
+    color: #f8d7da;
+  }
+
+  .result {
+    background-color: rgba(0, 0, 0, 0.3);
+  }
+
+  .cleanupButton {
+    background-color: #0d6efd;
+  }
+
+  .cleanupButton:hover:not(:disabled) {
+    background-color: #0a58ca;
+  }
+}

@@ -1,10 +1,13 @@
-import { memo, useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useTokenContext } from '../../contexts/TokenContext'
 import { useExport } from '../../hooks/useExport'
 import { useToast } from '../../contexts/ToastContext'
+import { ViewLayout } from '../Layout/ViewLayout'
+import { Button } from '../Shared/Button'
 import { OptionGroup } from '../Shared/OptionGroup'
 import { SliderWithValue } from '../Shared/SliderWithValue'
 import styles from '../../styles/components/views/Views.module.css'
+import layoutStyles from '../../styles/components/layout/ViewLayout.module.css'
 import type { CompressionLevel, ZipExportOptions } from '../../ts/types/index'
 
 const DEFAULT_ZIP_SETTINGS: ZipExportOptions = {
@@ -16,12 +19,12 @@ const DEFAULT_ZIP_SETTINGS: ZipExportOptions = {
 }
 
 export function DownloadView() {
-  const { tokens, generationOptions, updateGenerationOptions } = useTokenContext()
+  const { tokens, generationOptions, updateGenerationOptions, characters, scriptMeta } = useTokenContext()
   const { downloadZip, downloadPdf, downloadJson, downloadStyleFormat, downloadAll, cancelExport, isExporting, exportProgress, exportStep } = useExport()
   const { addToast } = useToast()
-  const [activeSubTab, setActiveSubTab] = useState<'png' | 'zip' | 'pdf'>('zip')
   const [activeZipSubTab, setActiveZipSubTab] = useState<'structure' | 'quality'>('structure')
   const [activePdfSubTab, setActivePdfSubTab] = useState<'layout' | 'quality'>('layout')
+  const [isExportingNightOrder, setIsExportingNightOrder] = useState(false)
 
   // Ensure zipSettings has all required fields
   const zipSettings = useMemo(() => ({
@@ -84,282 +87,278 @@ export function DownloadView() {
     }
   }
 
+  const handleDownloadNightOrder = useCallback(async () => {
+    if (isExportingNightOrder) return
+    if (characters.length === 0) {
+      addToast('No characters found. Load a script first.', 'warning')
+      return
+    }
+
+    setIsExportingNightOrder(true)
+    try {
+      addToast('Preparing Night Order PDF...', 'info')
+      // For now, inform the user to use the Script tab
+      // A full implementation would require rendering the night order sheets programmatically
+      addToast('Please use the Script tab to generate Night Order PDFs', 'info')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      addToast(`Failed to generate Night Order: ${message}`, 'error')
+    } finally {
+      setIsExportingNightOrder(false)
+    }
+  }, [isExportingNightOrder, characters, addToast])
+
   const hasTokens = tokens.length > 0
 
   return (
-    <div className={styles.exportView}>
-      <div className={styles.exportTwoColumn}>
-        {/* Left Column: Export Settings */}
-        <div className={styles.exportOptionsColumn}>
-          <h2>Export Settings</h2>
-          
-          <div className={styles.subtabsContainer}>
-            <div className={styles.subtabsNav}>
-              <button
-                className={`${styles.subtabButton} ${activeSubTab === 'png' ? styles.active : ''}`}
-                onClick={() => setActiveSubTab('png')}
+    <ViewLayout variant="2-panel">
+      {/* Left Sidebar - Export Settings */}
+      <ViewLayout.Panel position="left" width="left" scrollable>
+        <div className={layoutStyles.panelContent}>
+          {/* PNG Settings */}
+          <details className={layoutStyles.sidebarCard} open>
+            <summary className={layoutStyles.sectionHeader}>PNG Settings</summary>
+            <div className={layoutStyles.optionSection}>
+              <OptionGroup
+                label="Embed Metadata"
+                helpText="Include character info (name, team, ability) in PNG file metadata"
               >
-                PNG
-              </button>
-              <button
-                className={`${styles.subtabButton} ${activeSubTab === 'zip' ? styles.active : ''}`}
-                onClick={() => setActiveSubTab('zip')}
+                <input
+                  type="checkbox"
+                  className={styles.toggleSwitch}
+                  checked={generationOptions.pngSettings?.embedMetadata ?? false}
+                  onChange={(e) => updateGenerationOptions({
+                    pngSettings: {
+                      ...generationOptions.pngSettings,
+                      embedMetadata: e.target.checked,
+                      transparentBackground: generationOptions.pngSettings?.transparentBackground ?? false
+                    }
+                  })}
+                />
+              </OptionGroup>
+
+              <OptionGroup
+                label="Transparent Background"
+                helpText="Skip solid color fill (decorative background image is still drawn)"
               >
-                ZIP
-              </button>
-              <button
-                className={`${styles.subtabButton} ${activeSubTab === 'pdf' ? styles.active : ''}`}
-                onClick={() => setActiveSubTab('pdf')}
-              >
-                PDF
-              </button>
+                <input
+                  type="checkbox"
+                  className={styles.toggleSwitch}
+                  checked={generationOptions.pngSettings?.transparentBackground ?? false}
+                  onChange={(e) => updateGenerationOptions({
+                    pngSettings: {
+                      ...generationOptions.pngSettings,
+                      embedMetadata: generationOptions.pngSettings?.embedMetadata ?? false,
+                      transparentBackground: e.target.checked
+                    }
+                  })}
+                />
+              </OptionGroup>
             </div>
+          </details>
 
-            {/* PNG Settings */}
-            {activeSubTab === 'png' && (
-              <div className={styles.subtabContent}>
-                <div className={styles.subsection}>
+          {/* ZIP Settings */}
+          <details className={layoutStyles.sidebarCard} open>
+            <summary className={layoutStyles.sectionHeader}>ZIP Settings</summary>
+            <div className={layoutStyles.optionSection}>
+              {/* Nested sub-tabs for ZIP */}
+              <div className={styles.nestedSubtabs}>
+                <button
+                  className={`${styles.nestedSubtabButton} ${activeZipSubTab === 'structure' ? styles.active : ''}`}
+                  onClick={() => setActiveZipSubTab('structure')}
+                >
+                  Structure
+                </button>
+                <button
+                  className={`${styles.nestedSubtabButton} ${activeZipSubTab === 'quality' ? styles.active : ''}`}
+                  onClick={() => setActiveZipSubTab('quality')}
+                >
+                  Quality
+                </button>
+              </div>
+
+              {activeZipSubTab === 'structure' && (
+                <>
                   <OptionGroup
-                    label="Embed Metadata"
-                    helpText="Include character info (name, team, ability) in PNG file metadata"
+                    label="Save in Team Folders"
+                    helpText="Organize exported tokens by team (Townsfolk, Outsider, etc.)"
                   >
                     <input
                       type="checkbox"
                       className={styles.toggleSwitch}
-                      checked={generationOptions.pngSettings?.embedMetadata ?? false}
+                      checked={zipSettings.saveInTeamFolders}
                       onChange={(e) => updateGenerationOptions({
-                        pngSettings: {
-                          ...generationOptions.pngSettings,
-                          embedMetadata: e.target.checked,
-                          transparentBackground: generationOptions.pngSettings?.transparentBackground ?? false
+                        zipSettings: {
+                          ...zipSettings,
+                          saveInTeamFolders: e.target.checked,
                         }
                       })}
                     />
                   </OptionGroup>
 
                   <OptionGroup
-                    label="Transparent Background"
-                    helpText="Skip solid color fill (decorative background image is still drawn)"
+                    label="Save Reminders Separately"
+                    helpText="Place reminder tokens in a separate folder from character tokens"
                   >
                     <input
                       type="checkbox"
                       className={styles.toggleSwitch}
-                      checked={generationOptions.pngSettings?.transparentBackground ?? false}
+                      checked={zipSettings.saveRemindersSeparately}
                       onChange={(e) => updateGenerationOptions({
-                        pngSettings: {
-                          ...generationOptions.pngSettings,
-                          embedMetadata: generationOptions.pngSettings?.embedMetadata ?? false,
-                          transparentBackground: e.target.checked
+                        zipSettings: {
+                          ...zipSettings,
+                          saveRemindersSeparately: e.target.checked,
                         }
                       })}
                     />
                   </OptionGroup>
-                </div>
+
+                  <OptionGroup
+                    label="Meta Token Folder"
+                    helpText="Place script name, almanac, and pandemonium tokens in a _meta folder"
+                  >
+                    <input
+                      type="checkbox"
+                      className={styles.toggleSwitch}
+                      checked={zipSettings.metaTokenFolder}
+                      onChange={(e) => updateGenerationOptions({
+                        zipSettings: {
+                          ...zipSettings,
+                          metaTokenFolder: e.target.checked,
+                        }
+                      })}
+                    />
+                  </OptionGroup>
+                </>
+              )}
+
+              {activeZipSubTab === 'quality' && (
+                <OptionGroup
+                  label="Compression Level"
+                  helpText="Higher compression = smaller file but slower export"
+                >
+                  <select
+                    className={styles.selectInput}
+                    value={zipSettings.compressionLevel}
+                    onChange={(e) => updateGenerationOptions({
+                      zipSettings: {
+                        ...zipSettings,
+                        compressionLevel: e.target.value as CompressionLevel
+                      }
+                    })}
+                  >
+                    <option value="fast">Fast (larger file)</option>
+                    <option value="normal">Normal (balanced)</option>
+                    <option value="maximum">Maximum (smaller file)</option>
+                  </select>
+                </OptionGroup>
+              )}
+            </div>
+          </details>
+
+          {/* PDF Settings */}
+          <details className={layoutStyles.sidebarCard} open>
+            <summary className={layoutStyles.sectionHeader}>PDF Settings</summary>
+            <div className={layoutStyles.optionSection}>
+              {/* Nested sub-tabs for PDF */}
+              <div className={styles.nestedSubtabs}>
+                <button
+                  className={`${styles.nestedSubtabButton} ${activePdfSubTab === 'layout' ? styles.active : ''}`}
+                  onClick={() => setActivePdfSubTab('layout')}
+                >
+                  Layout
+                </button>
+                <button
+                  className={`${styles.nestedSubtabButton} ${activePdfSubTab === 'quality' ? styles.active : ''}`}
+                  onClick={() => setActivePdfSubTab('quality')}
+                >
+                  Quality
+                </button>
               </div>
-            )}
 
-            {/* ZIP Settings */}
-            {activeSubTab === 'zip' && (
-              <div className={styles.subtabContent}>
-                {/* Nested sub-tabs for ZIP */}
-                <div className={styles.nestedSubtabs}>
-                  <button
-                    className={`${styles.nestedSubtabButton} ${activeZipSubTab === 'structure' ? styles.active : ''}`}
-                    onClick={() => setActiveZipSubTab('structure')}
+              {activePdfSubTab === 'layout' && (
+                <>
+                  <OptionGroup
+                    label="X Offset"
+                    helpText="Horizontal offset for fine-tuning alignment"
+                    isSlider
                   >
-                    📁 Structure
-                  </button>
-                  <button
-                    className={`${styles.nestedSubtabButton} ${activeZipSubTab === 'quality' ? styles.active : ''}`}
-                    onClick={() => setActiveZipSubTab('quality')}
+                    <SliderWithValue
+                      value={(generationOptions.pdfXOffset ?? 0) * 16}
+                      onChange={(value) => updateGenerationOptions({ pdfXOffset: value / 16 })}
+                      min={-8}
+                      max={8}
+                      step={1}
+                      defaultValue={0}
+                      unit="/16 in"
+                      ariaLabel="PDF X Offset value"
+                    />
+                  </OptionGroup>
+
+                  <OptionGroup
+                    label="Y Offset"
+                    helpText="Vertical offset for fine-tuning alignment"
+                    isSlider
                   >
-                    ⚙️ Quality
-                  </button>
-                </div>
+                    <SliderWithValue
+                      value={(generationOptions.pdfYOffset ?? 0) * 16}
+                      onChange={(value) => updateGenerationOptions({ pdfYOffset: value / 16 })}
+                      min={-8}
+                      max={8}
+                      step={1}
+                      defaultValue={0}
+                      unit="/16 in"
+                      ariaLabel="PDF Y Offset value"
+                    />
+                  </OptionGroup>
 
-                {activeZipSubTab === 'structure' && (
-                  <div className={styles.subsection}>
-                    <OptionGroup
-                      label="Save in Team Folders"
-                      helpText="Organize exported tokens by team (Townsfolk, Outsider, etc.)"
-                    >
-                      <input
-                        type="checkbox"
-                        className={styles.toggleSwitch}
-                        checked={zipSettings.saveInTeamFolders}
-                        onChange={(e) => updateGenerationOptions({
-                          zipSettings: {
-                            ...zipSettings,
-                            saveInTeamFolders: e.target.checked,
-                          }
-                        })}
-                      />
-                    </OptionGroup>
-
-                    <OptionGroup
-                      label="Save Reminders Separately"
-                      helpText="Place reminder tokens in a separate folder from character tokens"
-                    >
-                      <input
-                        type="checkbox"
-                        className={styles.toggleSwitch}
-                        checked={zipSettings.saveRemindersSeparately}
-                        onChange={(e) => updateGenerationOptions({
-                          zipSettings: {
-                            ...zipSettings,
-                            saveRemindersSeparately: e.target.checked,
-                          }
-                        })}
-                      />
-                    </OptionGroup>
-
-                    <OptionGroup
-                      label="Meta Token Folder"
-                      helpText="Place script name, almanac, and pandemonium tokens in a _meta folder"
-                    >
-                      <input
-                        type="checkbox"
-                        className={styles.toggleSwitch}
-                        checked={zipSettings.metaTokenFolder}
-                        onChange={(e) => updateGenerationOptions({
-                          zipSettings: {
-                            ...zipSettings,
-                            metaTokenFolder: e.target.checked,
-                          }
-                        })}
-                      />
-                    </OptionGroup>
-                  </div>
-                )}
-
-                {activeZipSubTab === 'quality' && (
-                  <div className={styles.subsection}>
-                    <OptionGroup
-                      label="Compression Level"
-                      helpText="Higher compression = smaller file but slower export"
-                    >
-                      <select
-                        className={styles.selectInput}
-                        value={zipSettings.compressionLevel}
-                        onChange={(e) => updateGenerationOptions({
-                          zipSettings: {
-                            ...zipSettings,
-                            compressionLevel: e.target.value as CompressionLevel
-                          }
-                        })}
-                      >
-                        <option value="fast">Fast (larger file)</option>
-                        <option value="normal">Normal (balanced)</option>
-                        <option value="maximum">Maximum (smaller file)</option>
-                      </select>
-                    </OptionGroup>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* PDF Settings */}
-            {activeSubTab === 'pdf' && (
-              <div className={styles.subtabContent}>
-                {/* Nested sub-tabs for PDF */}
-                <div className={styles.nestedSubtabs}>
-                  <button
-                    className={`${styles.nestedSubtabButton} ${activePdfSubTab === 'layout' ? styles.active : ''}`}
-                    onClick={() => setActivePdfSubTab('layout')}
+                  <OptionGroup
+                    label="Print Bleed"
+                    helpText="Extends edge colors outward for clean cutting - prevents white edges"
+                    isSlider
                   >
-                    📐 Layout
-                  </button>
-                  <button
-                    className={`${styles.nestedSubtabButton} ${activePdfSubTab === 'quality' ? styles.active : ''}`}
-                    onClick={() => setActivePdfSubTab('quality')}
-                  >
-                    ✨ Quality
-                  </button>
-                </div>
+                    <SliderWithValue
+                      value={(generationOptions.pdfBleed ?? 0.125) * 32}
+                      onChange={(value) => updateGenerationOptions({ pdfBleed: value / 32 })}
+                      min={0}
+                      max={4}
+                      step={1}
+                      defaultValue={4}
+                      unit="/32 in"
+                      ariaLabel="PDF Print Bleed value"
+                    />
+                  </OptionGroup>
+                </>
+              )}
 
-                {activePdfSubTab === 'layout' && (
-                  <div className={styles.subsection}>
-                    <OptionGroup
-                      label="X Offset"
-                      helpText="Horizontal offset for fine-tuning alignment"
-                      isSlider
-                    >
-                      <SliderWithValue
-                        value={(generationOptions.pdfXOffset ?? 0) * 16}
-                        onChange={(value) => updateGenerationOptions({ pdfXOffset: value / 16 })}
-                        min={-8}
-                        max={8}
-                        step={1}
-                        defaultValue={0}
-                        unit="/16 in"
-                        ariaLabel="PDF X Offset value"
-                      />
-                    </OptionGroup>
-
-                    <OptionGroup
-                      label="Y Offset"
-                      helpText="Vertical offset for fine-tuning alignment"
-                      isSlider
-                    >
-                      <SliderWithValue
-                        value={(generationOptions.pdfYOffset ?? 0) * 16}
-                        onChange={(value) => updateGenerationOptions({ pdfYOffset: value / 16 })}
-                        min={-8}
-                        max={8}
-                        step={1}
-                        defaultValue={0}
-                        unit="/16 in"
-                        ariaLabel="PDF Y Offset value"
-                      />
-                    </OptionGroup>
-
-                    <OptionGroup
-                      label="Print Bleed"
-                      helpText="Extends edge colors outward for clean cutting - prevents white edges"
-                      isSlider
-                    >
-                      <SliderWithValue
-                        value={(generationOptions.pdfBleed ?? 0.125) * 32}
-                        onChange={(value) => updateGenerationOptions({ pdfBleed: value / 32 })}
-                        min={0}
-                        max={4}
-                        step={1}
-                        defaultValue={4}
-                        unit="/32 in"
-                        ariaLabel="PDF Print Bleed value"
-                      />
-                    </OptionGroup>
-                  </div>
-                )}
-
-                {activePdfSubTab === 'quality' && (
-                  <div className={styles.subsection}>
-                    <OptionGroup
-                      label="Image Quality"
-                      helpText="JPEG quality for PDF images (higher = larger file, better quality)"
-                      isSlider
-                    >
-                      <SliderWithValue
-                        value={(generationOptions.pdfImageQuality ?? 0.90) * 100}
-                        onChange={(value) => updateGenerationOptions({ pdfImageQuality: value / 100 })}
-                        min={70}
-                        max={100}
-                        step={5}
-                        defaultValue={90}
-                        unit="%"
-                        ariaLabel="PDF image quality percentage"
-                      />
-                    </OptionGroup>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+              {activePdfSubTab === 'quality' && (
+                <OptionGroup
+                  label="Image Quality"
+                  helpText="JPEG quality for PDF images (higher = larger file, better quality)"
+                  isSlider
+                >
+                  <SliderWithValue
+                    value={(generationOptions.pdfImageQuality ?? 0.90) * 100}
+                    onChange={(value) => updateGenerationOptions({ pdfImageQuality: value / 100 })}
+                    min={70}
+                    max={100}
+                    step={5}
+                    defaultValue={90}
+                    unit="%"
+                    ariaLabel="PDF image quality percentage"
+                  />
+                </OptionGroup>
+              )}
+            </div>
+          </details>
         </div>
+      </ViewLayout.Panel>
 
-        {/* Right Column: Download Actions */}
-        <div className={styles.exportActionsColumn}>
-          <h2>Download</h2>
+      {/* Right Content - Download Actions & Summary */}
+      <ViewLayout.Panel position="right" width="flex" scrollable>
+        <div className={styles.exportActionsPanel}>
+          <h2 className={styles.exportTitle}>Download</h2>
+
           {hasTokens ? (
             <p className={styles.exportSummary}>
               {tokens.length} token{tokens.length !== 1 ? 's' : ''} ready for export
@@ -372,69 +371,88 @@ export function DownloadView() {
           )}
 
           <div className={styles.exportButtons}>
-            <button
-              className={`btn-primary ${styles.btnExport} ${styles.btnExportAll}`}
+            <Button
+              variant="primary"
+              fullWidth
               onClick={handleDownloadAll}
               disabled={!hasTokens}
+              className={styles.btnExportAll}
             >
               <span className={styles.btnIcon}>📥</span>
               <span className={styles.btnText}>Download All</span>
-            </button>
-            
+            </Button>
+
             <div className={styles.exportButtonsGrid}>
-              <button
-                className={`btn-secondary ${styles.btnExportSmall}`}
+              <Button
+                variant="secondary"
                 onClick={handleDownloadZip}
                 disabled={!hasTokens}
+                className={styles.btnExportSmall}
               >
                 <span className={styles.btnIcon}>📦</span>
                 <span className={styles.btnText}>Download Token Images</span>
-              </button>
-              
-              <button
-                className={`btn-secondary ${styles.btnExportSmall}`}
+              </Button>
+
+              <Button
+                variant="secondary"
                 onClick={handleDownloadPdf}
                 disabled={!hasTokens}
+                className={styles.btnExportSmall}
               >
                 <span className={styles.btnIcon}>🖨️</span>
                 <span className={styles.btnText}>Download Token Print Sheet</span>
-              </button>
-              
-              <button
-                className={`btn-secondary ${styles.btnExportSmall}`}
+              </Button>
+
+              <Button
+                variant="secondary"
                 onClick={handleDownloadJson}
                 disabled={!hasTokens}
+                className={styles.btnExportSmall}
               >
                 <span className={styles.btnIcon}>📋</span>
                 <span className={styles.btnText}>Download JSON</span>
-              </button>
-              
-              <button
-                className={`btn-secondary ${styles.btnExportSmall}`}
+              </Button>
+
+              <Button
+                variant="secondary"
                 onClick={handleDownloadStyleFormat}
                 disabled={!hasTokens}
+                className={styles.btnExportSmall}
               >
                 <span className={styles.btnIcon}>🎨</span>
                 <span className={styles.btnText}>Download Style Format</span>
-              </button>
-              
-              <button
-                className={`btn-secondary ${styles.btnExportSmall}`}
-                disabled={true}
+              </Button>
+
+              <Button
+                variant="secondary"
+                onClick={handleDownloadNightOrder}
+                disabled={isExportingNightOrder || characters.length === 0}
+                className={styles.btnExportSmall}
+              >
+                <span className={styles.btnIcon}>🌙</span>
+                <span className={styles.btnText}>
+                  {isExportingNightOrder ? 'Generating...' : 'Generate Night Order'}
+                </span>
+              </Button>
+
+              <Button
+                variant="secondary"
+                disabled
                 title="Coming soon"
+                className={styles.btnExportSmall}
               >
                 <span className={styles.btnIcon}>📜</span>
                 <span className={styles.btnText}>Download Script</span>
                 <span className={styles.btnBadge}>Soon</span>
-              </button>
+              </Button>
             </div>
-            
+
             <p className={styles.btnDescription}>
               Token Print Sheets are compatible with Avery 94500 (1.75" character tokens) and Avery 94509 (1" reminder tokens) label sheets.
             </p>
           </div>
         </div>
-      </div>
-    </div>
+      </ViewLayout.Panel>
+    </ViewLayout>
   )
 }

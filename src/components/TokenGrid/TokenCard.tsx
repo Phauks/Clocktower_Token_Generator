@@ -53,6 +53,7 @@ interface TokenCardProps {
   onCardClick?: (token: Token) => void
   onSetAsExample?: (token: Token) => void
   onDelete?: (token: Token) => void
+  onEditInStudio?: (token: Token) => void  // Navigate to Studio with token image
 }
 
 // Map team names to CSS Module class names
@@ -80,11 +81,12 @@ function arePropsEqual(prevProps: TokenCardProps, nextProps: TokenCardProps): bo
     prevProps.variants?.length === nextProps.variants?.length &&
     prevProps.onCardClick === nextProps.onCardClick &&
     prevProps.onSetAsExample === nextProps.onSetAsExample &&
-    prevProps.onDelete === nextProps.onDelete
+    prevProps.onDelete === nextProps.onDelete &&
+    prevProps.onEditInStudio === nextProps.onEditInStudio
   )
 }
 
-function TokenCardComponent({ token, count = 1, variants = [], onCardClick, onSetAsExample, onDelete }: TokenCardProps) {
+function TokenCardComponent({ token, count = 1, variants = [], onCardClick, onSetAsExample, onDelete, onEditInStudio }: TokenCardProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [hasRendered, setHasRendered] = useState(false)
   const [activeVariantIndex, setActiveVariantIndex] = useState(0)
@@ -157,7 +159,7 @@ function TokenCardComponent({ token, count = 1, variants = [], onCardClick, onSe
   }
 
   const handleContextMenu = (e: React.MouseEvent) => {
-    if (onSetAsExample || onDelete) {
+    if (onSetAsExample || onDelete || onEditInStudio) {
       contextMenu.onContextMenu(e)
     }
   }
@@ -165,6 +167,16 @@ function TokenCardComponent({ token, count = 1, variants = [], onCardClick, onSe
   // Build context menu items
   const contextMenuItems: ContextMenuItem[] = useMemo(() => {
     const items: ContextMenuItem[] = []
+
+    // Edit in Studio (for character tokens with images)
+    if (onEditInStudio && displayToken.type === 'character') {
+      items.push({
+        icon: '🎨',
+        label: 'Edit in Studio',
+        onClick: () => onEditInStudio(displayToken),
+      })
+    }
+
     if (onSetAsExample) {
       items.push({
         icon: '⭐',
@@ -181,7 +193,7 @@ function TokenCardComponent({ token, count = 1, variants = [], onCardClick, onSe
       })
     }
     return items
-  }, [onSetAsExample, onDelete, displayToken])
+  }, [onSetAsExample, onDelete, onEditInStudio, displayToken])
 
   // Get team display name for character, reminder, and meta tokens
   const getTeamDisplay = () => {

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import type { Token, Character, Team } from '../../ts/types/index.js'
 import { useContextMenu } from '../../hooks/useContextMenu'
+import { useCharacterImageResolver } from '../../hooks/useCharacterImageResolver'
 import { ContextMenu } from '../Shared/ContextMenu'
 import type { ContextMenuItem } from '../Shared/ContextMenu'
 import styles from '../../styles/components/tokenDetail/CharacterNavigation.module.css'
@@ -72,6 +73,9 @@ export function CharacterNavigation({
   const [deleteConfirm, setDeleteConfirm] = useState<{ characterId: string; characterName: string } | null>(null)
   const [draggedCharId, setDraggedCharId] = useState<string | null>(null)
   const [dropTargetTeam, setDropTargetTeam] = useState<Team | null>(null)
+
+  // Use shared hook for character image resolution
+  const { resolvedUrls: resolvedImageUrls } = useCharacterImageResolver({ characters })
 
   useEffect(() => {
     if (selectedRef.current) {
@@ -171,12 +175,13 @@ export function CharacterNavigation({
   const renderCharacterItem = (char: Character, isLast: boolean) => {
     const reminderCount = getReminderCount(char)
     const isSelected = char.uuid === selectedCharacterUuid
-    const charToken = getCharacterToken(char)
     const teamClass = char.team?.toLowerCase() || 'townsfolk'
     const teamStyle = teamHeaderClassMap[teamClass] || ''
     const isDragging = draggedCharId === char.id
     // Official based on character source field
     const isOfficial = char.source === 'official'
+    // Get resolved character icon image
+    const characterImageUrl = char.uuid ? resolvedImageUrls.get(char.uuid) : undefined
 
     return (
       <div key={char.uuid || char.id} className={`${styles.itemWrapper} ${!isLast ? styles.withDivider : ''}`}>
@@ -186,7 +191,7 @@ export function CharacterNavigation({
           onClick={() => char.uuid && onSelectCharacter(char.uuid)}
           onMouseEnter={() => char.uuid && onHoverCharacter?.(char.uuid)}
           onContextMenu={(e) => handleContextMenu(e, char.id)}
-          draggable={!!onChangeTeam}
+          draggable={!!onChangeTeam && !isOfficial}
           onDragStart={(e) => handleDragStart(e, char.id)}
           onDragEnd={handleDragEnd}
           role="button"
@@ -196,22 +201,15 @@ export function CharacterNavigation({
               char.uuid && onSelectCharacter(char.uuid)
             }
           }}
-          title={`${char.name} (${reminderCount} reminders) - Right-click for options${onChangeTeam ? ' - Drag to change team' : ''}`}
+          title={`${char.name} (${reminderCount} reminders) - Right-click for options${onChangeTeam && !isOfficial ? ' - Drag to change team' : ''}${isOfficial ? ' - Official character (cannot change team)' : ''}`}
         >
-          {charToken && (
+          {characterImageUrl ? (
             <div className={styles.thumbnail}>
-              <canvas
-                width="40"
-                height="40"
-                ref={(canvas) => {
-                  if (canvas && charToken.canvas) {
-                    const ctx = canvas.getContext('2d')
-                    if (ctx) {
-                      ctx.drawImage(charToken.canvas, 0, 0, 40, 40)
-                    }
-                  }
-                }}
-              />
+              <img src={characterImageUrl} alt={char.name} className={styles.characterIcon} />
+            </div>
+          ) : (
+            <div className={styles.thumbnail}>
+              <div className={styles.iconPlaceholder}>?</div>
             </div>
           )}
           <div className={styles.info}>

@@ -43,16 +43,19 @@ export function cn(...args: ClassValue[]): string {
 /**
  * Create a variant-based class name builder
  * Useful for component variants like Button, Card, etc.
- * 
+ *
  * @example
- * const buttonClasses = createVariantClasses({
- *   base: 'btn',
+ * const cardClasses = createVariantClasses({
+ *   base: 'card',
  *   variants: {
- *     primary: 'btn-primary',
- *     secondary: 'btn-secondary',
+ *     elevated: 'card-elevated',
+ *     outlined: 'card-outlined',
  *   }
  * })
- * buttonClasses('primary') // Returns: 'btn btn-primary'
+ * cardClasses('elevated') // Returns: 'card card-elevated'
+ *
+ * Note: For buttons, use the unified Button component from
+ * src/components/Shared/Button instead of CSS class variants.
  */
 export function createVariantClasses<T extends string>(config: {
     base: string

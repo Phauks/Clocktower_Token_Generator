@@ -10,7 +10,8 @@ import {
   LRUEvictionPolicy,
   GalleryPreRenderStrategy,
   CustomizePreRenderStrategy,
-  ProjectPreRenderStrategy
+  ProjectPreRenderStrategy,
+  CacheLogger
 } from '../ts/cache/index.js'
 
 /**
@@ -46,7 +47,10 @@ export function PreRenderCacheProvider({ children }: PreRenderCacheProviderProps
         maxSize: 50,
         maxMemory: 25_000_000,
         evictionRatio: 0.2  // Evict 20% (10 tokens) at a time
-      })
+      }),
+      onEvict: (event) => {
+        CacheLogger.logEviction('gallery', event.key, event.reason, event.size, event.lastAccessed, event.accessCount)
+      }
     })
     mgr.registerCache('gallery', galleryCache)
     mgr.registerStrategy(new GalleryPreRenderStrategy(galleryCache, {
@@ -65,7 +69,10 @@ export function PreRenderCacheProvider({ children }: PreRenderCacheProviderProps
         maxSize: 5,
         maxMemory: 10_000_000,
         evictionRatio: 0.4  // Evict 40% (2 entries) at a time
-      })
+      }),
+      onEvict: (event) => {
+        CacheLogger.logEviction('customize', event.key, event.reason, event.size, event.lastAccessed, event.accessCount)
+      }
     })
     mgr.registerCache('customize', customizeCache)
     mgr.registerStrategy(new CustomizePreRenderStrategy(customizeCache, {
@@ -80,7 +87,10 @@ export function PreRenderCacheProvider({ children }: PreRenderCacheProviderProps
         maxSize: 20,
         maxMemory: 5_000_000,
         evictionRatio: 0.3  // Evict 30% (6 entries) at a time
-      })
+      }),
+      onEvict: (event) => {
+        CacheLogger.logEviction('project', event.key, event.reason, event.size, event.lastAccessed, event.accessCount)
+      }
     })
     mgr.registerCache('project', projectCache)
     mgr.registerStrategy(new ProjectPreRenderStrategy(projectCache, {

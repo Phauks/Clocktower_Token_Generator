@@ -1,0 +1,235 @@
+/**
+ * ViewLayout Component Styles
+ *
+ * Unified layout framework for all views.
+ * Provides consistent sidebar/panel patterns with independent scrolling.
+ *
+ * Usage:
+ *   <ViewLayout variant="2-panel">
+ *     <ViewLayout.Panel position="left" scrollable>...</ViewLayout.Panel>
+ *     <ViewLayout.Panel position="right" scrollable>...</ViewLayout.Panel>
+ *   </ViewLayout>
+ */
+
+/* ========================================
+   ViewLayout Configuration
+   All layout-related settings in one place
+   ======================================== */
+
+:root {
+  /* View container height (viewport minus header and tabs) */
+  --view-height: calc(100vh - var(--header-height) - var(--tab-height));
+
+  /* Sidebar width configuration */
+  --sidebar-width-left: 350px;
+  --sidebar-width-right: 500px;
+  --sidebar-width-right-studio: 250px;
+}
+
+/* ========================================
+   Base View Container
+   ======================================== */
+
+.viewContainer {
+  display: flex;
+  flex: 1;
+  height: var(--view-height);
+  max-height: var(--view-height);
+  overflow: hidden;
+}
+
+/* ========================================
+   Layout Variants
+   ======================================== */
+
+.layout2Panel {
+  /* Default flex row - left sidebar + right content */
+}
+
+.layout3Panel {
+  /* Same as 2-panel, just with 3 children */
+}
+
+.layoutFullWidth {
+  flex-direction: column;
+}
+
+/* ========================================
+   Hidden Scrollbar Utility
+   SINGLE SOURCE OF TRUTH - use this everywhere
+   ======================================== */
+
+.hiddenScrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.hiddenScrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none; /* Chrome/Safari/WebKit */
+}
+
+/* ========================================
+   Base Panel
+   ======================================== */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ========================================
+   Scrollable Panel Variant
+   ======================================== */
+
+.panelScrollable {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ========================================
+   Sidebar (Left/Right Fixed-Width Panels)
+   ======================================== */
+
+.sidebar {
+  flex-shrink: 0;
+  background-color: var(--bg-panel);
+}
+
+.sidebarLeft {
+  border-right: 1px solid var(--border-color);
+}
+
+.sidebarRight {
+  border-left: 1px solid var(--border-color);
+}
+
+/* ========================================
+   Width Variants
+   ======================================== */
+
+/* Left sidebar width */
+.widthLeft {
+  width: var(--sidebar-width-left);
+  min-width: var(--sidebar-width-left);
+  max-width: var(--sidebar-width-left);
+}
+
+/* Right sidebar width */
+.widthRight {
+  width: var(--sidebar-width-right);
+  min-width: var(--sidebar-width-right);
+  max-width: var(--sidebar-width-right);
+}
+
+/* Studio right sidebar width */
+.widthRightStudio {
+  width: var(--sidebar-width-right-studio);
+  min-width: var(--sidebar-width-right-studio);
+  max-width: var(--sidebar-width-right-studio);
+}
+
+/* Flexible width (fills remaining space) */
+.widthFlex {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ========================================
+   Main Content Area (Center Panel)
+   ======================================== */
+
+.mainContent {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-primary);
+  padding: var(--spacing-lg);
+}
+
+/* ========================================
+   Panel Content Wrapper
+   Provides consistent padding for panel contents
+   ======================================== */
+
+.panelContent {
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+/* ========================================
+   Collapsible Section Card
+   Reusable pattern for sidebar sections
+   ======================================== */
+
+.sidebarCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.sidebarCard[open] {
+  /* When details is open */
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-secondary);
+  cursor: pointer;
+  user-select: none;
+  font-weight: var(--font-weight-semibold);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  list-style: none;
+}
+
+.sectionHeader::-webkit-details-marker {
+  display: none;
+}
+
+.sectionHeader::after {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid var(--text-muted);
+  transition: transform var(--transition-fast);
+}
+
+.sidebarCard[open] .sectionHeader::after {
+  transform: rotate(180deg);
+}
+
+.sectionHeader:hover {
+  background: var(--bg-hover);
+}
+
+.optionSection {
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+/* ========================================
+   Content Panel Wrapper
+   Layout-only wrapper (padding now handled by .mainContent)
+   ======================================== */
+
+.contentPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}

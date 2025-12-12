@@ -1,0 +1,96 @@
+/**
+ * Auto-Save Toggle Button Styles
+ */
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 6px;
+  background: var(--bg-primary, #fff);
+  color: var(--text-primary, #333);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.toggle:hover:not(:disabled) {
+  background: var(--bg-secondary, #f5f5f5);
+  border-color: var(--border-hover, #999);
+  transform: translateY(-1px);
+}
+
+.toggle:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Enabled state */
+.toggle.enabled {
+  background: var(--success-bg, #e8f5e9);
+  border-color: var(--success-border, #4caf50);
+  color: var(--success-text, #2e7d32);
+}
+
+.toggle.enabled:hover:not(:disabled) {
+  background: var(--success-bg-hover, #c8e6c9);
+  border-color: var(--success-border-hover, #388e3c);
+}
+
+/* Disabled state */
+.toggle.disabled {
+  background: var(--warning-bg, #fff3e0);
+  border-color: var(--warning-border, #ff9800);
+  color: var(--warning-text, #e65100);
+}
+
+.toggle.disabled:hover:not(:disabled) {
+  background: var(--warning-bg-hover, #ffe0b2);
+  border-color: var(--warning-border-hover, #f57c00);
+}
+
+/* Inactive (no project) state */
+.toggle.inactive {
+  opacity: 0.6;
+  background: var(--bg-tertiary, #f0f0f0);
+  border-color: var(--border-color, #ddd);
+  color: var(--text-secondary, #666);
+}
+
+/* Icon */
+.icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* Label */
+.label {
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* Responsive: Hide label on small screens */
+@media (max-width: 768px) {
+  .label {
+    display: none;
+  }
+
+  .toggle {
+    padding: 8px;
+    min-width: 36px;
+    min-height: 36px;
+    justify-content: center;
+  }
+
+  .icon {
+    font-size: 18px;
+  }
+}

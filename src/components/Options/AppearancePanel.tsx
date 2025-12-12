@@ -1,6 +1,7 @@
 import { memo, useState } from 'react'
-import type { GenerationOptions, ImageOption } from '../../ts/types/index'
-import { ImageSelector } from '../Shared/ImageSelector'
+import type { GenerationOptions } from '../../ts/types/index'
+import { AssetPreviewSelector } from '../Shared/AssetPreviewSelector'
+import { ColorPreviewSelector } from '../Shared/ColorPreviewSelector'
 import { OptionGroup } from '../Shared/OptionGroup'
 import { SegmentedControl } from '../Shared/SegmentedControl'
 import { SliderWithValue } from '../Shared/SliderWithValue'
@@ -9,18 +10,11 @@ import styles from '../../styles/components/options/OptionsPanel.module.css'
 interface AppearancePanelProps {
   generationOptions: GenerationOptions
   onOptionChange: (options: Partial<GenerationOptions>) => void
+  projectId?: string
 }
 
 type TokenType = 'character' | 'reminder' | 'meta'
 type SectionType = 'background' | 'font' | 'icon'
-
-// Generate background options from available assets
-const BACKGROUND_OPTIONS: ImageOption[] = Array.from({ length: 7 }, (_, i) => ({
-  id: `character_background_${i + 1}`,
-  label: `Background ${i + 1}`,
-  src: `/assets/images/character_background/character_background_${i + 1}.png`,
-  source: 'builtin' as const,
-}))
 
 // Font configuration for each token type
 interface FontConfig {
@@ -38,7 +32,7 @@ interface BackgroundConfig {
   defaultType: 'color' | 'image'
 }
 
-export const AppearancePanel = memo(({ generationOptions, onOptionChange }: AppearancePanelProps) => {
+export const AppearancePanel = memo(({ generationOptions, onOptionChange, projectId }: AppearancePanelProps) => {
   const [activeTokenType, setActiveTokenType] = useState<TokenType>('character')
   const [activeSection, setActiveSection] = useState<SectionType>('background')
 
@@ -88,25 +82,23 @@ export const AppearancePanel = memo(({ generationOptions, onOptionChange }: Appe
         />
       </OptionGroup>
 
-      <OptionGroup label="Value">
-        {(generationOptions[config.typeKey] as 'color' | 'image') === 'color' ? (
-          <input
-            type="color"
-            className={styles.colorInput}
-            value={(generationOptions[config.colorKey] as string) || '#FFFFFF'}
-            onChange={(e) => onOptionChange({ [config.colorKey]: e.target.value })}
-          />
-        ) : (
-          <ImageSelector
-            options={BACKGROUND_OPTIONS}
-            value={(generationOptions[config.valueKey] as string) || 'character_background_1'}
-            onChange={(value) => onOptionChange({ [config.valueKey]: value })}
-            shape="circle"
-            showNone={false}
-            ariaLabel="Select background"
-          />
-        )}
-      </OptionGroup>
+      {/* Direct selector without "Value" wrapper */}
+      {(generationOptions[config.typeKey] as 'color' | 'image') === 'color' ? (
+        <ColorPreviewSelector
+          value={(generationOptions[config.colorKey] as string) || '#FFFFFF'}
+          onChange={(value) => onOptionChange({ [config.colorKey]: value })}
+          shape="circle"
+        />
+      ) : (
+        <AssetPreviewSelector
+          value={(generationOptions[config.valueKey] as string) || 'character_background_1'}
+          onChange={(value) => onOptionChange({ [config.valueKey]: value })}
+          assetType="token-background"
+          shape="circle"
+          showNone={false}
+          projectId={projectId}
+        />
+      )}
     </div>
   )
 

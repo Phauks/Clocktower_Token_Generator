@@ -64,7 +64,7 @@ export const ASSET_TYPE_CONFIGS: Record<AssetType, AssetTypeConfig> = {
     requireTransparency: false,
     targetWidth: 540,
     targetHeight: 540,
-    thumbnailSize: 128,
+    thumbnailSize: 128, // Standard grid display
   },
 
   'token-background': {
@@ -77,7 +77,7 @@ export const ASSET_TYPE_CONFIGS: Record<AssetType, AssetTypeConfig> = {
     maxHeight: 4096,
     requireSquare: true,
     requireTransparency: true,
-    thumbnailSize: 128,
+    thumbnailSize: 256, // Larger - needs detail for background preview
   },
 
   'script-background': {
@@ -90,7 +90,7 @@ export const ASSET_TYPE_CONFIGS: Record<AssetType, AssetTypeConfig> = {
     maxHeight: 8192,
     requireSquare: false,
     requireTransparency: false,
-    thumbnailSize: 128,
+    thumbnailSize: 512, // Large - high-res preview needed for layout assessment
   },
 
   'setup-flower': {
@@ -103,7 +103,7 @@ export const ASSET_TYPE_CONFIGS: Record<AssetType, AssetTypeConfig> = {
     maxHeight: 2048,
     requireSquare: true,
     requireTransparency: true,
-    thumbnailSize: 128,
+    thumbnailSize: 128, // Standard size for setup tokens
   },
 
   'leaf': {
@@ -116,7 +116,7 @@ export const ASSET_TYPE_CONFIGS: Record<AssetType, AssetTypeConfig> = {
     maxHeight: 256,
     requireSquare: false,
     requireTransparency: true,
-    thumbnailSize: 64,
+    thumbnailSize: 64, // Small decorative element
   },
 
   'logo': {
@@ -129,7 +129,46 @@ export const ASSET_TYPE_CONFIGS: Record<AssetType, AssetTypeConfig> = {
     maxHeight: 4096,
     requireSquare: false,
     requireTransparency: false,
-    thumbnailSize: 128,
+    thumbnailSize: 96, // Small-medium UI element
+  },
+
+  'studio-icon': {
+    allowedMimeTypes: ['image/png', 'image/webp'],
+    allowedExtensions: ['.png', '.webp'],
+    maxSize: 10 * MB,
+    minWidth: 200,
+    maxWidth: 4096,
+    minHeight: 200,
+    maxHeight: 4096,
+    requireSquare: false,
+    requireTransparency: true,
+    thumbnailSize: 128, // Standard grid display like character-icon
+  },
+
+  'studio-logo': {
+    allowedMimeTypes: ['image/png', 'image/webp'],
+    allowedExtensions: ['.png', '.webp'],
+    maxSize: 5 * MB,
+    minWidth: 64,
+    maxWidth: 4096,
+    minHeight: 64,
+    maxHeight: 4096,
+    requireSquare: false,
+    requireTransparency: true,
+    thumbnailSize: 96, // Similar to logo
+  },
+
+  'studio-project': {
+    allowedMimeTypes: ['image/png', 'image/webp'],
+    allowedExtensions: ['.png', '.webp'],
+    maxSize: 50 * MB, // Large multi-layer projects
+    minWidth: 200,
+    maxWidth: 8192,
+    minHeight: 200,
+    maxHeight: 8192,
+    requireSquare: false,
+    requireTransparency: true,
+    thumbnailSize: 256, // Larger for better layer preview
   },
 };
 
@@ -171,6 +210,9 @@ export const ASSET_ZIP_PATHS: Record<AssetType, string> = {
   'setup-flower': 'assets/setup-flowers/',
   'leaf': 'assets/leaves/',
   'logo': 'assets/logos/',
+  'studio-icon': 'assets/studio-icons/',
+  'studio-logo': 'assets/studio-logos/',
+  'studio-project': 'assets/studio-projects/',
 };
 
 // ============================================================================
@@ -187,6 +229,9 @@ export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   'setup-flower': 'Setup Flower',
   'leaf': 'Leaf',
   'logo': 'Logo',
+  'studio-icon': 'Studio Icon',
+  'studio-logo': 'Studio Logo',
+  'studio-project': 'Studio Project',
 };
 
 /**
@@ -199,6 +244,9 @@ export const ASSET_TYPE_LABELS_PLURAL: Record<AssetType, string> = {
   'setup-flower': 'Setup Flowers',
   'leaf': 'Leaves',
   'logo': 'Logos',
+  'studio-icon': 'Studio Icons',
+  'studio-logo': 'Studio Logos',
+  'studio-project': 'Studio Projects',
 };
 
 /**
@@ -211,4 +259,7 @@ export const ASSET_TYPE_ICONS: Record<AssetType, string> = {
   'setup-flower': '🌸',
   'leaf': '🍃',
   'logo': '🏷️',
+  'studio-icon': '✨',
+  'studio-logo': '🎭',
+  'studio-project': '📦',
 };

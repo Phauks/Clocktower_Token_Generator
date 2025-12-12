@@ -48,6 +48,26 @@
   color: #757575;
 }
 
+.disabled {
+  background: #ffe0b2;
+  color: #e65100;
+  border: 1px solid #ff9800;
+}
+
+/* Clickable state - cursor and hover effect */
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.clickable:active {
+  transform: translateY(0);
+}
+
 /* Icon */
 .icon {
   font-size: 16px;
@@ -106,6 +126,32 @@
   background: #bbbbbb;
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+/* History Button */
+.historyButton {
+  padding: 6px 10px;
+  background: #757575;
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.historyButton:hover {
+  background: #616161;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(117, 117, 117, 0.3);
+}
+
+.historyButton:active {
+  transform: translateY(0);
 }
 
 /* Tooltip */

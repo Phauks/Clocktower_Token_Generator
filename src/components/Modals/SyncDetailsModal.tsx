@@ -8,9 +8,14 @@
  * - Manual update check button
  * - Clear cache option
  * - Error details and retry button
+ *
+ * Migrated to use unified Modal, Button, and Alert components.
  */
 
 import { useState, useCallback, useEffect } from 'react';
+import { Modal } from '../Shared/Modal/Modal';
+import { Button } from '../Shared/Button';
+import { Alert } from '../Shared/Alert';
 import { useDataSync } from '../../contexts/DataSyncContext';
 import { storageManager } from '../../ts/sync/index.js';
 import CONFIG from '../../ts/config.js';
@@ -151,134 +156,123 @@ export function SyncDetailsModal({ isOpen, onClose }: SyncDetailsModalProps) {
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.header}>
-          <h2>Data Synchronization</h2>
-          <button
-            type="button"
-            className={styles.closeButton}
-            onClick={onClose}
-            aria-label="Close modal"
-          >
-            ×
-          </button>
-        </div>
-
-        <div className={styles.content}>
-          {/* Status Section */}
-          <section className={styles.section}>
-            <h3>Status</h3>
-            <div className={styles.infoGrid}>
-              <div className={styles.infoItem}>
-                <span className={styles.label}>Current Status:</span>
-                <span className={`${styles.value} ${styles[status.state]}`}>
-                  {getStatusLabel()}
-                </span>
-              </div>
-              <div className={styles.infoItem}>
-                <span className={styles.label}>Data Source:</span>
-                <span className={styles.value}>{getDataSourceLabel()}</span>
-              </div>
-              <div className={styles.infoItem}>
-                <span className={styles.label}>Current Version:</span>
-                <span className={styles.value}>
-                  {status.currentVersion ? (
-                    <a 
-                      href={`https://github.com/${CONFIG.SYNC.GITHUB_REPO}/releases/tag/${status.currentVersion}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={styles.versionLink}
-                    >
-                      {status.currentVersion}
-                    </a>
-                  ) : 'Unknown'}
-                </span>
-              </div>
-              {status.lastSync && (
-                <div className={styles.infoItem}>
-                  <span className={styles.label}>Last Sync:</span>
-                  <span className={styles.value}>
-                    {status.lastSync.toLocaleString()}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Update Available */}
-            {status.availableVersion && status.availableVersion !== status.currentVersion && (
-              <div className={styles.updateNotice}>
-                <strong>Update Available:</strong> {status.availableVersion}
-                <button
-                  type="button"
-                  className={styles.downloadButton}
-                  onClick={handleDownloadUpdate}
-                  disabled={isDownloading || status.state === 'downloading'}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Data Synchronization"
+      size="medium"
+    >
+      {/* Status Section */}
+      <section className={styles.section}>
+        <h3>Status</h3>
+        <div className={styles.infoGrid}>
+          <div className={styles.infoItem}>
+            <span className={styles.label}>Current Status:</span>
+            <span className={`${styles.value} ${styles[status.state]}`}>
+              {getStatusLabel()}
+            </span>
+          </div>
+          <div className={styles.infoItem}>
+            <span className={styles.label}>Data Source:</span>
+            <span className={styles.value}>{getDataSourceLabel()}</span>
+          </div>
+          <div className={styles.infoItem}>
+            <span className={styles.label}>Current Version:</span>
+            <span className={styles.value}>
+              {status.currentVersion ? (
+                <a
+                  href={`https://github.com/${CONFIG.SYNC.GITHUB_REPO}/releases/tag/${status.currentVersion}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.versionLink}
                 >
-                  {isDownloading ? 'Downloading...' : 'Download Now'}
-                </button>
-              </div>
-            )}
-
-            {/* Error */}
-            {status.error && (
-              <div className={styles.errorNotice}>
-                <strong>Error:</strong> {status.error}
-              </div>
-            )}
-          </section>
-
-          {/* Cache Statistics */}
-          <section className={styles.section}>
-            <h3>Cache Statistics</h3>
-            <div className={styles.infoGrid}>
-              <div className={styles.infoItem}>
-                <span className={styles.label}>Characters Cached:</span>
-                <span className={styles.value}>{cacheStats.characterCount}</span>
-              </div>
-              <div className={styles.infoItem}>
-                <span className={styles.label}>Storage Used:</span>
-                <span className={styles.value}>
-                  {formatBytes(cacheStats.storageUsed)}
-                </span>
-              </div>
-              {cacheStats.cacheAge && (
-                <div className={styles.infoItem}>
-                  <span className={styles.label}>Cache Age:</span>
-                  <span className={styles.value}>{cacheStats.cacheAge}</span>
-                </div>
-              )}
+                  {status.currentVersion}
+                </a>
+              ) : 'Unknown'}
+            </span>
+          </div>
+          {status.lastSync && (
+            <div className={styles.infoItem}>
+              <span className={styles.label}>Last Sync:</span>
+              <span className={styles.value}>
+                {status.lastSync.toLocaleString()}
+              </span>
             </div>
-          </section>
-
-          {/* Actions */}
-          <section className={styles.section}>
-            <h3>Actions</h3>
-            <div className={styles.actions}>
-              <button
-                type="button"
-                className={styles.actionButton}
-                onClick={handleCheckForUpdates}
-                disabled={isChecking || status.state === 'checking'}
-              >
-                {isChecking ? 'Checking...' : 'Check for Updates'}
-              </button>
-              <button
-                type="button"
-                className={`${styles.actionButton} ${styles.danger}`}
-                onClick={handleClearCache}
-                disabled={isClearing}
-              >
-                {isClearing ? 'Clearing...' : 'Clear Cache & Resync'}
-              </button>
-            </div>
-          </section>
+          )}
         </div>
-      </div>
-    </div>
+
+        {/* Update Available */}
+        {status.availableVersion && status.availableVersion !== status.currentVersion && (
+          <Alert variant="info" style={{ marginTop: 'var(--spacing-md)' }}>
+            <strong>Update Available:</strong> {status.availableVersion}
+            <Button
+              variant="accent"
+              size="small"
+              onClick={handleDownloadUpdate}
+              loading={isDownloading}
+              loadingText="Downloading..."
+              style={{ marginLeft: 'var(--spacing-md)' }}
+            >
+              Download Now
+            </Button>
+          </Alert>
+        )}
+
+        {/* Error */}
+        {status.error && (
+          <Alert variant="error" style={{ marginTop: 'var(--spacing-md)' }}>
+            {status.error}
+          </Alert>
+        )}
+      </section>
+
+      {/* Cache Statistics */}
+      <section className={styles.section}>
+        <h3>Cache Statistics</h3>
+        <div className={styles.infoGrid}>
+          <div className={styles.infoItem}>
+            <span className={styles.label}>Characters Cached:</span>
+            <span className={styles.value}>{cacheStats.characterCount}</span>
+          </div>
+          <div className={styles.infoItem}>
+            <span className={styles.label}>Storage Used:</span>
+            <span className={styles.value}>
+              {formatBytes(cacheStats.storageUsed)}
+            </span>
+          </div>
+          {cacheStats.cacheAge && (
+            <div className={styles.infoItem}>
+              <span className={styles.label}>Cache Age:</span>
+              <span className={styles.value}>{cacheStats.cacheAge}</span>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Actions */}
+      <section className={styles.section}>
+        <h3>Actions</h3>
+        <div className={styles.actions}>
+          <Button
+            variant="secondary"
+            onClick={handleCheckForUpdates}
+            loading={isChecking}
+            loadingText="Checking..."
+          >
+            Check for Updates
+          </Button>
+          <Button
+            variant="danger"
+            onClick={handleClearCache}
+            loading={isClearing}
+            loadingText="Clearing..."
+          >
+            Clear Cache & Resync
+          </Button>
+        </div>
+      </section>
+    </Modal>
   );
 }
 

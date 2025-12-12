@@ -3,7 +3,7 @@
  * JSON Utility Functions
  */
 
-import type { ValidationResult, ScriptEntry } from '../types/index.js';
+import type { ValidationResult, ScriptEntry, Character } from '../types/index.js';
 
 /**
  * Format JSON with pretty printing
@@ -82,7 +82,7 @@ export function getCleanJsonForExport(jsonString: string): string {
     try {
         const parsed = JSON.parse(jsonString);
         if (!Array.isArray(parsed)) return jsonString;
-        
+
         const cleaned = parsed.map(entry => {
             // If it's an object (character or meta), strip uuid
             if (typeof entry === 'object' && entry !== null) {
@@ -91,8 +91,81 @@ export function getCleanJsonForExport(jsonString: string): string {
             // String IDs stay as-is
             return entry;
         });
-        
+
         return JSON.stringify(cleaned, null, 2);
+    } catch {
+        return jsonString;
+    }
+}
+
+/**
+ * Check if a script entry is an object with only an "id" field (condensable format)
+ * @param entry - Script entry to check
+ * @returns True if entry is condensable { "id": "..." } format
+ */
+function isCondensableIdReference(entry: unknown): entry is { id: string } {
+    if (typeof entry !== 'object' || entry === null) return false;
+    const keys = Object.keys(entry);
+    return keys.length === 1 && 'id' in entry && typeof (entry as { id: unknown }).id === 'string';
+}
+
+/**
+ * Check if an ID corresponds to an official character
+ * @param id - Character ID to check
+ * @param officialData - Array of official characters
+ * @returns True if ID matches an official character
+ */
+function isOfficialCharacter(id: string, officialData: Character[]): boolean {
+    const normalizedId = id.toLowerCase().trim();
+    return officialData.some(char => char.id.toLowerCase() === normalizedId);
+}
+
+/**
+ * Check if a script has condensable character references
+ * Detects object-format references like { "id": "clockmaker" } that could be simplified to "clockmaker"
+ * @param jsonString - JSON string to check
+ * @param officialData - Array of official characters to validate against
+ * @returns True if script contains condensable references
+ */
+export function hasCondensableReferences(jsonString: string, officialData: Character[]): boolean {
+    try {
+        const parsed = JSON.parse(jsonString);
+        if (!Array.isArray(parsed)) return false;
+
+        return parsed.some(entry => {
+            // Check if entry is condensable format and matches official character
+            if (isCondensableIdReference(entry)) {
+                return isOfficialCharacter(entry.id, officialData);
+            }
+            return false;
+        });
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Condense script by converting object-format character references to string format
+ * Converts { "id": "clockmaker" } to "clockmaker" for official characters only
+ * @param jsonString - JSON string to condense
+ * @param officialData - Array of official characters to validate against
+ * @returns Condensed JSON string with simplified character references
+ */
+export function condenseScript(jsonString: string, officialData: Character[]): string {
+    try {
+        const parsed = JSON.parse(jsonString);
+        if (!Array.isArray(parsed)) return jsonString;
+
+        const condensed = parsed.map(entry => {
+            // If entry is condensable and matches official character, convert to string
+            if (isCondensableIdReference(entry) && isOfficialCharacter(entry.id, officialData)) {
+                return entry.id;
+            }
+            // Keep all other entries as-is (strings, _meta, custom characters, etc.)
+            return entry;
+        });
+
+        return JSON.stringify(condensed, null, 2);
     } catch {
         return jsonString;
     }

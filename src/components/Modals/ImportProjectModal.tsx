@@ -3,10 +3,15 @@
  *
  * Modal for importing projects from ZIP files with drag-and-drop support.
  * Shows validation results, preview, and import progress.
+ * Migrated to use unified Modal, Button, and Alert components.
  */
 
 import { useState, useCallback, useRef } from 'react';
+import { Modal } from '../Shared/Modal/Modal';
+import { Button } from '../Shared/Button';
+import { Alert } from '../Shared/Alert';
 import { ProjectImporter } from '../../ts/services/project/ProjectImporter';
+import { logger } from '../../ts/utils/index.js';
 import type { ProjectPreview } from '../../ts/types/project.js';
 import styles from '../../styles/components/modals/ImportProjectModal.module.css';
 
@@ -70,7 +75,7 @@ export function ImportProjectModal({ isOpen, onClose, onImport }: ImportProjectM
 
       // Show warnings if any
       if (validation.warnings && validation.warnings.length > 0) {
-        console.warn('Import warnings:', validation.warnings);
+        logger.warn('ImportProjectModal', 'Import warnings', { warnings: validation.warnings });
       }
 
       // Generate preview
@@ -157,173 +162,156 @@ export function ImportProjectModal({ isOpen, onClose, onImport }: ImportProjectM
     }
   }, [isImporting, onClose]);
 
-  if (!isOpen) return null;
+  const footerContent = selectedFile && preview ? (
+    <>
+      <Button
+        variant="secondary"
+        onClick={() => {
+          setSelectedFile(null);
+          setPreview(null);
+          setError(null);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+        }}
+        disabled={isImporting}
+      >
+        Choose Different File
+      </Button>
+      <Button
+        variant="accent"
+        onClick={handleImport}
+        loading={isImporting}
+        loadingText="Importing..."
+      >
+        Import Project
+      </Button>
+    </>
+  ) : (
+    <Button variant="secondary" onClick={handleClose} disabled={isImporting}>
+      Cancel
+    </Button>
+  );
 
   return (
-    <div className={styles.overlay} onClick={handleClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className={styles.header}>
-          <h2 className={styles.title}>Import Project</h2>
-          <button
-            onClick={handleClose}
-            className={styles.closeButton}
-            aria-label="Close"
-            disabled={isImporting}
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Import Project"
+      size="medium"
+      preventClose={isImporting}
+      footer={footerContent}
+    >
+      {!selectedFile && (
+        <>
+          {/* Drop Zone */}
+          <div
+            className={`${styles.dropZone} ${isDragging ? styles.dragging : ''} ${
+              error ? styles.error : ''
+            }`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onClick={handleBrowseClick}
           >
-            ×
-          </button>
-        </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".zip"
+              onChange={handleFileSelect}
+              className={styles.fileInput}
+            />
 
-        {/* Content */}
-        <div className={styles.content}>
-          {!selectedFile && (
-            <>
-              {/* Drop Zone */}
-              <div
-                className={`${styles.dropZone} ${isDragging ? styles.dragging : ''} ${
-                  error ? styles.error : ''
-                }`}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragEnter={handleDragEnter}
-                onDragLeave={handleDragLeave}
-                onClick={handleBrowseClick}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".zip"
-                  onChange={handleFileSelect}
-                  className={styles.fileInput}
-                />
+            <svg
+              className={styles.uploadIcon}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
 
-                <svg
-                  className={styles.uploadIcon}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
-                </svg>
+            <p className={styles.dropText}>
+              <strong>Drop ZIP file here</strong> or click to browse
+            </p>
+            <p className={styles.dropHint}>Maximum file size: 50MB</p>
+          </div>
 
-                <p className={styles.dropText}>
-                  <strong>Drop ZIP file here</strong> or click to browse
-                </p>
-                <p className={styles.dropHint}>Maximum file size: 50MB</p>
-              </div>
-
-              {error && (
-                <div className={styles.errorMessage} role="alert">
-                  <span className={styles.errorIcon}>⚠</span>
-                  {error}
-                </div>
-              )}
-            </>
+          {error && (
+            <Alert variant="error" style={{ marginTop: 'var(--spacing-md)' }}>
+              {error}
+            </Alert>
           )}
+        </>
+      )}
 
-          {selectedFile && isValidating && (
-            <div className={styles.validating}>
-              <div className={styles.spinner} />
-              <p>Validating {selectedFile.name}...</p>
+      {selectedFile && isValidating && (
+        <div className={styles.validating}>
+          <div className={styles.spinner} />
+          <p>Validating {selectedFile.name}...</p>
+        </div>
+      )}
+
+      {selectedFile && preview && !isValidating && (
+        <>
+          {/* Preview */}
+          <div className={styles.preview}>
+            <h3 className={styles.previewTitle}>{preview.name}</h3>
+            {preview.description && (
+              <p className={styles.previewDescription}>{preview.description}</p>
+            )}
+
+            <div className={styles.previewStats}>
+              <div className={styles.stat}>
+                <span className={styles.statLabel}>Characters:</span>
+                <span className={styles.statValue}>{preview.characterCount}</span>
+              </div>
+              <div className={styles.stat}>
+                <span className={styles.statLabel}>Custom Icons:</span>
+                <span className={styles.statValue}>{preview.customIconCount}</span>
+              </div>
+              <div className={styles.stat}>
+                <span className={styles.statLabel}>File Size:</span>
+                <span className={styles.statValue}>
+                  {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
+                </span>
+              </div>
+            </div>
+
+            {preview.thumbnailDataUrl && (
+              <div className={styles.thumbnailSection}>
+                <span className={styles.thumbnailLabel}>Thumbnail:</span>
+                <img
+                  src={preview.thumbnailDataUrl}
+                  alt="Project thumbnail"
+                  className={styles.thumbnail}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Progress */}
+          {isImporting && (
+            <div className={styles.progressSection}>
+              <div className={styles.progressBar}>
+                <div className={styles.progressFill} style={{ width: `${progress}%` }} />
+              </div>
+              <span className={styles.progressText}>Importing... {progress}%</span>
             </div>
           )}
 
-          {selectedFile && preview && !isValidating && (
-            <>
-              {/* Preview */}
-              <div className={styles.preview}>
-                <h3 className={styles.previewTitle}>{preview.name}</h3>
-                {preview.description && (
-                  <p className={styles.previewDescription}>{preview.description}</p>
-                )}
-
-                <div className={styles.previewStats}>
-                  <div className={styles.stat}>
-                    <span className={styles.statLabel}>Characters:</span>
-                    <span className={styles.statValue}>{preview.characterCount}</span>
-                  </div>
-                  <div className={styles.stat}>
-                    <span className={styles.statLabel}>Custom Icons:</span>
-                    <span className={styles.statValue}>{preview.customIconCount}</span>
-                  </div>
-                  <div className={styles.stat}>
-                    <span className={styles.statLabel}>File Size:</span>
-                    <span className={styles.statValue}>
-                      {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
-                    </span>
-                  </div>
-                </div>
-
-                {preview.thumbnailDataUrl && (
-                  <div className={styles.thumbnailSection}>
-                    <span className={styles.thumbnailLabel}>Thumbnail:</span>
-                    <img
-                      src={preview.thumbnailDataUrl}
-                      alt="Project thumbnail"
-                      className={styles.thumbnail}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Progress */}
-              {isImporting && (
-                <div className={styles.progressSection}>
-                  <div className={styles.progressBar}>
-                    <div className={styles.progressFill} style={{ width: `${progress}%` }} />
-                  </div>
-                  <span className={styles.progressText}>Importing... {progress}%</span>
-                </div>
-              )}
-
-              {/* Error */}
-              {error && (
-                <div className={styles.errorMessage} role="alert">
-                  <span className={styles.errorIcon}>⚠</span>
-                  {error}
-                </div>
-              )}
-            </>
+          {/* Error */}
+          {error && (
+            <Alert variant="error" style={{ marginTop: 'var(--spacing-md)' }}>
+              {error}
+            </Alert>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className={styles.footer}>
-          {selectedFile && preview ? (
-            <>
-              <button
-                onClick={() => {
-                  setSelectedFile(null);
-                  setPreview(null);
-                  setError(null);
-                  if (fileInputRef.current) {
-                    fileInputRef.current.value = '';
-                  }
-                }}
-                className={styles.cancelButton}
-                disabled={isImporting}
-              >
-                Choose Different File
-              </button>
-              <button
-                onClick={handleImport}
-                className={styles.importButton}
-                disabled={isImporting}
-              >
-                {isImporting ? 'Importing...' : 'Import Project'}
-              </button>
-            </>
-          ) : (
-            <button onClick={handleClose} className={styles.cancelButton} disabled={isImporting}>
-              Cancel
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
+        </>
+      )}
+    </Modal>
   );
 }

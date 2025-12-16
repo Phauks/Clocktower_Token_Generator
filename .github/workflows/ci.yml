@@ -29,7 +29,7 @@ jobs:
     # Test on multiple Node.js versions for compatibility
     strategy:
       matrix:
-        node-version: ['18.x', '20.x']
+        node-version: ['23.x', '24.x', '25.x']
       fail-fast: false
 
     steps:
@@ -49,15 +49,6 @@ jobs:
       # This matches the local pre-commit workflow from package.json
       - name: Run validation (lint + test + build)
         run: npm run validate
-
-      # Upload build artifacts only for Node 20.x to avoid duplication
-      - name: Upload build artifacts
-        if: matrix.node-version == '20.x'
-        uses: actions/upload-artifact@v6
-        with:
-          name: dist-${{ github.sha }}
-          path: dist/
-          retention-days: 7
 
       # Add summary to GitHub Actions UI
       - name: Summary

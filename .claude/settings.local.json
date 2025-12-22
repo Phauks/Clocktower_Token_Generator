@@ -13,7 +13,9 @@
       "Skill(superpowers:root-cause-tracing)",
       "Bash(powershell -Command \"Get-ChildItem -Path ''assets/images/setup_flower'' -Name\")",
       "Bash(powershell -Command \"Rename-Item -Path ''assets/images/setup_flower'' -NewName ''setup_overlays''\")",
-      "Bash(powershell -Command \"Remove-Item ''C:\\\\Users\\\\Trevo\\\\OneDrive\\\\Desktop\\\\Board Games\\\\Blood on the Clocktower\\\\Github - Token Generator\\\\Clocktower_Token_Generator\\\\src\\\\hooks\\\\cache\\\\useProjectCacheWarming.ts''\")"
+      "Bash(powershell -Command \"Remove-Item ''C:\\\\Users\\\\Trevo\\\\OneDrive\\\\Desktop\\\\Board Games\\\\Blood on the Clocktower\\\\Github - Token Generator\\\\Clocktower_Token_Generator\\\\src\\\\hooks\\\\cache\\\\useProjectCacheWarming.ts''\")",
+      "Bash(git ls-tree:*)",
+      "Bash(git mv:*)"
     ]
   }
 }

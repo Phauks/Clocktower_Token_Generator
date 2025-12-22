@@ -170,6 +170,10 @@ export class TokensPreRenderStrategy implements IPreRenderStrategy {
           data: task,
         });
 
+        if (!response) {
+          throw new Error('Worker pool not available');
+        }
+
         // Cache result
         await this.cache.set(token.filename, response.dataUrl);
         return token.filename;

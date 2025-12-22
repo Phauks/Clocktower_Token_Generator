@@ -318,7 +318,10 @@ export function CharacterGridView({ characters, tokens }: CharacterGridViewProps
             <button
               type="button"
               className={styles.variantButton}
-              onClick={(e) => handlePrevVariant(char.uuid, variants.length, e)}
+              onClick={(e) => {
+                // char.uuid is guaranteed by the && check above
+                handlePrevVariant(char.uuid as string, variants.length, e);
+              }}
               aria-label="Previous variant"
               title="Previous variant"
             >
@@ -330,7 +333,10 @@ export function CharacterGridView({ characters, tokens }: CharacterGridViewProps
             <button
               type="button"
               className={styles.variantButton}
-              onClick={(e) => handleNextVariant(char.uuid, variants.length, e)}
+              onClick={(e) => {
+                // char.uuid is guaranteed by the && check above
+                handleNextVariant(char.uuid as string, variants.length, e);
+              }}
               aria-label="Next variant"
               title="Next variant"
             >

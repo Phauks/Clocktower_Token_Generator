@@ -585,7 +585,7 @@ export const BackgroundStyleSelector = memo(function BackgroundStyleSelector({
       <div className={drawerStyles.column}>
         <div className={drawerStyles.sectionHeader}>Light & Color</div>
         <EditableSlider
-          label="Bright"
+          label="Brightness"
           value={drawer.pendingValue.light?.brightness ?? 100}
           onChange={(v) =>
             handleLightChange({
@@ -613,7 +613,7 @@ export const BackgroundStyleSelector = memo(function BackgroundStyleSelector({
           ariaLabel="Contrast"
         />
         <EditableSlider
-          label="Satur."
+          label="Saturation"
           value={drawer.pendingValue.light?.saturation ?? 100}
           onChange={(v) =>
             handleLightChange({
@@ -669,6 +669,22 @@ export const BackgroundStyleSelector = memo(function BackgroundStyleSelector({
             disabled={!drawer.pendingValue.effects.vignetteEnabled}
             title="Vignette color"
           />
+          <button
+            type="button"
+            className={drawerStyles.randomizeButton}
+            onClick={() =>
+              handleEffectsChange({
+                ...drawer.pendingValue.effects,
+                vignetteColor: `#${Math.floor(Math.random() * 16777215)
+                  .toString(16)
+                  .padStart(6, '0')}`,
+              })
+            }
+            disabled={!drawer.pendingValue.effects.vignetteEnabled}
+            title="Randomize vignette color"
+          >
+            🎲
+          </button>
         </div>
         <EditableSlider
           label="Intensity"
@@ -710,6 +726,22 @@ export const BackgroundStyleSelector = memo(function BackgroundStyleSelector({
             disabled={!drawer.pendingValue.effects.innerGlowEnabled}
             title="Glow color"
           />
+          <button
+            type="button"
+            className={drawerStyles.randomizeButton}
+            onClick={() =>
+              handleEffectsChange({
+                ...drawer.pendingValue.effects,
+                innerGlowColor: `#${Math.floor(Math.random() * 16777215)
+                  .toString(16)
+                  .padStart(6, '0')}`,
+              })
+            }
+            disabled={!drawer.pendingValue.effects.innerGlowEnabled}
+            title="Randomize glow color"
+          >
+            🎲
+          </button>
         </div>
         <EditableSlider
           label="Radius"
@@ -860,7 +892,7 @@ export const BackgroundStyleSelector = memo(function BackgroundStyleSelector({
         preview={
           <PreviewBox shape="circle" size={size}>
             <BackgroundPreview
-              style={currentStyle}
+              style={drawer.isOpen ? drawer.pendingValue : currentStyle}
               size={size === 'small' ? 40 : size === 'large' ? 64 : 52}
             />
           </PreviewBox>
